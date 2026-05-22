@@ -4,7 +4,7 @@ name: Compare Multi-trip vs 1-trip Trucks (big_instance, Dh=200 kg, Dd∈{2.27,5
 on:
   push:
     branches:
-      - main
+      - main_huett
   workflow_dispatch:
 
 env:

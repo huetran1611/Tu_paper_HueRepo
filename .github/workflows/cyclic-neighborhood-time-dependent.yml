@@ -1,9 +1,6 @@
 name: Cyclic neighborhood selection - time-dependent instances
 
 on:
-  push:
-    branches:
-      - main_huett
   workflow_dispatch:
 
 permissions:

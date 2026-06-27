@@ -26,14 +26,14 @@ if [[ "$strategy" != "cyclic" && "$strategy" != "random" && "$strategy" != "adap
 fi
 
 strategy_args=("--neighborhood-selection=$strategy")
-result_suffix=""
+result_suffix="_strategy_${strategy}"
 if [[ "$strategy" == "adaptive" ]]; then
   if [[ -z "$gamma_set" || -z "$gamma1" || -z "$gamma2" || -z "$gamma3" || -z "$gamma4" ]]; then
     echo "Adaptive runs require ADAPTIVE_GAMMA_SET and GAMMA1..GAMMA4" >&2
     exit 2
   fi
   strategy_args+=("--gamma1=$gamma1" "--gamma2=$gamma2" "--gamma3=$gamma3" "--gamma4=$gamma4")
-  result_suffix="_gamma_${gamma_set}"
+  result_suffix+="_gamma_${gamma_set}"
 fi
 
 instance_file="$instance_dir/$instance_base.txt"

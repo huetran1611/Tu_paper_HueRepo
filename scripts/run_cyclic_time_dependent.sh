@@ -14,10 +14,26 @@ repo_root=${GITHUB_WORKSPACE:-$(pwd)}
 instance_dir="$repo_root/instance_time_dependent"
 seed=$((41 + repetition))
 strategy=${NEIGHBORHOOD_STRATEGY:-cyclic}
+gamma_set=${ADAPTIVE_GAMMA_SET:-}
+gamma1=${GAMMA1:-}
+gamma2=${GAMMA2:-}
+gamma3=${GAMMA3:-}
+gamma4=${GAMMA4:-}
 
 if [[ "$strategy" != "cyclic" && "$strategy" != "random" && "$strategy" != "adaptive" ]]; then
   echo "Invalid NEIGHBORHOOD_STRATEGY: $strategy" >&2
   exit 2
+fi
+
+strategy_args=("--neighborhood-selection=$strategy")
+result_suffix=""
+if [[ "$strategy" == "adaptive" ]]; then
+  if [[ -z "$gamma_set" || -z "$gamma1" || -z "$gamma2" || -z "$gamma3" || -z "$gamma4" ]]; then
+    echo "Adaptive runs require ADAPTIVE_GAMMA_SET and GAMMA1..GAMMA4" >&2
+    exit 2
+  fi
+  strategy_args+=("--gamma1=$gamma1" "--gamma2=$gamma2" "--gamma3=$gamma3" "--gamma4=$gamma4")
+  result_suffix="_gamma_${gamma_set}"
 fi
 
 instance_file="$instance_dir/$instance_base.txt"
@@ -36,15 +52,15 @@ output_dir=$(realpath "$output_dir")
 work_dir=$(mktemp -d "${RUNNER_TEMP:-/tmp}/cyclic-${instance_base}-run${repetition}-XXXXXX")
 trap 'rm -rf "$work_dir"' EXIT
 
-result_file="$output_dir/${instance_base}_run_${repetition}.txt"
-log_file="$output_dir/${instance_base}_run_${repetition}.log"
+result_file="$output_dir/${instance_base}_run_${repetition}${result_suffix}.txt"
+log_file="$output_dir/${instance_base}_run_${repetition}${result_suffix}.log"
 
 pushd "$work_dir" >/dev/null
 set +e
 "$solver" "$instance_file" \
   --truck-vmax-file="$vmax_file" \
   --truck-theta-file="$theta_file" \
-  --neighborhood-selection="$strategy" \
+  "${strategy_args[@]}" \
   --attempts=1 \
   --seed="$seed" >"$log_file" 2>&1
 solver_exit_code=$?
@@ -55,6 +71,11 @@ set -e
   echo "Customer group: ${instance_base%%.*}"
   echo "Repetition: $repetition"
   echo "Experiment strategy: $strategy"
+  echo "Gamma set: $gamma_set"
+  echo "Gamma1: $gamma1"
+  echo "Gamma2: $gamma2"
+  echo "Gamma3: $gamma3"
+  echo "Gamma4: $gamma4"
   echo "Experiment seed: $seed"
   echo "Solver exit code: $solver_exit_code"
   if [[ -f output_solution_best.txt ]]; then

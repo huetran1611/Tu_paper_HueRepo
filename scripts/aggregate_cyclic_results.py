@@ -15,6 +15,11 @@ FIELDS = [
     "Customer group",
     "Repetition",
     "Strategy",
+    "Gamma set",
+    "Gamma1",
+    "Gamma2",
+    "Gamma3",
+    "Gamma4",
     "Seed",
     "Solver exit code",
     "Initial cost",
@@ -68,6 +73,11 @@ def parse_result(path):
         "Customer group": as_number(read_value(text, "Customer group"), integer=True),
         "Repetition": as_number(read_value(text, "Repetition"), integer=True),
         "Strategy": read_value(text, "Experiment strategy") or read_value(text, "Neighborhood selection"),
+        "Gamma set": read_value(text, "Gamma set"),
+        "Gamma1": as_number(read_value(text, "Gamma1")),
+        "Gamma2": as_number(read_value(text, "Gamma2")),
+        "Gamma3": as_number(read_value(text, "Gamma3")),
+        "Gamma4": as_number(read_value(text, "Gamma4")),
         "Seed": as_number(read_value(text, "Experiment seed") or read_value(text, "Random seed"), integer=True),
         "Solver exit code": as_number(read_value(text, "Solver exit code"), integer=True),
         "Initial cost": as_number(read_value(text, "Initial solution cost")),
@@ -140,14 +150,17 @@ def worksheet_xml(headers, rows, widths):
 
 def write_xlsx(path, detail_rows, summary_rows, detail_sheet_name):
     detail_values = [[row[field] for field in FIELDS] for row in detail_rows]
-    summary_headers = ["Customer group", "Runs", "Feasible", "Best cost", "Mean cost", "Worst cost", "Mean elapsed seconds"]
+    summary_headers = [
+        "Strategy", "Gamma set", "Gamma1", "Gamma2", "Gamma3", "Gamma4",
+        "Customer group", "Runs", "Feasible", "Best cost", "Mean cost", "Worst cost", "Mean elapsed seconds",
+    ]
     sheets = [
         (detail_sheet_name, worksheet_xml(
             FIELDS,
             detail_values,
-            [18, 15, 12, 12, 10, 16, 15, 15, 15, 15, 17, 14, 55, 55, 20, 20, 18, 20, 80],
+            [18, 15, 12, 12, 12, 10, 10, 10, 10, 10, 16, 15, 15, 15, 15, 17, 14, 55, 55, 20, 20, 18, 20, 80],
         )),
-        ("Summary", worksheet_xml(summary_headers, summary_rows, [15, 10, 12, 15, 15, 15, 22])),
+        ("Summary", worksheet_xml(summary_headers, summary_rows, [12, 12, 10, 10, 10, 10, 15, 10, 12, 15, 15, 15, 22])),
     ]
     content_types = (
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
@@ -223,17 +236,21 @@ def main():
 
     grouped = defaultdict(list)
     for row in rows:
-        grouped[row["Customer group"]].append(row)
+        key = (
+            row["Strategy"], row["Gamma set"], row["Gamma1"], row["Gamma2"],
+            row["Gamma3"], row["Gamma4"], row["Customer group"],
+        )
+        grouped[key].append(row)
     summary_rows = []
-    for group in sorted(grouped):
-        group_rows = grouped[group]
+    for key in sorted(grouped, key=lambda value: tuple(str(part) for part in value)):
+        group_rows = grouped[key]
         feasible_costs = [
             row["Improved cost"] for row in group_rows
             if row["Feasibility"] == "FEASIBLE" and isinstance(row["Improved cost"], float)
         ]
         elapsed = [row["Elapsed seconds"] for row in group_rows if isinstance(row["Elapsed seconds"], float)]
         summary_rows.append([
-            group,
+            *key,
             len(group_rows),
             sum(row["Feasibility"] == "FEASIBLE" for row in group_rows),
             min(feasible_costs) if feasible_costs else "",

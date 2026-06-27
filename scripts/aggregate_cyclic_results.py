@@ -138,11 +138,11 @@ def worksheet_xml(headers, rows, widths):
     )
 
 
-def write_xlsx(path, detail_rows, summary_rows):
+def write_xlsx(path, detail_rows, summary_rows, detail_sheet_name):
     detail_values = [[row[field] for field in FIELDS] for row in detail_rows]
     summary_headers = ["Customer group", "Runs", "Feasible", "Best cost", "Mean cost", "Worst cost", "Mean elapsed seconds"]
     sheets = [
-        ("Cyclic results", worksheet_xml(
+        (detail_sheet_name, worksheet_xml(
             FIELDS,
             detail_values,
             [18, 15, 12, 12, 10, 16, 15, 15, 15, 15, 17, 14, 55, 55, 20, 20, 18, 20, 80],
@@ -242,7 +242,9 @@ def main():
             statistics.fmean(elapsed) if elapsed else "",
         ])
 
-    write_xlsx(args.output_xlsx, rows, summary_rows)
+    strategies = sorted({row["Strategy"] for row in rows if row["Strategy"]})
+    detail_sheet_name = f"{strategies[0].capitalize()} results" if len(strategies) == 1 else "Neighborhood results"
+    write_xlsx(args.output_xlsx, rows, summary_rows, detail_sheet_name)
     if args.csv:
         args.csv.parent.mkdir(parents=True, exist_ok=True)
         with args.csv.open("w", newline="", encoding="utf-8") as csv_file:

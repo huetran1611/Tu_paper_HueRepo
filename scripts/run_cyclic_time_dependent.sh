@@ -13,6 +13,12 @@ output_dir=$4
 repo_root=${GITHUB_WORKSPACE:-$(pwd)}
 instance_dir="$repo_root/instance_time_dependent"
 seed=$((41 + repetition))
+strategy=${NEIGHBORHOOD_STRATEGY:-cyclic}
+
+if [[ "$strategy" != "cyclic" && "$strategy" != "random" && "$strategy" != "adaptive" ]]; then
+  echo "Invalid NEIGHBORHOOD_STRATEGY: $strategy" >&2
+  exit 2
+fi
 
 instance_file="$instance_dir/$instance_base.txt"
 vmax_file="$instance_dir/$instance_base.vmax_ij.txt"
@@ -38,7 +44,7 @@ set +e
 "$solver" "$instance_file" \
   --truck-vmax-file="$vmax_file" \
   --truck-theta-file="$theta_file" \
-  --neighborhood-selection=cyclic \
+  --neighborhood-selection="$strategy" \
   --attempts=1 \
   --seed="$seed" >"$log_file" 2>&1
 solver_exit_code=$?
@@ -48,13 +54,13 @@ set -e
   echo "Instance: $instance_base"
   echo "Customer group: ${instance_base%%.*}"
   echo "Repetition: $repetition"
-  echo "Experiment strategy: cyclic"
+  echo "Experiment strategy: $strategy"
   echo "Experiment seed: $seed"
   echo "Solver exit code: $solver_exit_code"
   if [[ -f output_solution_best.txt ]]; then
     cat output_solution_best.txt
   else
-    echo "Neighborhood selection: cyclic"
+    echo "Neighborhood selection: $strategy"
     echo "Random seed: $seed"
     echo "Simulated annealing: disabled"
     echo "Diversification: disabled"
@@ -68,5 +74,4 @@ set -e
 } >"$result_file"
 popd >/dev/null
 
-echo "Completed $instance_base repetition $repetition with exit code $solver_exit_code"
-
+echo "Completed $instance_base repetition $repetition using $strategy with exit code $solver_exit_code"

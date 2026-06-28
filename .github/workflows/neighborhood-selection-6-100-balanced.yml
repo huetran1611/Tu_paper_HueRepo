@@ -1,4 +1,4 @@
-name: Six neighborhood strategies - balanced 6-to-100-customer experiment
+name: Six neighborhood strategies - balanced 6-to-100 extra 10 runs
 
 on:
   workflow_dispatch:
@@ -22,7 +22,7 @@ jobs:
         run: |
           g++ -O2 -std=c++20 tabubu_TimeDependent_neighbourhoddSelection.cpp -o tabubu_neighborhood_6_100
 
-      - name: Generate 2400 tasks distributed across 250 jobs
+      - name: Generate 4800 extra-run tasks distributed across 250 jobs
         id: matrix
         run: |
           python3 - <<'PYEOF'
@@ -59,16 +59,16 @@ jobs:
           tasks = []
           for instance in instances:
               for method in methods:
-                  for repetition in range(1, 6):
+                  for repetition in range(6, 16):
                       tasks.append({"instance": instance, "repetition": repetition, **method})
-          if len(tasks) != 2400:
-              raise SystemExit(f"Expected 2400 tasks, found {len(tasks)}")
+          if len(tasks) != 4800:
+              raise SystemExit(f"Expected 4800 tasks, found {len(tasks)}")
 
           batches = [[] for _ in range(250)]
           for index, task in enumerate(tasks):
               batches[index % len(batches)].append(task)
           distribution = Counter(map(len, batches))
-          if distribution != Counter({10: 150, 9: 100}):
+          if distribution != Counter({20: 50, 19: 200}):
               raise SystemExit(f"Unexpected batch distribution: {distribution}")
 
           matrix = [
@@ -80,7 +80,7 @@ jobs:
           ]
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
               output.write(f"matrix={json.dumps(matrix, separators=(',', ':'))}\n")
-          print("Created 250 jobs: 150 jobs x 10 processes + 100 jobs x 9 processes")
+          print("Created 250 jobs: 50 jobs x 20 processes + 200 jobs x 19 processes")
           PYEOF
 
       - name: Upload solver
@@ -107,7 +107,7 @@ jobs:
         with:
           name: neighborhood-6-100-solver
 
-      - name: Run nine or ten neighborhood tasks in parallel
+      - name: Run nineteen or twenty neighborhood tasks in parallel
         shell: bash
         run: |
           chmod +x tabubu_neighborhood_6_100
@@ -130,7 +130,7 @@ jobs:
           retention-days: 7
 
   aggregate:
-    name: Aggregate all 2400 results into Excel
+    name: Aggregate all 4800 extra-run results into Excel
     needs: solve
     if: always()
     runs-on: ubuntu-latest
@@ -149,8 +149,8 @@ jobs:
         run: |
           python3 scripts/aggregate_cyclic_results.py \
             collected_results \
-            neighborhood_selection_6_100_results.xlsx \
-            --csv neighborhood_selection_6_100_results.csv
+            neighborhood_selection_6_100_extra10_results.xlsx \
+            --csv neighborhood_selection_6_100_extra10_results.csv
 
       - name: Verify all strategies and repetitions
         run: |
@@ -158,39 +158,43 @@ jobs:
           import csv
           from collections import Counter
 
-          with open("neighborhood_selection_6_100_results.csv", newline="", encoding="utf-8") as csv_file:
+          with open("neighborhood_selection_6_100_extra10_results.csv", newline="", encoding="utf-8") as csv_file:
               rows = list(csv.DictReader(csv_file))
-          if len(rows) != 2400:
-              raise SystemExit(f"Expected 2400 results, found {len(rows)}")
+          if len(rows) != 4800:
+              raise SystemExit(f"Expected 4800 results, found {len(rows)}")
           methods = Counter(
               row["Strategy"] if row["Strategy"] != "adaptive"
               else f'adaptive-{row["Gamma set"]}'
               for row in rows
           )
           expected = Counter({
-              "cyclic": 400,
-              "random": 400,
-              "adaptive-g1": 400,
-              "adaptive-g2": 400,
-              "adaptive-g3": 400,
-              "adaptive-g4": 400,
+              "cyclic": 800,
+              "random": 800,
+              "adaptive-g1": 800,
+              "adaptive-g2": 800,
+              "adaptive-g3": 800,
+              "adaptive-g4": 800,
           })
           if methods != expected:
               raise SystemExit(f"Unexpected method counts: {methods}")
           customer_groups = Counter(row["Customer group"] for row in rows)
-          expected_groups = Counter({"6": 360, "10": 360, "12": 360, "20": 360, "50": 480, "100": 480})
+          expected_groups = Counter({"6": 720, "10": 720, "12": 720, "20": 720, "50": 960, "100": 960})
           if customer_groups != expected_groups:
               raise SystemExit(f"Unexpected customer-group counts: {customer_groups}")
-          print("Verified 2400 results across six methods and six customer groups")
+          repetitions = Counter(row["Repetition"] for row in rows)
+          expected_repetitions = Counter({str(rep): 480 for rep in range(6, 16)})
+          if repetitions != expected_repetitions:
+              raise SystemExit(f"Unexpected repetition counts: {repetitions}")
+          print("Verified 4800 extra-run results across six methods and six customer groups")
           PYEOF
 
       - name: Upload consolidated experiment results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neighborhood-selection-6-100-experiment-results
+          name: neighborhood-selection-6-100-extra10-experiment-results
           path: |
-            neighborhood_selection_6_100_results.xlsx
-            neighborhood_selection_6_100_results.csv
+            neighborhood_selection_6_100_extra10_results.xlsx
+            neighborhood_selection_6_100_extra10_results.csv
           if-no-files-found: warn
           retention-days: 30

@@ -1,11 +1,6 @@
 name: Resume missing 200-customer neighborhood configurations
 
 on:
-  push:
-    branches:
-      - main_huett
-    paths:
-      - .github/triggers/resume-neighborhood-selection-200
   workflow_dispatch:
 
 permissions:

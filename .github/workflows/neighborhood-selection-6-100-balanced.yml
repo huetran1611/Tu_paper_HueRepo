@@ -1,9 +1,6 @@
 name: Six neighborhood strategies - balanced 6-to-100-customer experiment
 
 on:
-  push:
-    branches:
-      - main_huett
   workflow_dispatch:
 
 permissions:

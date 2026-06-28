@@ -5876,6 +5876,10 @@ Solution destroy_sisr_repair(Solution sol) {
     return repair_solution_common(sol, to_destroy);
 }
 
+static bool write_output_file(const std::string& out_path, const Solution& sol, double cost,
+                              double mean_elapsed_sec, bool final_feasibility,
+                              double worst_cost, double mean_cost);
+
 Solution tabu_search(const Solution& initial_solution, int num_initial_sol,  vector<double>& iter_current, vector<double>& iter_best, vector<bool>& iter_feasible) {
     auto ts_start = std::chrono::high_resolution_clock::now();
     auto is_feasible = [](const Solution& sol) {
@@ -5919,6 +5923,9 @@ Solution tabu_search(const Solution& initial_solution, int num_initial_sol,  vec
     cout << "Initial Cost: " << best_solution_score_now << "\n";
 
     double current_score = best_solution_score_now;
+    write_output_file("output_solution_best.txt", initial_solution,
+                      initial_solution.total_makespan, 0.0, initial_feasible,
+                      initial_solution.total_makespan, initial_solution.total_makespan);
     while (iter < total_iters) {
         if (CFG_TIME_LIMIT_SEC > 0.0) {
             double elapsed = std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - ts_start).count();
@@ -6000,11 +6007,13 @@ Solution tabu_search(const Solution& initial_solution, int num_initial_sol,  vec
         double neighbor_score = solution_score_makespan(neighbor);
 
         // Acceptance
+        bool checkpoint_dirty = false;
         if (neighbor_score + 1e-12 < best_solution_score_now) {
             
             current_sol = neighbor;
             best_solution = neighbor;
             best_solution_score_now = neighbor_score;
+            checkpoint_dirty = !std::isfinite(best_feasible_makespan);
             score[selected_neighbor] += CFG_GAMMA1;
             current_score = neighbor_score;
             no_improve_iters = 0;
@@ -6025,8 +6034,18 @@ Solution tabu_search(const Solution& initial_solution, int num_initial_sol,  vec
              if (n_cost + 1e-12 < best_feasible_makespan) {
                  best_feasible_solution = neighbor;
                  best_feasible_makespan = n_cost;
+                 checkpoint_dirty = true;
                  cout << "Iter " << iter << " New Best Feasible Makespan: " << best_feasible_makespan << "\n";
              }
+        }
+
+        if (checkpoint_dirty) {
+            const bool have_feasible = std::isfinite(best_feasible_makespan);
+            const Solution& checkpoint_solution = have_feasible ? best_feasible_solution : best_solution;
+            double elapsed = std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - ts_start).count();
+            write_output_file("output_solution_best.txt", checkpoint_solution,
+                              initial_solution.total_makespan, elapsed, have_feasible,
+                              checkpoint_solution.total_makespan, checkpoint_solution.total_makespan);
         }
 
         // Update best segment solution
@@ -6152,7 +6171,8 @@ static int compute_segment_count(int total_iters, int iters_per_segment) {
 }
 
 static bool write_output_file(const std::string& out_path, const Solution& sol, double cost, double mean_elapsed_sec, bool final_feasibility, double worst_cost, double mean_cost) {
-    std::ofstream ofs(out_path);
+    const std::string temporary_path = out_path + ".tmp";
+    std::ofstream ofs(temporary_path);
     if (!ofs) return false;
     ofs.setf(std::ios::fixed); ofs << setprecision(6);
     ofs << "Neighborhood selection: " << CFG_NEIGHBORHOOD_SELECTION << "\n";
@@ -6171,7 +6191,9 @@ static bool write_output_file(const std::string& out_path, const Solution& sol, 
     ofs << "Final solution feasibility: " << (final_feasibility ? "FEASIBLE" : "INFEASIBLE") << "\n";
     ofs << "Solution Details:\n";
     print_solution_stream(sol, ofs);
-    return true;
+    ofs.close();
+    if (!ofs) return false;
+    return std::rename(temporary_path.c_str(), out_path.c_str()) == 0;
 }
 
 int main(int argc, char* argv[]) {

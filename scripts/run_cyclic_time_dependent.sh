@@ -19,6 +19,7 @@ gamma1=${GAMMA1:-}
 gamma2=${GAMMA2:-}
 gamma3=${GAMMA3:-}
 gamma4=${GAMMA4:-}
+solver_time_limit_sec=${SOLVER_TIME_LIMIT_SEC:-}
 
 if [[ "$strategy" != "cyclic" && "$strategy" != "random" && "$strategy" != "adaptive" ]]; then
   echo "Invalid NEIGHBORHOOD_STRATEGY: $strategy" >&2
@@ -34,6 +35,9 @@ if [[ "$strategy" == "adaptive" ]]; then
   fi
   strategy_args+=("--gamma1=$gamma1" "--gamma2=$gamma2" "--gamma3=$gamma3" "--gamma4=$gamma4")
   result_suffix+="_gamma_${gamma_set}"
+fi
+if [[ -n "$solver_time_limit_sec" ]]; then
+  strategy_args+=("--time-limit=$solver_time_limit_sec")
 fi
 
 instance_file="$instance_dir/$instance_base.txt"
@@ -57,14 +61,27 @@ log_file="$output_dir/${instance_base}_run_${repetition}${result_suffix}.log"
 
 pushd "$work_dir" >/dev/null
 set +e
-"$solver" "$instance_file" \
-  --truck-vmax-file="$vmax_file" \
-  --truck-theta-file="$theta_file" \
-  "${strategy_args[@]}" \
-  --attempts=1 \
-  --seed="$seed" >"$log_file" 2>&1
+solver_command=(
+  "$solver" "$instance_file"
+  --truck-vmax-file="$vmax_file"
+  --truck-theta-file="$theta_file"
+  "${strategy_args[@]}"
+  --attempts=1
+  --seed="$seed"
+)
+if [[ -n "$solver_time_limit_sec" ]] && command -v timeout >/dev/null 2>&1; then
+  timeout --signal=TERM --kill-after=30 "${solver_time_limit_sec}s" \
+    "${solver_command[@]}" >"$log_file" 2>&1
+else
+  "${solver_command[@]}" >"$log_file" 2>&1
+fi
 solver_exit_code=$?
 set -e
+
+solver_termination="completed normally"
+if [[ "$solver_exit_code" -eq 124 || "$solver_exit_code" -eq 137 || "$solver_exit_code" -eq 143 ]]; then
+  solver_termination="time limit reached; best checkpoint preserved"
+fi
 
 {
   echo "Instance: $instance_base"
@@ -76,8 +93,10 @@ set -e
   echo "Gamma2: $gamma2"
   echo "Gamma3: $gamma3"
   echo "Gamma4: $gamma4"
+  echo "Solver time limit seconds: $solver_time_limit_sec"
   echo "Experiment seed: $seed"
   echo "Solver exit code: $solver_exit_code"
+  echo "Solver termination: $solver_termination"
   if [[ -f output_solution_best.txt ]]; then
     cat output_solution_best.txt
   else

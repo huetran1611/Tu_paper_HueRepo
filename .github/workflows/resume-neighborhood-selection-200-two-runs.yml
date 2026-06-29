@@ -1,0 +1,233 @@
+name: Resume failed 200-customer jobs from two runs
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  GROUP_1_RUN_ID: "28310990837"
+  GROUP_2_RUN_ID: "28310990818"
+  SOLVER_TIME_LIMIT_SEC: "18000"
+
+jobs:
+  prepare:
+    name: Build solver and failed-job matrix
+    runs-on: ubuntu-latest
+    outputs:
+      resume_matrix: ${{ steps.matrix.outputs.matrix }}
+      resume_count: ${{ steps.matrix.outputs.count }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Compile solver from current code
+        run: |
+          g++ -O2 -std=c++20 tabubu_TimeDependent_neighbourhoddSelection.cpp \
+            -o tabubu_neighborhood_200_resume_two_runs
+
+      - name: Build failed-job matrix
+        id: matrix
+        run: |
+          python3 - <<'PYEOF'
+          import json
+          import os
+
+          gamma = {
+              "g1": [0.3, 0.2, 0.1, 0.3],
+              "g2": [0.5, 0.3, 0.1, 0.3],
+              "g3": [0.3, 0.2, 0.1, 0.6],
+              "g4": [0.5, 0.3, 0.1, 0.6],
+          }
+          failed = [
+              # Run 28310990837: cyclic, random, adaptive g1
+              ("200.40.3", "adaptive", "g1", [1, 2, 3, 4, 5]),
+              ("200.40.4", "cyclic", "", [1, 2, 3, 4, 5]),
+              ("200.40.4", "random", "", [1, 2, 3, 4, 5]),
+              ("200.40.4", "adaptive", "g1", [1, 2, 3, 4, 5]),
+              # Run 28310990818: adaptive g2, g3, g4
+              ("200.40.3", "adaptive", "g4", [1, 2, 3, 4, 5]),
+              ("200.40.4", "adaptive", "g2", [1, 2, 3, 4, 5]),
+              ("200.40.4", "adaptive", "g3", [1, 2, 3, 4, 5]),
+              ("200.40.4", "adaptive", "g4", [1, 2, 3, 4, 5]),
+          ]
+
+          matrix = []
+          for instance, strategy, gamma_set, repetitions in failed:
+              for repetition in repetitions:
+                  task = {"instance": instance, "repetition": repetition, "strategy": strategy}
+                  task_id = f"{instance}-run-{repetition}-{strategy}"
+                  if strategy == "adaptive":
+                      task["gamma_set"] = gamma_set
+                      task["gamma"] = gamma[gamma_set]
+                      task_id += f"-{gamma_set}"
+                  matrix.append({
+                      "task_id": task_id,
+                      "tasks_json": json.dumps([task], separators=(",", ":")),
+                  })
+
+          if len(matrix) != 40:
+              raise SystemExit(f"Expected 40 failed jobs to resume, found {len(matrix)}")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"matrix={json.dumps(matrix, separators=(',', ':'))}\n")
+              output.write(f"count={len(matrix)}\n")
+          print(f"Prepared {len(matrix)} failed configurations to rerun")
+          PYEOF
+
+      - name: Upload resume solver
+        uses: actions/upload-artifact@v4
+        with:
+          name: neighborhood-200-two-runs-resume-solver
+          path: tabubu_neighborhood_200_resume_two_runs
+          retention-days: 1
+
+  solve-failed:
+    name: ${{ matrix.task_id }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix:
+        include: ${{ fromJson(needs.prepare.outputs.resume_matrix) }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: neighborhood-200-two-runs-resume-solver
+
+      - name: Run failed configuration with current code
+        shell: bash
+        run: |
+          chmod +x tabubu_neighborhood_200_resume_two_runs
+          mkdir -p resumed_results
+          cat > task.json <<'JSONEOF'
+          ${{ matrix.tasks_json }}
+          JSONEOF
+          python3 scripts/run_neighborhood_batch.py \
+            ./tabubu_neighborhood_200_resume_two_runs \
+            task.json \
+            resumed_results
+
+      - name: Upload resumed configuration result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: neighborhood-200-resumed-${{ matrix.task_id }}
+          path: resumed_results/*.txt
+          if-no-files-found: warn
+          retention-days: 90
+
+  aggregate:
+    name: Merge two old runs plus resumed run
+    needs: [prepare, solve-failed]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download successful group-1 results from old run
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ env.GROUP_1_RUN_ID }}
+          pattern: neighborhood-200-group-1-200.*
+          path: recovered_group_1
+          merge-multiple: true
+
+      - name: Download successful group-2 results from old run
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ env.GROUP_2_RUN_ID }}
+          pattern: neighborhood-200-group-2-200.*
+          path: recovered_group_2
+          merge-multiple: true
+
+      - name: Download resumed results from this run
+        uses: actions/download-artifact@v4
+        with:
+          pattern: neighborhood-200-resumed-*
+          path: resumed_results
+          merge-multiple: true
+
+      - name: Combine result files, preferring resumed outputs
+        run: |
+          python3 - <<'PYEOF'
+          import shutil
+          from pathlib import Path
+
+          combined = Path("combined_results")
+          combined.mkdir(exist_ok=True)
+          sources = [
+              Path("recovered_group_1"),
+              Path("recovered_group_2"),
+              Path("resumed_results"),
+          ]
+          copied = 0
+          for source in sources:
+              for path in sorted(source.rglob("*_run_*.txt")):
+                  target = combined / path.name
+                  shutil.copy2(path, target)
+                  copied += 1
+          unique_count = len(list(combined.glob("*_run_*.txt")))
+          print(f"Copied {copied} result files into {unique_count} unique result files")
+          PYEOF
+
+      - name: Create complete Excel workbook and CSV
+        run: |
+          python3 scripts/aggregate_cyclic_results.py \
+            combined_results \
+            neighborhood_selection_200_two_runs_complete.xlsx \
+            --csv neighborhood_selection_200_two_runs_complete.csv
+
+      - name: Verify complete 480-configuration result set
+        run: |
+          python3 - <<'PYEOF'
+          import csv
+          from collections import Counter
+
+          with open("neighborhood_selection_200_two_runs_complete.csv", newline="", encoding="utf-8") as csv_file:
+              rows = list(csv.DictReader(csv_file))
+
+          keys = {
+              (row["Instance"], row["Strategy"], row["Gamma set"], row["Repetition"])
+              for row in rows
+          }
+          actual = Counter(
+              row["Strategy"] if row["Strategy"] != "adaptive"
+              else f'adaptive-{row["Gamma set"]}'
+              for row in rows
+          )
+          expected = Counter({
+              "cyclic": 80,
+              "random": 80,
+              "adaptive-g1": 80,
+              "adaptive-g2": 80,
+              "adaptive-g3": 80,
+              "adaptive-g4": 80,
+          })
+          if len(rows) != 480 or len(keys) != 480 or actual != expected:
+              raise SystemExit(
+                  f"Expected 480 unique rows and {expected}; "
+                  f"found {len(rows)} rows, {len(keys)} unique keys, and {actual}"
+              )
+          print("Verified complete 480-configuration result set")
+          PYEOF
+
+      - name: Upload complete merged results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: neighborhood-selection-200-two-runs-complete-results
+          path: |
+            neighborhood_selection_200_two_runs_complete.xlsx
+            neighborhood_selection_200_two_runs_complete.csv
+            combined_results/*.txt
+          if-no-files-found: warn
+          retention-days: 90

@@ -1,22 +1,10 @@
-#include <algorithm>
+#include <bits/stdc++.h>
 #include <chrono>
-#include <cmath>
-#include <cstdlib>
 #include <filesystem>
-#include <fstream>
-#include <iomanip>
-#include <iostream>
-#include <limits>
-#include <map>
-#include <numeric>
-#include <optional>
-#include <queue>
+#include <cmath>
+#include <algorithm>
 #include <random>
-#include <sstream>
-#include <string>
-#include <unordered_set>
-#include <utility>
-#include <vector>
+#include <optional>
 
 #define ll long long
 #define pb push_back
@@ -54,8 +42,7 @@ int L = 24; //number of time segments in a day
 //vd time_segments_sigma = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0}; //sigma (truck velocity coefficient) for each time segments
 vd time_segment = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}; // time segment boundaries in hours
 vd time_segments_sigma = {0.9, 0.8, 0.4, 0.6,0.9, 0.8, 0.6, 0.8, 0.8, 0.7, 0.5, 0.8}; //sigma (truck velocity coefficient) for each time segments
-vvd truck_vmax_ij; // truck_vmax_ij[i][j]: edge-specific base speed vmax_ij (m/s)
-vector<vvd> truck_theta_ijl; // truck_theta_ijl[l][i][j]: edge/time-specific coefficient theta_ijl
+static vector<vector<vd>> arc_time_sigma; // arc_time_sigma[i][j][seg]: per-arc per-segment velocity coefficient; empty = use time_segments_sigma fallback
 double Dd = 2.27, E = 7200000.0; //drone's weight and energy capacities (for all drones)
 double v_fly_drone = 31.3, v_take_off = 15.6, v_landing = 7.8; // speed of the drone
 double height = 50; // height of the drone
@@ -98,12 +85,10 @@ const int NUM_OF_INITIAL_SOLUTIONS = 200;
 const int MAX_SEGMENT = 200;
 const int MAX_NO_IMPROVE = 1000;
 const int MAX_ITER_PER_SEGMENT = 1000;
-static double CFG_GAMMA1 = 0.5;
-static double CFG_GAMMA2 = 0.3;
-static double CFG_GAMMA3 = 0.1;
-static double CFG_GAMMA4 = 0.3;
-static string CFG_NEIGHBORHOOD_SELECTION = "adaptive";
-static unsigned int CFG_RANDOM_SEED = 42;
+const double gamma1 = 0.5;
+const double gamma2 = 0.3;
+const double gamma3 = 0.1;
+const double gamma4 = 0.3;
 
 // Runtime-configurable search knobs (initialized from compile-time defaults)
 static int CFG_NUM_INITIAL = NUM_OF_INITIAL_SOLUTIONS;
@@ -111,8 +96,6 @@ static int CFG_MAX_SEGMENT = MAX_SEGMENT;
 static int CFG_MAX_NO_IMPROVE = MAX_NO_IMPROVE;
 static int CFG_MAX_ITER_PER_SEGMENT = MAX_ITER_PER_SEGMENT;
 static double CFG_TIME_LIMIT_SEC = 0.0; // 0 = unlimited
-static string CFG_TRUCK_VMAX_FILE; // optional file: i j vmax_ij
-static string CFG_TRUCK_THETA_FILE; // optional file: i j l theta_ijl, l is 0-based segment index
 
 // Adaptive penalty coefficients for constraint violations
 static double PENALTY_LAMBDA_CAPACITY = 1.0;      // λ for capacity violations
@@ -124,6 +107,9 @@ static const double PENALTY_INCREASE = 1.2;       // multiply when violated *
 static const double PENALTY_DECREASE = 1.2;       // divide when satisfied *
 static const double PENALTY_MIN = 0.5;            // minimum λ value
 static const double PENALTY_MAX = 1000.0;
+
+static const double T0 = 150.0; // initial temperature for simulated annealing acceptance
+double alpha = 0.9998; // cooling rate for simulated annealing
 
 // Destroy and repair helper
 vvd edge_records; // edge_records[i][j]: stores working times for edge (i,j)
@@ -242,6 +228,27 @@ void input(string filepath){
         deadline[cust] = deadline_val;
         ++cust;
     }
+    // Read arc_time_sigma block if present (optional section)
+    arc_time_sigma.clear();
+    while (getline(fin, line)) {
+        if (line.empty() || line[0] == '#') continue;
+        if (line.find("arc_sigma_start") != string::npos) {
+            arc_time_sigma.assign(n + 1, vector<vd>(n + 1));
+            while (getline(fin, line)) {
+                if (line.empty() || line[0] == '#') continue;
+                if (line.find("arc_sigma_end") != string::npos) break;
+                stringstream ss(line);
+                int i, j;
+                if (!(ss >> i >> j)) continue;
+                vd sigmas;
+                double sv;
+                while (ss >> sv) sigmas.push_back(sv);
+                if (i >= 0 && i <= n && j >= 0 && j <= n)
+                    arc_time_sigma[i][j] = sigmas;
+            }
+            break;
+        }
+    }
 }
 
 void update_tabu_tenures() {
@@ -275,105 +282,233 @@ void compute_distance_matrices(const vector<Point>& loc) {
     }
 }
 
-static int truck_time_segment_count() {
-    return max(1, (int)time_segment.size() - 1);
-}
+// Load full OD distance matrix from CSV where the first row/column are labels.
+// Uses the top-left (n+1) x (n+1) numeric block after label column.
+static bool load_distance_matrix_csv(const std::string& path) {
+    std::ifstream fin(path);
+    if (!fin) {
+        std::cerr << "Error: cannot open distance CSV: " << path << "\n";
+        return false;
+    }
 
-static bool parse_numeric_record(string line, vector<double>& values) {
-    values.clear();
-    size_t comment_pos = line.find('#');
-    if (comment_pos != string::npos) line = line.substr(0, comment_pos);
-    replace(line.begin(), line.end(), ',', ' ');
-    stringstream ss(line);
-    double value;
-    while (ss >> value) values.push_back(value);
-    return !values.empty();
-}
+    auto csv_split = [](const std::string& line) {
+        std::vector<std::string> fields;
+        bool in_q = false;
+        std::string f;
+        for (char c : line) {
+            if (c == '"') { in_q = !in_q; }
+            else if (c == ',' && !in_q) { fields.push_back(f); f.clear(); }
+            else { f += c; }
+        }
+        fields.push_back(f);
+        return fields;
+    };
+    auto trim = [](std::string s) {
+        size_t a = s.find_first_not_of(" \t\r\n");
+        if (a == std::string::npos) return std::string{};
+        return s.substr(a, s.find_last_not_of(" \t\r\n") - a + 1);
+    };
 
-static void initialize_time_dependent_truck_speed_model() {
-    int segment_count = truck_time_segment_count();
-    truck_vmax_ij.assign(n + 1, vd(n + 1, vmax));
-    truck_theta_ijl.assign(segment_count, vvd(n + 1, vd(n + 1, 1.0)));
+    std::string line;
+    if (!std::getline(fin, line)) {
+        std::cerr << "Error: empty distance CSV: " << path << "\n";
+        return false;
+    }
+    if (line.size() >= 3 && (unsigned char)line[0] == 0xEF) line = line.substr(3);
 
-    for (int l = 0; l < segment_count; ++l) {
-        double default_theta = (l < (int)time_segments_sigma.size()) ? time_segments_sigma[l] : 1.0;
-        for (int i = 0; i <= n; ++i) {
-            for (int j = 0; j <= n; ++j) {
-                truck_theta_ijl[l][i][j] = default_theta;
+    std::vector<std::vector<double>> rows;
+    rows.reserve(n + 1);
+    while (std::getline(fin, line)) {
+        if (line.empty()) continue;
+        auto f = csv_split(line);
+        if (f.size() < 2) continue;
+        std::vector<double> vals;
+        vals.reserve(f.size() - 1);
+        for (size_t c = 1; c < f.size(); ++c) {
+            std::string t = trim(f[c]);
+            if (t.empty()) {
+                vals.push_back(0.0);
+                continue;
+            }
+            try {
+                vals.push_back(std::stod(t));
+            } catch (...) {
+                vals.clear();
+                break;
             }
         }
+        if (!vals.empty()) rows.push_back(std::move(vals));
     }
+
+    if ((int)rows.size() < n + 1) {
+        std::cerr << "Error: distance CSV has " << rows.size()
+                  << " rows but needs at least " << (n + 1) << "\n";
+        return false;
+    }
+    for (int i = 0; i <= n; ++i) {
+        if ((int)rows[i].size() < n + 1) {
+            std::cerr << "Error: distance CSV row " << i
+                      << " has " << rows[i].size()
+                      << " columns but needs at least " << (n + 1) << "\n";
+            return false;
+        }
+    }
+
+    for (int i = 0; i <= n; ++i) {
+        for (int j = 0; j <= n; ++j) {
+            distance_matrix[i][j] = rows[i][j];
+        }
+    }
+    std::cout << "Loaded distance matrix CSV: " << path
+              << " with " << (n + 1) << "x" << (n + 1) << " entries\n";
+    return true;
 }
 
-static void load_truck_vmax_ij_file(const string& filepath) {
-    if (filepath.empty()) return;
-    ifstream fin(filepath);
-    if (!fin) {
-        cerr << "Error: Cannot open truck vmax file " << filepath << endl;
-        exit(1);
+// Load arc-specific per-segment sigma values from a CSV.
+// Supports either:
+// 1) origin_id,destination_id,time_slot,avg_speed_kmh,... (e.g. P0001)
+// 2) origin_idx,destination_idx,time_slot,avg_speed_kmh,... (integer indices)
+// Updates arc_time_sigma, time_segment, and time_segments_sigma.
+static void load_speed_csv(const std::string& path) {
+    std::ifstream fin(path);
+    if (!fin) { std::cerr << "Warning: cannot open speed CSV: " << path << "\n"; return; }
+
+    // Simple CSV parser handling quoted fields
+    auto csv_split = [](const std::string& line) {
+        std::vector<std::string> fields;
+        bool in_q = false;
+        std::string f;
+        for (char c : line) {
+            if (c == '"') { in_q = !in_q; }
+            else if (c == ',' && !in_q) { fields.push_back(f); f.clear(); }
+            else { f += c; }
+        }
+        fields.push_back(f);
+        return fields;
+    };
+    auto trim = [](std::string s) {
+        size_t a = s.find_first_not_of(" \t\r\n");
+        if (a == std::string::npos) return std::string{};
+        return s.substr(a, s.find_last_not_of(" \t\r\n") - a + 1);
+    };
+
+    // Read header (strip UTF-8 BOM)
+    std::string line;
+    if (!std::getline(fin, line)) return;
+    if (line.size() >= 3 && (unsigned char)line[0] == 0xEF) line = line.substr(3);
+    auto hdr = csv_split(line);
+    int c_orig=-1, c_dest=-1, c_orig_idx=-1, c_dest_idx=-1, c_slot=-1, c_dist=-1, c_spd=-1;
+    for (int i = 0; i < (int)hdr.size(); ++i) {
+        std::string h = trim(hdr[i]);
+        if (h == "origin_id")      c_orig = i;
+        else if (h == "destination_id") c_dest = i;
+        else if (h == "origin_idx") c_orig_idx = i;
+        else if (h == "destination_idx") c_dest_idx = i;
+        else if (h == "time_slot")  c_slot = i;
+        else if (h == "distance_m") c_dist = i;
+        else if (h == "avg_speed_kmh") c_spd = i;
+    }
+    bool use_idx_cols = (c_orig_idx >= 0 && c_dest_idx >= 0);
+    bool use_id_cols = (c_orig >= 0 && c_dest >= 0);
+    if ((!use_idx_cols && !use_id_cols) || c_slot < 0 || c_spd < 0) {
+        std::cerr << "Warning: speed CSV missing required columns\n"; return;
     }
 
-    string line;
-    vector<double> values;
-    while (getline(fin, line)) {
-        if (!parse_numeric_record(line, values)) continue;
-        if (values.size() < 3) continue;
-        int i = (int)values[0];
-        int j = (int)values[1];
-        double edge_vmax = values[2];
-        if (i < 0 || i > n || j < 0 || j > n || edge_vmax <= 1e-8) continue;
-        truck_vmax_ij[i][j] = edge_vmax;
+    // Parse rows
+    struct Row { int i, j; std::string slot; double speed; };
+    std::vector<Row> rows;
+    std::set<std::string> slot_set;
+    while (std::getline(fin, line)) {
+        if (line.empty() || line[0] == '#') continue;
+        auto f = csv_split(line);
+        int max_col = std::max({
+            use_idx_cols ? c_orig_idx : c_orig,
+            use_idx_cols ? c_dest_idx : c_dest,
+            c_slot, c_spd, c_dist
+        });
+        if ((int)f.size() <= max_col) continue;
+        std::string orig = trim(f[use_idx_cols ? c_orig_idx : c_orig]);
+        std::string dest = trim(f[use_idx_cols ? c_dest_idx : c_dest]);
+        std::string slot = trim(f[c_slot]);
+        int ni = -1, nj = -1;
+        try {
+            if (use_idx_cols) {
+                ni = std::stoi(orig);
+                nj = std::stoi(dest);
+            } else {
+                if (orig.size() > 1) ni = std::stoi(orig.substr(1));
+                if (dest.size() > 1) nj = std::stoi(dest.substr(1));
+            }
+        } catch (...) { continue; }
+        if (ni < 0 || nj < 0 || ni > n || nj > n || ni == nj) continue;
+        double spd = 0;
+        try { spd = std::stod(trim(f[c_spd])); } catch (...) { continue; }
+        slot_set.insert(slot);
+        rows.push_back({ni, nj, slot, spd});
     }
-}
+    if (rows.empty()) return;
 
-static void load_truck_theta_ijl_file(const string& filepath) {
-    if (filepath.empty()) return;
-    ifstream fin(filepath);
-    if (!fin) {
-        cerr << "Error: Cannot open truck theta file " << filepath << endl;
-        exit(1);
+    // Build time_segment boundaries from slot strings like "05-07"
+    std::set<int> bnd_set;
+    for (const auto& s : slot_set) {
+        auto dash = s.find('-', 1);
+        if (dash == std::string::npos) continue;
+        try { bnd_set.insert(std::stoi(s.substr(0, dash))); bnd_set.insert(std::stoi(s.substr(dash+1))); } catch (...) {}
+    }
+    if (bnd_set.size() < 2) return;
+    time_segment.assign(bnd_set.begin(), bnd_set.end());
+
+    // Map slot string -> segment index (0-based, = index of slot start boundary)
+    std::map<std::string, int> slot_seg;
+    for (const auto& s : slot_set) {
+        auto dash = s.find('-', 1);
+        if (dash == std::string::npos) continue;
+        try {
+            double start_hr = std::stod(s.substr(0, dash));
+            auto it = std::lower_bound(time_segment.begin(), time_segment.end(), start_hr);
+            if (it != time_segment.end() && *it == start_hr)
+                slot_seg[s] = (int)(it - time_segment.begin());
+        } catch (...) {}
     }
 
-    int segment_count = truck_time_segment_count();
-    string line;
-    vector<double> values;
-    while (getline(fin, line)) {
-        if (!parse_numeric_record(line, values)) continue;
-        if (values.size() < 4) continue;
-        int i = (int)values[0];
-        int j = (int)values[1];
-        int l = (int)values[2];
-        double theta = values[3];
-        if (i < 0 || i > n || j < 0 || j > n || l < 0 || l >= segment_count || theta <= 1e-8) continue;
-        truck_theta_ijl[l][i][j] = theta;
-    }
-}
+    int num_segs = (int)time_segment.size() - 1;
+    const double FREE_FLOW_KMH = 25.0;
 
-static void configure_time_dependent_truck_speed_model() {
-    initialize_time_dependent_truck_speed_model();
-    load_truck_vmax_ij_file(CFG_TRUCK_VMAX_FILE);
-    load_truck_theta_ijl_file(CFG_TRUCK_THETA_FILE);
-}
+    // Initialise arc_time_sigma with sentinel -1
+    arc_time_sigma.assign(n+1, std::vector<vd>(n+1, vd(num_segs, -1.0)));
 
-static double get_truck_edge_speed(int from, int to, int segment_idx) {
-    if (from < 0 || from > n || to < 0 || to > n) return vmax;
-    double edge_vmax = vmax;
-    if ((int)truck_vmax_ij.size() == n + 1 && (int)truck_vmax_ij[from].size() == n + 1) {
-        edge_vmax = truck_vmax_ij[from][to];
+    for (auto& r : rows) {
+        auto it = slot_seg.find(r.slot);
+        if (it == slot_seg.end()) continue;
+        int seg = it->second;
+        if (seg >= num_segs) continue;
+        arc_time_sigma[r.i][r.j][seg] = r.speed / FREE_FLOW_KMH;
     }
 
-    double theta = 1.0;
-    if (segment_idx >= 0 && segment_idx < (int)truck_theta_ijl.size() &&
-        (int)truck_theta_ijl[segment_idx].size() == n + 1 &&
-        (int)truck_theta_ijl[segment_idx][from].size() == n + 1) {
-        theta = truck_theta_ijl[segment_idx][from][to];
-    } else if (segment_idx >= 0 && segment_idx < (int)time_segments_sigma.size()) {
-        theta = time_segments_sigma[segment_idx];
+    // Compute per-segment global averages from observed data
+    vd global_avg(num_segs, 1.0);
+    for (int s = 0; s < num_segs; ++s) {
+        double sum = 0; int cnt = 0;
+        for (int i = 0; i <= n; ++i)
+            for (int j = 0; j <= n; ++j)
+                if (i != j && arc_time_sigma[i][j][s] >= 0) { sum += arc_time_sigma[i][j][s]; cnt++; }
+        global_avg[s] = cnt > 0 ? sum/cnt : 1.0;
     }
+    time_segments_sigma = global_avg;
 
-    double speed = theta * edge_vmax;
-    if (speed <= 1e-8) return max(vmax, 1.0);
-    return speed;
+    // Fill missing slots with global average
+    for (int i = 0; i <= n; ++i)
+        for (int j = 0; j <= n; ++j)
+            if (i != j)
+                for (int s = 0; s < num_segs; ++s)
+                    if (arc_time_sigma[i][j][s] < 0)
+                        arc_time_sigma[i][j][s] = global_avg[s];
+
+    std::cout << "Loaded speed CSV: " << rows.size() << " arc-slot entries, "
+              << num_segs << " segments [";
+    for (int s = 0; s < (int)time_segment.size(); ++s)
+        std::cout << time_segment[s] << (s+1<(int)time_segment.size()?",":"");
+    std::cout << "]h\n";
 }
 
 // Helper: get time segment index for a given time t (in hours)
@@ -411,16 +546,21 @@ pair<double, double> compute_truck_route_time(const vi& route, double start=0) {
         while (dist_left > 1e-8) {
             if (++guard_steps > 1000000) {
                 // Fallback: assume constant speed and finish remaining distance
-                int seg_safe = get_time_segment(time / 3600.0);
-                double v_safe = get_truck_edge_speed(from, to, seg_safe);
+                double v_safe = vmax > 1e-6 ? vmax : 1.0;
                 time += dist_left / v_safe;
                 dist_left = 0.0;
                 break;
             }
             // Convert time to hours for segment lookup
             double t_hr = time / 3600.0;
-            int seg = get_time_segment(t_hr); // 0-based index into truck_theta_ijl
-            double v = get_truck_edge_speed(from, to, seg); // v_ijl = theta_ijl * vmax_ij
+            int seg = get_time_segment(t_hr); // 0-based index into time_segments_sigma
+            double sigma;
+            if (!arc_time_sigma.empty() && seg < (int)arc_time_sigma[from][to].size())
+                sigma = arc_time_sigma[from][to][seg];
+            else
+                sigma = (seg < (int)time_segments_sigma.size()) ? time_segments_sigma[seg] : 1.0;
+            double v = vmax * sigma; // m/s
+            if (v <= 1e-8) v = vmax;
             // Time left in this cyclic custom segment. If the trip goes beyond
             // one profile period, boundaries must advance to the current cycle.
             double period_hr = (time_segment.size() >= 2 && time_segment.back() > time_segment.front())
@@ -1528,9 +1668,7 @@ Solution local_search(const Solution& initial_solution, int neighbor_id, int cur
     if (neighbor_id == 0) {
         // Relocate 1 customer from the critical (longest-time) vehicle route to another route of the same mode
         // 1) Identify critical vehicle (truck or drone) using precomputed times
-        auto critical_info = critical_solution_index(initial_solution);
-        int critical_idx = critical_info.first;
-        bool crit_is_truck = critical_info.second;
+        auto [critical_idx, crit_is_truck] = critical_solution_index(initial_solution);
 
          // Ensure tabu list is sized to (n+1) x (h+d)
         int veh_count = h + d;
@@ -1752,9 +1890,7 @@ Solution local_search(const Solution& initial_solution, int neighbor_id, int cur
         return best_neighbor;
     } else if (neighbor_id == 1) {
         // Neighborhood 1: swap two customers, allowing cross-mode exchanges
-        auto critical_info_2opt_star = critical_solution_index(initial_solution);
-        int critical_idx = critical_info_2opt_star.first;
-        bool crit_is_truck = critical_info_2opt_star.second;
+        auto [critical_idx, crit_is_truck] = critical_solution_index(initial_solution);
 
         if ((int)tabu_list_11.size() != n + 1 || (n + 1 > 0 && (int)tabu_list_11[0].size() != n + 1)) {
             tabu_list_11.assign(n + 1, vector<int>(n + 1, 0));
@@ -2386,9 +2522,7 @@ Solution local_search(const Solution& initial_solution, int neighbor_id, int cur
             tabu_list_2opt_star.assign(n + 1, vector<int>(n + 1, 0));
         }
 
-        pair<int, bool> critical_info_2opt_star = critical_solution_index(initial_solution);
-        int critical_idx = critical_info_2opt_star.first;
-        bool crit_is_truck = critical_info_2opt_star.second;
+        auto [critical_idx, crit_is_truck] = critical_solution_index(initial_solution);
 
         auto normalize_route = [](vi route) {
             if (route.empty()) return route;
@@ -5886,10 +6020,6 @@ Solution destroy_sisr_repair(Solution sol) {
     return repair_solution_common(sol, to_destroy);
 }
 
-static bool write_output_file(const std::string& out_path, const Solution& sol, double cost,
-                              double mean_elapsed_sec, bool final_feasibility,
-                              double worst_cost, double mean_cost);
-
 Solution tabu_search(const Solution& initial_solution, int num_initial_sol,  vector<double>& iter_current, vector<double>& iter_best, vector<bool>& iter_feasible) {
     auto ts_start = std::chrono::high_resolution_clock::now();
     auto is_feasible = [](const Solution& sol) {
@@ -5916,60 +6046,79 @@ Solution tabu_search(const Solution& initial_solution, int num_initial_sol,  vec
     iter_best.clear();
     iter_feasible.clear();
 
+    int destroy_repair_count = 0;
+    int no_improve_segments = 0;
+
     Solution current_sol = initial_solution;
+    double current_cost = initial_solution.total_makespan;
 
     int iter = 0;
     int total_iters = CFG_MAX_SEGMENT * CFG_MAX_ITER_PER_SEGMENT;
     int no_improve_iters = 0;
+    int scoring_mode_iter = 0; // 0: makespan, 1: L2 norm, 2: total time
     Solution best_segment_sol = current_sol;
-    double best_segment_score = solution_score_makespan(current_sol);
-    double best_solution_score_now = best_segment_score;
-    cout << "=== Starting Tabu Search (Neighborhood Selection Experiment) ===\n";
-    cout << "Neighborhood selection: " << CFG_NEIGHBORHOOD_SELECTION << "\n";
-    if (CFG_NEIGHBORHOOD_SELECTION == "adaptive") {
-        cout << "Adaptive parameters: [" << CFG_GAMMA1 << ", " << CFG_GAMMA2
-             << ", " << CFG_GAMMA3 << ", " << CFG_GAMMA4 << "]\n";
-    }
+    double best_segment_score = scoring_mode_iter == 0 ? solution_score_makespan(current_sol) :
+                                (scoring_mode_iter == 1 ? solution_score_l2_norm(current_sol) : solution_score_total_time(current_sol));
+    double best_solution_score_now;
+        if (scoring_mode_iter == 1) {
+            best_solution_score_now = solution_score_l2_norm(current_sol);
+        }
+        else if (scoring_mode_iter == 0){
+            best_solution_score_now = solution_score_makespan(current_sol);
+        }
+        else if (scoring_mode_iter == 2){
+            best_solution_score_now = solution_score_total_time(current_sol);
+        }
+    cout << "=== Starting Unified Tabu Search (Minimizing Weighted Cost) ===\n";
     cout << "Initial Cost: " << best_solution_score_now << "\n";
 
     double current_score = best_solution_score_now;
-    write_output_file("output_solution_best.txt", initial_solution,
-                      initial_solution.total_makespan, 0.0, initial_feasible,
-                      initial_solution.total_makespan, initial_solution.total_makespan);
+    int segments_per_mode[3] = {0, 0, 0};
     while (iter < total_iters) {
         if (CFG_TIME_LIMIT_SEC > 0.0) {
             double elapsed = std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - ts_start).count();
             if (elapsed >= CFG_TIME_LIMIT_SEC) break;
         }
         
-        current_score = solution_score_makespan(current_sol);
+        if (scoring_mode_iter == 1) {
+            current_score = solution_score_l2_norm(current_sol);
+            //best_solution_score_now = solution_score_l2_norm(best_solution);
+        }
+        else if (scoring_mode_iter == 0){
+            current_score = solution_score_makespan(current_sol);
+            //best_solution_score_now = solution_score_makespan(best_solution);
+        }
+        else if (scoring_mode_iter == 2){
+            current_score = solution_score_total_time(current_sol);
+            //best_solution_score_now = solution_score_total_time(best_solution);
+        }
         double current_pure_cost = current_sol.total_makespan;
         iter_current.push_back(current_pure_cost);;
         iter_best.push_back(best_feasible_solution.total_makespan);
         iter_feasible.push_back(is_feasible(current_sol));
 
 
-        int selected_neighbor = 0;
-        if (CFG_NEIGHBORHOOD_SELECTION == "random") {
-            selected_neighbor = rand() % NUM_NEIGHBORHOODS;
-        } else if (CFG_NEIGHBORHOOD_SELECTION == "cyclic") {
-            selected_neighbor = iter % NUM_NEIGHBORHOODS;
-        } else {
-            double total_weight = 0.0;
-            for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) {
-                total_weight += weight[i];
-            }
-            double random_value = static_cast<double>(rand()) / RAND_MAX;
-            selected_neighbor = NUM_NEIGHBORHOODS - 1;
-            double cumulative = 0.0;
-            for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) {
-                cumulative += weight[i] / total_weight;
-                if (random_value < cumulative) {
-                    selected_neighbor = i;
-                    break;
-                }
+        // Roulette Wheel Selection
+        double total_weight = 0.0;
+        for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) {
+            total_weight += weight[i];
+        }
+        double r = ((double) rand() / (RAND_MAX));
+        int selected_neighbor = NUM_NEIGHBORHOODS - 1; // fallback: last bucket absorbs rounding
+        double cumulative = 0.0;
+        for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) {
+            cumulative += weight[i] / total_weight;
+            if (r < cumulative) {
+                selected_neighbor = i;
+                break;
             }
         }
+
+        // Change it to random selection for testing
+        //selected_neighbor = rand() % NUM_NEIGHBORHOODS;
+
+        //Change it to round-robin/cyclic for testing
+        //selected_neighbor = iter % NUM_NEIGHBORHOODS;
         count[selected_neighbor]++;
 
         
@@ -5977,15 +6126,29 @@ Solution tabu_search(const Solution& initial_solution, int num_initial_sol,  vec
         Solution init_neighbor;
         Solution neighbor;
         try {
-            init_neighbor = local_search(current_sol, selected_neighbor, iter, best_solution_score_now, solution_score_makespan);
+            if (scoring_mode_iter == 0) {
+                init_neighbor = local_search(current_sol, selected_neighbor, iter, best_solution_score_now, solution_score_makespan);
+            }
+            else if (scoring_mode_iter == 1){
+                init_neighbor = local_search(current_sol, selected_neighbor, iter, best_solution_score_now, solution_score_l2_norm);
+            }
+            else if (scoring_mode_iter == 2){
+                init_neighbor = local_search_all_vehicle(current_sol, selected_neighbor, iter, best_solution_score_now, solution_score_total_time);
+            }
             neighbor = recalculate_solution(init_neighbor);
             if (std::abs(neighbor.deadline_violation - init_neighbor.deadline_violation) > 1e-8 ||
                 std::abs(neighbor.capacity_violation - init_neighbor.capacity_violation) > 1e-8 ||
                 std::abs(neighbor.energy_violation - init_neighbor.energy_violation) > 1e-8 ||
                 std::abs(neighbor.total_makespan - init_neighbor.total_makespan) > 1e-8) {
-                cerr << "Warning: iter " << iter
-                     << ", neighborhood " << selected_neighbor
-                     << " had stale cached metrics; using recalculated neighbor.\n";
+                cout << "Iter " << iter << ", Selected Neighborhood: " << selected_neighbor << " recalculation changed violation values!\n";
+                cout << "Current Solution:\n";
+                print_solution_stream(current_sol, cout);
+                cout << "Initial Neighbor Solution:\n";
+                print_solution_stream(init_neighbor, cout);
+                cout << "Recalculated Neighbor Solution:\n";
+                print_solution_stream(neighbor, cout);
+                neighbor = current_sol;
+                exit(1);
             }
              if (!check_solution_integrity(neighbor)) {
                 cout << "Iter " << iter << ", Selected Neighborhood: " << selected_neighbor << "failed integrity check!\n";
@@ -6014,27 +6177,41 @@ Solution tabu_search(const Solution& initial_solution, int num_initial_sol,  vec
         }
 
         bool neighbor_feasible = is_feasible(neighbor);
-        double neighbor_score = solution_score_makespan(neighbor);
+        double neighbor_score;
+        if (scoring_mode_iter == 1) {
+            neighbor_score = solution_score_l2_norm(neighbor);
+        } else if (scoring_mode_iter == 0) {
+            neighbor_score = solution_score_makespan(neighbor);
+        } else if (scoring_mode_iter == 2){
+            neighbor_score = solution_score_total_time(neighbor);
+        }
 
         // Acceptance
-        bool checkpoint_dirty = false;
         if (neighbor_score + 1e-12 < best_solution_score_now) {
             
             current_sol = neighbor;
             best_solution = neighbor;
             best_solution_score_now = neighbor_score;
-            checkpoint_dirty = !std::isfinite(best_feasible_makespan);
-            score[selected_neighbor] += CFG_GAMMA1;
+            score[selected_neighbor] += gamma1;
             current_score = neighbor_score;
             no_improve_iters = 0;
             
         } else if (neighbor_score + 1e-12 < current_score) {
             current_sol = neighbor;
-            score[selected_neighbor] += CFG_GAMMA2;
+            score[selected_neighbor] += gamma2;
             current_score = neighbor_score;
             no_improve_iters++;
         } else {
-            score[selected_neighbor] += CFG_GAMMA3;
+            double T = T0 * pow(alpha, iter);
+            double delta = current_score - neighbor_score;
+            double ap = exp(delta / T);
+            double rand_val = ((double) rand() / (RAND_MAX));
+            if (rand_val < ap) {
+                current_sol = neighbor;
+                current_cost = neighbor.total_makespan;
+                current_score = neighbor_score;
+            }
+            score[selected_neighbor] += gamma3;
             no_improve_iters++;
         }
 
@@ -6044,18 +6221,8 @@ Solution tabu_search(const Solution& initial_solution, int num_initial_sol,  vec
              if (n_cost + 1e-12 < best_feasible_makespan) {
                  best_feasible_solution = neighbor;
                  best_feasible_makespan = n_cost;
-                 checkpoint_dirty = true;
                  cout << "Iter " << iter << " New Best Feasible Makespan: " << best_feasible_makespan << "\n";
              }
-        }
-
-        if (checkpoint_dirty) {
-            const bool have_feasible = std::isfinite(best_feasible_makespan);
-            const Solution& checkpoint_solution = have_feasible ? best_feasible_solution : best_solution;
-            double elapsed = std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - ts_start).count();
-            write_output_file("output_solution_best.txt", checkpoint_solution,
-                              initial_solution.total_makespan, elapsed, have_feasible,
-                              checkpoint_solution.total_makespan, checkpoint_solution.total_makespan);
         }
 
         // Update best segment solution
@@ -6066,34 +6233,75 @@ Solution tabu_search(const Solution& initial_solution, int num_initial_sol,  vec
         
         update_penalties(current_sol);
 
-        // Adaptive weights are updated after each complete segment.
-        if ((iter + 1) % CFG_MAX_ITER_PER_SEGMENT == 0) {
-            cout << "=== End of Segment " << ((iter + 1) / CFG_MAX_ITER_PER_SEGMENT) << " ===\n";
+        // Periodic Weight & Segment Mode Update
+        if (iter % CFG_MAX_ITER_PER_SEGMENT == 0) {
+            segments_per_mode[scoring_mode_iter]++;
+            cout << "=== End of Segment " << (iter / CFG_MAX_ITER_PER_SEGMENT) << " ===\n";
             cout << "Best Current Solution Score: " << best_solution_score_now << " with makespan " << best_solution.total_makespan << "\n";
             cout << "Current Solution Score: " << current_score << " with makespan " << current_sol.total_makespan << "\n";
+            cout << "Current mode: " << (scoring_mode_iter == 0 ? "Makespan" : (scoring_mode_iter == 1 ? "L2 Norm" : "Total Time")) << "\n";
             cout << "Current Weights and Count of neighborhoods: ";
             for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) {
                 cout << "N" << i << ": " << weight[i] << " " << count[i] << " | ";
             }
             cout << "\n";
             if (best_segment_score + 1e-12 < best_solution_score_now) {
+                no_improve_segments = 0;
                 best_solution = best_segment_sol;
                 best_solution_score_now = best_segment_score;
             }
+            else {
+                no_improve_segments++;
+            }
 
-            if (CFG_NEIGHBORHOOD_SELECTION == "adaptive") {
-                for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) {
-                    if (count[i] != 0) {
-                        weight[i] = (1.0 - CFG_GAMMA4) * weight[i] + CFG_GAMMA4 * (score[i] / count[i]);
-                    }
+            if (scoring_mode_iter == 2) {
+                scoring_mode_iter = 0;
+                best_solution_score_now = solution_score_makespan(best_solution);
+                best_segment_sol = best_solution;
+                best_segment_score = best_solution_score_now;
+            }
+
+            if (no_improve_segments % 4 == 2 && no_improve_segments > 0) {
+                // If no improvement for 2 consecutive segments, switch scoring mode to encourage different search behavior
+                if (scoring_mode_iter == 0) {
+                    scoring_mode_iter = 2;
                 }
-                double sum_weights = 0.0;
-                for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) sum_weights += weight[i];
-                if (sum_weights > 0.0) {
-                    for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) weight[i] /= sum_weights;
-                } else {
-                    for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) weight[i] = 1.0 / NUM_NEIGHBORHOODS;
+                else if (scoring_mode_iter == 2) {
+                    scoring_mode_iter = 0;
                 }
+                best_solution_score_now = scoring_mode_iter == 0 ? solution_score_makespan(best_solution) :
+                                            (scoring_mode_iter == 1 ? solution_score_l2_norm(best_solution) : solution_score_total_time(best_solution));
+                best_segment_sol = best_solution;
+                best_segment_score = best_solution_score_now;
+            }
+            if (no_improve_segments % 4 == 0 && no_improve_segments > 0) {
+                // If no improvement for 4 consecutive segments, destroy and repair;
+                current_sol = destroy_worst_repair_random(current_sol);
+                current_sol = recalculate_solution(current_sol);
+                current_score = best_solution_score_now;
+                cout << "No improvement for " << no_improve_segments << " segments, applying perturbation. New makespan: " << current_sol.total_makespan << "\n";
+                tabu_list_10.clear();
+                tabu_list_11.clear();
+                tabu_list_20.clear();
+                tabu_list_2opt.clear();
+                tabu_list_2opt_star.clear();
+                tabu_list_22.clear();
+                tabu_list_21.clear();
+                tabu_list_ejection.clear();
+            }
+
+            // Update weights based on scores
+            for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) {
+                if (count[i] != 0) {
+                    weight[i] = (1.0 - gamma4) * weight[i] + gamma4 * (score[i] / count[i]);
+                }
+            }
+            double sum_weights = 0.0;
+            for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) sum_weights += weight[i];
+            if (sum_weights > 0.0) {
+                for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) weight[i] /= sum_weights;
+            } else {
+                 for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) weight[i] = 1.0 / NUM_NEIGHBORHOODS;
             }
             for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) {
                 score[i] = 0.0;
@@ -6125,6 +6333,8 @@ Solution tabu_search(const Solution& initial_solution, int num_initial_sol,  vec
         }
     } */
 
+    //cout << "Destroy/Repair applied " << destroy_repair_count << " times during the search.\n";
+    cout << "Segments per mode: Makespan " << segments_per_mode[0] << ", L2 Norm " << segments_per_mode[1] << ", Total Time " << segments_per_mode[2] << "\n";
     if (best_feasible_makespan < std::numeric_limits<double>::infinity()) {
         return best_feasible_solution;
     }
@@ -6181,18 +6391,9 @@ static int compute_segment_count(int total_iters, int iters_per_segment) {
 }
 
 static bool write_output_file(const std::string& out_path, const Solution& sol, double cost, double mean_elapsed_sec, bool final_feasibility, double worst_cost, double mean_cost) {
-    const std::string temporary_path = out_path + ".tmp";
-    std::ofstream ofs(temporary_path);
+    std::ofstream ofs(out_path);
     if (!ofs) return false;
     ofs.setf(std::ios::fixed); ofs << setprecision(6);
-    ofs << "Neighborhood selection: " << CFG_NEIGHBORHOOD_SELECTION << "\n";
-    if (CFG_NEIGHBORHOOD_SELECTION == "adaptive") {
-        ofs << "Adaptive parameters: " << CFG_GAMMA1 << " " << CFG_GAMMA2 << " "
-            << CFG_GAMMA3 << " " << CFG_GAMMA4 << "\n";
-    }
-    ofs << "Random seed: " << CFG_RANDOM_SEED << "\n";
-    ofs << "Simulated annealing: disabled\n";
-    ofs << "Diversification: disabled\n";
     ofs << "Initial solution cost: " << cost << "\n";
     ofs << "Improved solution cost: " << sol.total_makespan << "\n";
     ofs << "Worst solution cost: " << worst_cost << "\n";
@@ -6201,9 +6402,7 @@ static bool write_output_file(const std::string& out_path, const Solution& sol, 
     ofs << "Final solution feasibility: " << (final_feasibility ? "FEASIBLE" : "INFEASIBLE") << "\n";
     ofs << "Solution Details:\n";
     print_solution_stream(sol, ofs);
-    ofs.close();
-    if (!ofs) return false;
-    return std::rename(temporary_path.c_str(), out_path.c_str()) == 0;
+    return true;
 }
 
 int main(int argc, char* argv[]) {
@@ -6212,15 +6411,16 @@ int main(int argc, char* argv[]) {
              << " input_file [--print-distance-matrix]"
              << " [--attempts=N] [--segments=N] [--iters=N] [--no-improve=N] [--time-limit=SEC] [--auto-tune]"
              << " [--knn-k=K] [--knn-window=W]"
-             << " [--truck-vmax-file=PATH] [--truck-theta-file=PATH]"
-             << " [--neighborhood-selection=random|cyclic|adaptive]"
-             << " [--gamma1=X] [--gamma2=X] [--gamma3=X] [--gamma4=X] [--seed=N]"
+               << " [--distance-csv=PATH]"
+             << " [--speed-csv=PATH]"
              << "\n";
         return 1;
     }
     string input_file = argv[1];
     bool print_dist_matrix = false;
     bool auto_tune = false;
+    string distance_csv_path;
+    string speed_csv_path;
     // Parse optional flags
     for (int ai = 2; ai < argc; ++ai) {
         string arg = argv[ai];
@@ -6233,39 +6433,27 @@ int main(int argc, char* argv[]) {
         if (parse_kv_flag(arg, "--time-limit", v)) { CFG_TIME_LIMIT_SEC = max(0.0, stod(v)); continue; }
         if (parse_kv_flag(arg, "--knn-k", v)) { CFG_KNN_K = max(0, stoi(v)); continue; }
         if (parse_kv_flag(arg, "--knn-window", v)) { CFG_KNN_WINDOW = max(0, stoi(v)); continue; }
-        if (parse_kv_flag(arg, "--truck-vmax-file", v)) { CFG_TRUCK_VMAX_FILE = v; continue; }
-        if (parse_kv_flag(arg, "--truck-theta-file", v)) { CFG_TRUCK_THETA_FILE = v; continue; }
-        if (parse_kv_flag(arg, "--neighborhood-selection", v)) { CFG_NEIGHBORHOOD_SELECTION = v; continue; }
-        if (parse_kv_flag(arg, "--gamma1", v)) { CFG_GAMMA1 = stod(v); continue; }
-        if (parse_kv_flag(arg, "--gamma2", v)) { CFG_GAMMA2 = stod(v); continue; }
-        if (parse_kv_flag(arg, "--gamma3", v)) { CFG_GAMMA3 = stod(v); continue; }
-        if (parse_kv_flag(arg, "--gamma4", v)) { CFG_GAMMA4 = stod(v); continue; }
-        if (parse_kv_flag(arg, "--seed", v)) { CFG_RANDOM_SEED = stoul(v); continue; }
+        if (parse_kv_flag(arg, "--distance-csv", v)) { distance_csv_path = v; continue; }
+        if (parse_kv_flag(arg, "--speed-csv", v)) { speed_csv_path = v; continue; }
         if (arg == "--auto-tune") { auto_tune = true; continue; }
     }
-
-    if (CFG_NEIGHBORHOOD_SELECTION != "random" &&
-        CFG_NEIGHBORHOOD_SELECTION != "cyclic" &&
-        CFG_NEIGHBORHOOD_SELECTION != "adaptive") {
-        cerr << "Invalid --neighborhood-selection: " << CFG_NEIGHBORHOOD_SELECTION
-             << ". Expected random, cyclic, or adaptive.\n";
-        return 1;
-    }
-    if (CFG_GAMMA1 < 0.0 || CFG_GAMMA2 < 0.0 || CFG_GAMMA3 < 0.0 ||
-        CFG_GAMMA4 < 0.0 || CFG_GAMMA4 > 1.0) {
-        cerr << "Invalid adaptive parameters: gamma1..gamma3 must be non-negative and gamma4 must be in [0,1].\n";
-        return 1;
-    }
-    srand(CFG_RANDOM_SEED);
 
     // Read input instance
     input(input_file);
     // Recalculate tenures based on instance size
     update_tabu_tenures();
     // Build distance matrix for downstream time computations
-    compute_distance_matrices(loc);
-    // Build edge/time-dependent truck speed model: v_ijl = theta_ijl * vmax_ij.
-    configure_time_dependent_truck_speed_model();
+    // If --distance-csv is provided, distance must come from it (no Euclidean fallback).
+    if (!distance_csv_path.empty()) {
+        if (!load_distance_matrix_csv(distance_csv_path)) {
+            std::cerr << "Failed to load --distance-csv=" << distance_csv_path << "\n";
+            return 1;
+        }
+    } else {
+        compute_distance_matrices(loc);
+    }
+    // Load arc-specific speed CSV if provided (builds arc_time_sigma/time segments only)
+    if (!speed_csv_path.empty()) load_speed_csv(speed_csv_path);
     if (print_dist_matrix) {
         print_distance_matrix();
         return 0; // only print distance matrix and exit
@@ -6280,9 +6468,17 @@ int main(int argc, char* argv[]) {
         int tuned_iters_per_seg  = compute_iters_per_segment(n, NUM_NEIGHBORHOODS);
         int tuned_segments       = compute_segment_count(tuned_total_iters, tuned_iters_per_seg);
         CFG_MAX_ITER_PER_SEGMENT = min(CFG_MAX_ITER_PER_SEGMENT, tuned_iters_per_seg);
-        CFG_MAX_SEGMENT          = min(CFG_MAX_SEGMENT, tuned_segments);
-        CFG_MAX_NO_IMPROVE       = 4 * CFG_MAX_ITER_PER_SEGMENT;
-        cout << "Search config: total_iters=" << (1LL * CFG_MAX_SEGMENT * CFG_MAX_ITER_PER_SEGMENT)
+        // When a time limit is set, use a large segment count so time governs termination
+        if (CFG_TIME_LIMIT_SEC > 0.0) {
+            // Estimate segments needed to fill the time limit (generous upper bound)
+            int time_based_segments = max(tuned_segments, (int)(CFG_TIME_LIMIT_SEC * 200));
+            CFG_MAX_SEGMENT  = time_based_segments;
+            CFG_MAX_NO_IMPROVE = max(4 * CFG_MAX_ITER_PER_SEGMENT, time_based_segments * CFG_MAX_ITER_PER_SEGMENT);
+        } else {
+            CFG_MAX_SEGMENT    = min(CFG_MAX_SEGMENT, tuned_segments);
+            CFG_MAX_NO_IMPROVE = 4 * CFG_MAX_ITER_PER_SEGMENT;
+        }
+        cout << "Search config: total_iters=" << (CFG_MAX_SEGMENT * CFG_MAX_ITER_PER_SEGMENT)
              << " (segments=" << CFG_MAX_SEGMENT
              << ", iters_per_seg=" << CFG_MAX_ITER_PER_SEGMENT
              << ", no_improve=" << CFG_MAX_NO_IMPROVE << ")\n";
@@ -6327,7 +6523,7 @@ int main(int argc, char* argv[]) {
     all_results.reserve(CFG_NUM_INITIAL);
 
     auto start_time = std::chrono::high_resolution_clock::now();
-    int ablation_seed = static_cast<int>(CFG_RANDOM_SEED);
+    int ablation_seed = 42;
     for (int attempt = 0; attempt < CFG_NUM_INITIAL; ++attempt) {
         Solution initial_solution = generate_initial_solution(ablation_seed + attempt);
         vd iter_current, iter_best;
@@ -6404,6 +6600,6 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-// Run with : g++ -O3 -std=c++20 tabubu.cpp -o tabubu && ./tabubu instance/50.20.4.txt
+// Run with : g++ -O3 -std=c++20 tabubu_time.cpp -o tabubu_time && ./tabubu_time /workspaces/PDSTSP/instance_hanoi/hanoi_1000_generated.txt --speed-csv=od_speed_by_time_slot_weekday_avg.csv --time-limit=120 --distance-csv=/workspaces/PDSTSP/od_distance_m.csv
 // Plot history iteration: python plot_iteration.py --input output.txt --save iterations.png
 // Plot route: python3 plot_sol.py instance/50.20.4.txt output_solution_best.txt

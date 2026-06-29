@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cctype>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -98,12 +99,10 @@ const int NUM_OF_INITIAL_SOLUTIONS = 200;
 const int MAX_SEGMENT = 200;
 const int MAX_NO_IMPROVE = 1000;
 const int MAX_ITER_PER_SEGMENT = 1000;
-static double CFG_GAMMA1 = 0.5;
-static double CFG_GAMMA2 = 0.3;
-static double CFG_GAMMA3 = 0.1;
-static double CFG_GAMMA4 = 0.3;
-static string CFG_NEIGHBORHOOD_SELECTION = "adaptive";
-static unsigned int CFG_RANDOM_SEED = 42;
+const double gamma1 = 0.5;
+const double gamma2 = 0.3;
+const double gamma3 = 0.1;
+const double gamma4 = 0.3;
 
 // Runtime-configurable search knobs (initialized from compile-time defaults)
 static int CFG_NUM_INITIAL = NUM_OF_INITIAL_SOLUTIONS;
@@ -113,6 +112,23 @@ static int CFG_MAX_ITER_PER_SEGMENT = MAX_ITER_PER_SEGMENT;
 static double CFG_TIME_LIMIT_SEC = 0.0; // 0 = unlimited
 static string CFG_TRUCK_VMAX_FILE; // optional file: i j vmax_ij
 static string CFG_TRUCK_THETA_FILE; // optional file: i j l theta_ijl, l is 0-based segment index
+
+enum class ModeSelectionStrategy {
+    FixedMakespan,
+    SwitchingObjective
+};
+
+struct ModeSelectionConfig {
+    string key;
+    string label;
+    ModeSelectionStrategy strategy;
+    double segment_multiplier = 1.0;
+};
+
+static string CFG_ABLATION_STRATEGY = "all"; // all, fixed, switching, extended-fixed
+static double CFG_EXTENDED_FIXED_MULTIPLIER = 2.0;
+static string CFG_ABLATION_PREFIX = "ablation_mode";
+static int CFG_SEED_BASE = 42;
 
 // Adaptive penalty coefficients for constraint violations
 static double PENALTY_LAMBDA_CAPACITY = 1.0;      // λ for capacity violations
@@ -5886,18 +5902,39 @@ Solution destroy_sisr_repair(Solution sol) {
     return repair_solution_common(sol, to_destroy);
 }
 
-static bool write_output_file(const std::string& out_path, const Solution& sol, double cost,
-                              double mean_elapsed_sec, bool final_feasibility,
-                              double worst_cost, double mean_cost);
+static double score_solution_for_mode(const Solution& sol, int scoring_mode_iter) {
+    if (scoring_mode_iter == 1) return solution_score_l2_norm(sol);
+    if (scoring_mode_iter == 2) return solution_score_total_time(sol);
+    return solution_score_makespan(sol);
+}
 
-Solution tabu_search(const Solution& initial_solution, int num_initial_sol,  vector<double>& iter_current, vector<double>& iter_best, vector<bool>& iter_feasible) {
+static const char* scoring_mode_name(int scoring_mode_iter) {
+    if (scoring_mode_iter == 1) return "L2 Norm";
+    if (scoring_mode_iter == 2) return "Total Time";
+    return "Makespan";
+}
+
+static void clear_tabu_memory() {
+    tabu_list_switch.clear();
+    tabu_list_10.clear();
+    tabu_list_11.clear();
+    tabu_list_20.clear();
+    tabu_list_2opt.clear();
+    tabu_list_2opt_star.clear();
+    tabu_list_22.clear();
+    tabu_list_21.clear();
+    tabu_list_ejection.clear();
+}
+
+Solution tabu_search(const Solution& initial_solution, int num_initial_sol, vector<double>& iter_current, vector<double>& iter_best, vector<bool>& iter_feasible, const ModeSelectionConfig& mode_config) {
     auto ts_start = std::chrono::high_resolution_clock::now();
     auto is_feasible = [](const Solution& sol) {
         return sol.deadline_violation <= 1e-8 &&
                sol.capacity_violation <= 1e-8 &&
                sol.energy_violation <= 1e-8;
     };
-    // Initialize edge records
+    // Initialize edge records and tabu memory so repeated ablation runs are independent.
+    clear_tabu_memory();
     edge_records.assign(n + 1, vector<double>(n + 1, 1e10));
     updated_edge_records(initial_solution);
     Solution best_solution = initial_solution;
@@ -5916,60 +5953,58 @@ Solution tabu_search(const Solution& initial_solution, int num_initial_sol,  vec
     iter_best.clear();
     iter_feasible.clear();
 
+    int destroy_repair_count = 0;
+    int no_improve_segments = 0;
+
     Solution current_sol = initial_solution;
+    double current_cost = initial_solution.total_makespan;
 
     int iter = 0;
     int total_iters = CFG_MAX_SEGMENT * CFG_MAX_ITER_PER_SEGMENT;
     int no_improve_iters = 0;
+    int scoring_mode_iter = 0; // 0: makespan, 1: L2 norm, 2: total time
     Solution best_segment_sol = current_sol;
-    double best_segment_score = solution_score_makespan(current_sol);
-    double best_solution_score_now = best_segment_score;
-    cout << "=== Starting Tabu Search (Neighborhood Selection Experiment) ===\n";
-    cout << "Neighborhood selection: " << CFG_NEIGHBORHOOD_SELECTION << "\n";
-    if (CFG_NEIGHBORHOOD_SELECTION == "adaptive") {
-        cout << "Adaptive parameters: [" << CFG_GAMMA1 << ", " << CFG_GAMMA2
-             << ", " << CFG_GAMMA3 << ", " << CFG_GAMMA4 << "]\n";
-    }
+    double best_segment_score = score_solution_for_mode(current_sol, scoring_mode_iter);
+    double best_solution_score_now = score_solution_for_mode(current_sol, scoring_mode_iter);
+    cout << "=== Starting Unified Tabu Search (" << mode_config.label << ") ===\n";
     cout << "Initial Cost: " << best_solution_score_now << "\n";
 
     double current_score = best_solution_score_now;
-    write_output_file("output_solution_best.txt", initial_solution,
-                      initial_solution.total_makespan, 0.0, initial_feasible,
-                      initial_solution.total_makespan, initial_solution.total_makespan);
+    int segments_per_mode[3] = {0, 0, 0};
     while (iter < total_iters) {
         if (CFG_TIME_LIMIT_SEC > 0.0) {
             double elapsed = std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - ts_start).count();
             if (elapsed >= CFG_TIME_LIMIT_SEC) break;
         }
         
-        current_score = solution_score_makespan(current_sol);
+        current_score = score_solution_for_mode(current_sol, scoring_mode_iter);
         double current_pure_cost = current_sol.total_makespan;
         iter_current.push_back(current_pure_cost);;
         iter_best.push_back(best_feasible_solution.total_makespan);
         iter_feasible.push_back(is_feasible(current_sol));
 
 
-        int selected_neighbor = 0;
-        if (CFG_NEIGHBORHOOD_SELECTION == "random") {
-            selected_neighbor = rand() % NUM_NEIGHBORHOODS;
-        } else if (CFG_NEIGHBORHOOD_SELECTION == "cyclic") {
-            selected_neighbor = iter % NUM_NEIGHBORHOODS;
-        } else {
-            double total_weight = 0.0;
-            for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) {
-                total_weight += weight[i];
-            }
-            double random_value = static_cast<double>(rand()) / RAND_MAX;
-            selected_neighbor = NUM_NEIGHBORHOODS - 1;
-            double cumulative = 0.0;
-            for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) {
-                cumulative += weight[i] / total_weight;
-                if (random_value < cumulative) {
-                    selected_neighbor = i;
-                    break;
-                }
+        // Roulette Wheel Selection
+        double total_weight = 0.0;
+        for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) {
+            total_weight += weight[i];
+        }
+        double r = ((double) rand() / (RAND_MAX));
+        int selected_neighbor = NUM_NEIGHBORHOODS - 1; // fallback: last bucket absorbs rounding
+        double cumulative = 0.0;
+        for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) {
+            cumulative += weight[i] / total_weight;
+            if (r < cumulative) {
+                selected_neighbor = i;
+                break;
             }
         }
+
+        // Change it to random selection for testing
+        //selected_neighbor = rand() % NUM_NEIGHBORHOODS;
+
+        //Change it to round-robin/cyclic for testing
+        //selected_neighbor = iter % NUM_NEIGHBORHOODS;
         count[selected_neighbor]++;
 
         
@@ -5977,7 +6012,15 @@ Solution tabu_search(const Solution& initial_solution, int num_initial_sol,  vec
         Solution init_neighbor;
         Solution neighbor;
         try {
-            init_neighbor = local_search(current_sol, selected_neighbor, iter, best_solution_score_now, solution_score_makespan);
+            if (scoring_mode_iter == 0) {
+                init_neighbor = local_search(current_sol, selected_neighbor, iter, best_solution_score_now, solution_score_makespan);
+            }
+            else if (scoring_mode_iter == 1){
+                init_neighbor = local_search(current_sol, selected_neighbor, iter, best_solution_score_now, solution_score_l2_norm);
+            }
+            else if (scoring_mode_iter == 2){
+                init_neighbor = local_search_all_vehicle(current_sol, selected_neighbor, iter, best_solution_score_now, solution_score_total_time);
+            }
             neighbor = recalculate_solution(init_neighbor);
             if (std::abs(neighbor.deadline_violation - init_neighbor.deadline_violation) > 1e-8 ||
                 std::abs(neighbor.capacity_violation - init_neighbor.capacity_violation) > 1e-8 ||
@@ -6014,27 +6057,26 @@ Solution tabu_search(const Solution& initial_solution, int num_initial_sol,  vec
         }
 
         bool neighbor_feasible = is_feasible(neighbor);
-        double neighbor_score = solution_score_makespan(neighbor);
+        double neighbor_score = score_solution_for_mode(neighbor, scoring_mode_iter);
 
         // Acceptance
-        bool checkpoint_dirty = false;
         if (neighbor_score + 1e-12 < best_solution_score_now) {
             
             current_sol = neighbor;
             best_solution = neighbor;
             best_solution_score_now = neighbor_score;
-            checkpoint_dirty = !std::isfinite(best_feasible_makespan);
-            score[selected_neighbor] += CFG_GAMMA1;
+            score[selected_neighbor] += gamma1;
             current_score = neighbor_score;
             no_improve_iters = 0;
             
         } else if (neighbor_score + 1e-12 < current_score) {
             current_sol = neighbor;
-            score[selected_neighbor] += CFG_GAMMA2;
+            score[selected_neighbor] += gamma2;
             current_score = neighbor_score;
             no_improve_iters++;
         } else {
-            score[selected_neighbor] += CFG_GAMMA3;
+            // Ablation variant: no simulated annealing acceptance. Worsening moves are rejected.
+            score[selected_neighbor] += gamma3;
             no_improve_iters++;
         }
 
@@ -6044,18 +6086,8 @@ Solution tabu_search(const Solution& initial_solution, int num_initial_sol,  vec
              if (n_cost + 1e-12 < best_feasible_makespan) {
                  best_feasible_solution = neighbor;
                  best_feasible_makespan = n_cost;
-                 checkpoint_dirty = true;
                  cout << "Iter " << iter << " New Best Feasible Makespan: " << best_feasible_makespan << "\n";
              }
-        }
-
-        if (checkpoint_dirty) {
-            const bool have_feasible = std::isfinite(best_feasible_makespan);
-            const Solution& checkpoint_solution = have_feasible ? best_feasible_solution : best_solution;
-            double elapsed = std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - ts_start).count();
-            write_output_file("output_solution_best.txt", checkpoint_solution,
-                              initial_solution.total_makespan, elapsed, have_feasible,
-                              checkpoint_solution.total_makespan, checkpoint_solution.total_makespan);
         }
 
         // Update best segment solution
@@ -6066,34 +6098,71 @@ Solution tabu_search(const Solution& initial_solution, int num_initial_sol,  vec
         
         update_penalties(current_sol);
 
-        // Adaptive weights are updated after each complete segment.
-        if ((iter + 1) % CFG_MAX_ITER_PER_SEGMENT == 0) {
-            cout << "=== End of Segment " << ((iter + 1) / CFG_MAX_ITER_PER_SEGMENT) << " ===\n";
+        // Periodic Weight & Segment Mode Update
+        if (iter % CFG_MAX_ITER_PER_SEGMENT == 0) {
+            segments_per_mode[scoring_mode_iter]++;
+            cout << "=== End of Segment " << (iter / CFG_MAX_ITER_PER_SEGMENT) << " ===\n";
             cout << "Best Current Solution Score: " << best_solution_score_now << " with makespan " << best_solution.total_makespan << "\n";
             cout << "Current Solution Score: " << current_score << " with makespan " << current_sol.total_makespan << "\n";
+            cout << "Current mode: " << scoring_mode_name(scoring_mode_iter) << "\n";
             cout << "Current Weights and Count of neighborhoods: ";
             for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) {
                 cout << "N" << i << ": " << weight[i] << " " << count[i] << " | ";
             }
             cout << "\n";
             if (best_segment_score + 1e-12 < best_solution_score_now) {
+                no_improve_segments = 0;
                 best_solution = best_segment_sol;
                 best_solution_score_now = best_segment_score;
             }
+            else {
+                no_improve_segments++;
+            }
 
-            if (CFG_NEIGHBORHOOD_SELECTION == "adaptive") {
-                for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) {
-                    if (count[i] != 0) {
-                        weight[i] = (1.0 - CFG_GAMMA4) * weight[i] + CFG_GAMMA4 * (score[i] / count[i]);
-                    }
+            if (mode_config.strategy == ModeSelectionStrategy::SwitchingObjective && scoring_mode_iter == 2) {
+                scoring_mode_iter = 0;
+                best_solution_score_now = solution_score_makespan(best_solution);
+                best_segment_sol = best_solution;
+                best_segment_score = best_solution_score_now;
+            }
+
+            if (mode_config.strategy == ModeSelectionStrategy::SwitchingObjective && no_improve_segments % 4 == 2 && no_improve_segments > 0) {
+                // If no improvement for 2 consecutive segments, switch scoring mode to encourage different search behavior
+                if (scoring_mode_iter == 0) {
+                    scoring_mode_iter = 2;
                 }
-                double sum_weights = 0.0;
-                for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) sum_weights += weight[i];
-                if (sum_weights > 0.0) {
-                    for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) weight[i] /= sum_weights;
-                } else {
-                    for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) weight[i] = 1.0 / NUM_NEIGHBORHOODS;
+                else if (scoring_mode_iter == 2) {
+                    scoring_mode_iter = 0;
                 }
+                best_solution_score_now = score_solution_for_mode(best_solution, scoring_mode_iter);
+                best_segment_sol = best_solution;
+                best_segment_score = best_solution_score_now;
+            }
+            if (no_improve_segments % 4 == 0 && no_improve_segments > 0) {
+                // Ablation variant: destroy-repair perturbation is disabled.
+                cout << "No improvement for " << no_improve_segments << " segments; destroy-repair disabled for ablation.\n";
+                tabu_list_10.clear();
+                tabu_list_11.clear();
+                tabu_list_20.clear();
+                tabu_list_2opt.clear();
+                tabu_list_2opt_star.clear();
+                tabu_list_22.clear();
+                tabu_list_21.clear();
+                tabu_list_ejection.clear();
+            } 
+
+            // Update weights based on scores
+            for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) {
+                if (count[i] != 0) {
+                    weight[i] = (1.0 - gamma4) * weight[i] + gamma4 * (score[i] / count[i]);
+                }
+            }
+            double sum_weights = 0.0;
+            for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) sum_weights += weight[i];
+            if (sum_weights > 0.0) {
+                for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) weight[i] /= sum_weights;
+            } else {
+                 for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) weight[i] = 1.0 / NUM_NEIGHBORHOODS;
             }
             for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) {
                 score[i] = 0.0;
@@ -6125,6 +6194,8 @@ Solution tabu_search(const Solution& initial_solution, int num_initial_sol,  vec
         }
     } */
 
+    //cout << "Destroy/Repair applied " << destroy_repair_count << " times during the search.\n";
+    cout << "Segments per mode: Makespan " << segments_per_mode[0] << ", L2 Norm " << segments_per_mode[1] << ", Total Time " << segments_per_mode[2] << "\n";
     if (best_feasible_makespan < std::numeric_limits<double>::infinity()) {
         return best_feasible_solution;
     }
@@ -6181,18 +6252,9 @@ static int compute_segment_count(int total_iters, int iters_per_segment) {
 }
 
 static bool write_output_file(const std::string& out_path, const Solution& sol, double cost, double mean_elapsed_sec, bool final_feasibility, double worst_cost, double mean_cost) {
-    const std::string temporary_path = out_path + ".tmp";
-    std::ofstream ofs(temporary_path);
+    std::ofstream ofs(out_path);
     if (!ofs) return false;
     ofs.setf(std::ios::fixed); ofs << setprecision(6);
-    ofs << "Neighborhood selection: " << CFG_NEIGHBORHOOD_SELECTION << "\n";
-    if (CFG_NEIGHBORHOOD_SELECTION == "adaptive") {
-        ofs << "Adaptive parameters: " << CFG_GAMMA1 << " " << CFG_GAMMA2 << " "
-            << CFG_GAMMA3 << " " << CFG_GAMMA4 << "\n";
-    }
-    ofs << "Random seed: " << CFG_RANDOM_SEED << "\n";
-    ofs << "Simulated annealing: disabled\n";
-    ofs << "Diversification: disabled\n";
     ofs << "Initial solution cost: " << cost << "\n";
     ofs << "Improved solution cost: " << sol.total_makespan << "\n";
     ofs << "Worst solution cost: " << worst_cost << "\n";
@@ -6201,9 +6263,87 @@ static bool write_output_file(const std::string& out_path, const Solution& sol, 
     ofs << "Final solution feasibility: " << (final_feasibility ? "FEASIBLE" : "INFEASIBLE") << "\n";
     ofs << "Solution Details:\n";
     print_solution_stream(sol, ofs);
-    ofs.close();
+    return true;
+}
+
+static string sanitize_filename(string s) {
+    for (char& c : s) {
+        if (!(std::isalnum(static_cast<unsigned char>(c)) || c == '-' || c == '_')) c = '_';
+    }
+    return s;
+}
+
+static bool solution_is_feasible(const Solution& sol) {
+    for (const vi &r : sol.truck_routes) {
+        vd truck_metric = check_route_feasibility(r, 0.0, true);
+        if (truck_metric[1] > 1e-8 || truck_metric[2] > 1e-8 || truck_metric[3] > 1e-8) return false;
+    }
+    for (const vi &r : sol.drone_routes) {
+        vd drone_metric = check_route_feasibility(r, 0.0, false);
+        if (drone_metric[1] > 1e-8 || drone_metric[2] > 1e-8 || drone_metric[3] > 1e-8) return false;
+    }
+    return true;
+}
+
+struct AblationSummary {
+    string key;
+    string label;
+    double best_cost = 0.0;
+    double mean_cost = 0.0;
+    double worst_cost = 0.0;
+    double mean_elapsed_sec = 0.0;
+    bool final_feasible = false;
+};
+
+static bool write_ablation_summary_csv(const string& out_path, const vector<AblationSummary>& rows) {
+    ofstream ofs(out_path);
     if (!ofs) return false;
-    return std::rename(temporary_path.c_str(), out_path.c_str()) == 0;
+    ofs.setf(std::ios::fixed); ofs << setprecision(6);
+    ofs << "configuration,best_cost,mean_cost,worst_cost,mean_elapsed_sec,best_gap_percent,mean_gap_percent,time_gap_percent,final_feasible\n";
+    if (rows.empty()) return true;
+    const double base_best = rows[0].best_cost;
+    const double base_mean = rows[0].mean_cost;
+    const double base_time = rows[0].mean_elapsed_sec;
+    for (const auto& row : rows) {
+        double best_gap = (base_best > 0.0) ? 100.0 * (row.best_cost - base_best) / base_best : 0.0;
+        double mean_gap = (base_mean > 0.0) ? 100.0 * (row.mean_cost - base_mean) / base_mean : 0.0;
+        double time_gap = (base_time > 0.0) ? 100.0 * (row.mean_elapsed_sec - base_time) / base_time : 0.0;
+        ofs << row.label << "," << row.best_cost << "," << row.mean_cost << "," << row.worst_cost << ","
+            << row.mean_elapsed_sec << "," << best_gap << "," << mean_gap << "," << time_gap << ","
+            << (row.final_feasible ? "true" : "false") << "\n";
+    }
+    return true;
+}
+
+static bool write_ablation_summary_tex(const string& out_path, const vector<AblationSummary>& rows) {
+    ofstream ofs(out_path);
+    if (!ofs) return false;
+    ofs.setf(std::ios::fixed); ofs << setprecision(3);
+    ofs << "\\begin{table}[htbp]\n"
+        << "\\centering\n"
+        << "\\caption{Mode selection strategy comparison. Gaps are relative to the fixed-makespan baseline; negative values indicate better performance than the baseline.}\n"
+        << "\\label{tab:ablation-mode}\n"
+        << "\\begin{tabular}{lrrr}\n"
+        << "\\toprule\n"
+        << "Configuration & Best Gap (\\%) & Mean Gap (\\%) & Time Gap (\\%) \\\\\n"
+        << "\\midrule\n";
+    if (!rows.empty()) {
+        const double base_best = rows[0].best_cost;
+        const double base_mean = rows[0].mean_cost;
+        const double base_time = rows[0].mean_elapsed_sec;
+        for (const auto& row : rows) {
+            double best_gap = (base_best > 0.0) ? 100.0 * (row.best_cost - base_best) / base_best : 0.0;
+            double mean_gap = (base_mean > 0.0) ? 100.0 * (row.mean_cost - base_mean) / base_mean : 0.0;
+            double time_gap = (base_time > 0.0) ? 100.0 * (row.mean_elapsed_sec - base_time) / base_time : 0.0;
+            ofs << row.label << " & " << showpos << best_gap << noshowpos
+                << " & " << showpos << mean_gap << noshowpos
+                << " & " << showpos << time_gap << noshowpos << " \\\\\n";
+        }
+    }
+    ofs << "\\bottomrule\n"
+        << "\\end{tabular}\n"
+        << "\\end{table}\n";
+    return true;
 }
 
 int main(int argc, char* argv[]) {
@@ -6213,8 +6353,8 @@ int main(int argc, char* argv[]) {
              << " [--attempts=N] [--segments=N] [--iters=N] [--no-improve=N] [--time-limit=SEC] [--auto-tune]"
              << " [--knn-k=K] [--knn-window=W]"
              << " [--truck-vmax-file=PATH] [--truck-theta-file=PATH]"
-             << " [--neighborhood-selection=random|cyclic|adaptive]"
-             << " [--gamma1=X] [--gamma2=X] [--gamma3=X] [--gamma4=X] [--seed=N]"
+             << " [--strategy=all|fixed|switching|extended-fixed] [--extended-multiplier=X] [--ablation-prefix=NAME]"
+             << " [--seed-base=N]"
              << "\n";
         return 1;
     }
@@ -6235,28 +6375,12 @@ int main(int argc, char* argv[]) {
         if (parse_kv_flag(arg, "--knn-window", v)) { CFG_KNN_WINDOW = max(0, stoi(v)); continue; }
         if (parse_kv_flag(arg, "--truck-vmax-file", v)) { CFG_TRUCK_VMAX_FILE = v; continue; }
         if (parse_kv_flag(arg, "--truck-theta-file", v)) { CFG_TRUCK_THETA_FILE = v; continue; }
-        if (parse_kv_flag(arg, "--neighborhood-selection", v)) { CFG_NEIGHBORHOOD_SELECTION = v; continue; }
-        if (parse_kv_flag(arg, "--gamma1", v)) { CFG_GAMMA1 = stod(v); continue; }
-        if (parse_kv_flag(arg, "--gamma2", v)) { CFG_GAMMA2 = stod(v); continue; }
-        if (parse_kv_flag(arg, "--gamma3", v)) { CFG_GAMMA3 = stod(v); continue; }
-        if (parse_kv_flag(arg, "--gamma4", v)) { CFG_GAMMA4 = stod(v); continue; }
-        if (parse_kv_flag(arg, "--seed", v)) { CFG_RANDOM_SEED = stoul(v); continue; }
+        if (parse_kv_flag(arg, "--strategy", v)) { CFG_ABLATION_STRATEGY = v; continue; }
+        if (parse_kv_flag(arg, "--extended-multiplier", v)) { CFG_EXTENDED_FIXED_MULTIPLIER = max(1.0, stod(v)); continue; }
+        if (parse_kv_flag(arg, "--ablation-prefix", v)) { CFG_ABLATION_PREFIX = v; continue; }
+        if (parse_kv_flag(arg, "--seed-base", v)) { CFG_SEED_BASE = stoi(v); continue; }
         if (arg == "--auto-tune") { auto_tune = true; continue; }
     }
-
-    if (CFG_NEIGHBORHOOD_SELECTION != "random" &&
-        CFG_NEIGHBORHOOD_SELECTION != "cyclic" &&
-        CFG_NEIGHBORHOOD_SELECTION != "adaptive") {
-        cerr << "Invalid --neighborhood-selection: " << CFG_NEIGHBORHOOD_SELECTION
-             << ". Expected random, cyclic, or adaptive.\n";
-        return 1;
-    }
-    if (CFG_GAMMA1 < 0.0 || CFG_GAMMA2 < 0.0 || CFG_GAMMA3 < 0.0 ||
-        CFG_GAMMA4 < 0.0 || CFG_GAMMA4 > 1.0) {
-        cerr << "Invalid adaptive parameters: gamma1..gamma3 must be non-negative and gamma4 must be in [0,1].\n";
-        return 1;
-    }
-    srand(CFG_RANDOM_SEED);
 
     // Read input instance
     input(input_file);
@@ -6315,7 +6439,28 @@ int main(int argc, char* argv[]) {
     cout << "\n";
     exit(1); */
 
-    // Collect all attempt results, sort, take top-K for mean/worst
+    const int BASE_MAX_SEGMENT = CFG_MAX_SEGMENT;
+    const double BASE_TIME_LIMIT_SEC = CFG_TIME_LIMIT_SEC;
+
+    vector<ModeSelectionConfig> configs;
+    auto add_config = [&](const string& key, const string& label, ModeSelectionStrategy strategy, double multiplier) {
+        configs.push_back({key, label, strategy, multiplier});
+    };
+    if (CFG_ABLATION_STRATEGY == "all") {
+        add_config("fixed", "Fixed makespan", ModeSelectionStrategy::FixedMakespan, 1.0);
+        add_config("switching", "Switching objective", ModeSelectionStrategy::SwitchingObjective, 1.0);
+        add_config("extended-fixed", "Extended fixed makespan", ModeSelectionStrategy::FixedMakespan, CFG_EXTENDED_FIXED_MULTIPLIER);
+    } else if (CFG_ABLATION_STRATEGY == "fixed") {
+        add_config("fixed", "Fixed makespan", ModeSelectionStrategy::FixedMakespan, 1.0);
+    } else if (CFG_ABLATION_STRATEGY == "switching") {
+        add_config("switching", "Switching objective", ModeSelectionStrategy::SwitchingObjective, 1.0);
+    } else if (CFG_ABLATION_STRATEGY == "extended-fixed") {
+        add_config("extended-fixed", "Extended fixed makespan", ModeSelectionStrategy::FixedMakespan, CFG_EXTENDED_FIXED_MULTIPLIER);
+    } else {
+        cerr << "Unknown --strategy value: " << CFG_ABLATION_STRATEGY << "\n";
+        return 1;
+    }
+
     struct AttemptResult {
         Solution sol;
         double initial_cost;
@@ -6323,87 +6468,89 @@ int main(int argc, char* argv[]) {
         vd iter_best;
         vector<bool> iter_feasible;
     };
-    vector<AttemptResult> all_results;
-    all_results.reserve(CFG_NUM_INITIAL);
 
-    auto start_time = std::chrono::high_resolution_clock::now();
-    int ablation_seed = static_cast<int>(CFG_RANDOM_SEED);
-    for (int attempt = 0; attempt < CFG_NUM_INITIAL; ++attempt) {
-        Solution initial_solution = generate_initial_solution(ablation_seed + attempt);
-        vd iter_current, iter_best;
-        vector<bool> current_feasibility;
-        Solution improved_sol = tabu_search(initial_solution, CFG_NUM_INITIAL, iter_current, iter_best, current_feasibility);
-        cout.setf(std::ios::fixed); cout << setprecision(6);
-        cout << "Attempt " << attempt + 1 << " cost: " << improved_sol.total_makespan << "\n";
-        print_solution_stream(improved_sol, cout);
-        all_results.push_back({improved_sol, initial_solution.total_makespan,
-                                iter_current, iter_best, current_feasibility});
-    }
+    vector<AblationSummary> summaries;
+    summaries.reserve(configs.size());
 
-    // Sort ascending by makespan; best solution = rank 0
-    sort(all_results.begin(), all_results.end(),
-         [](const AttemptResult& a, const AttemptResult& b) {
-             return a.sol.total_makespan < b.sol.total_makespan;
-         });
+    auto run_config = [&](const ModeSelectionConfig& config) {
+        CFG_MAX_SEGMENT = max(1, (int)ceil(BASE_MAX_SEGMENT * config.segment_multiplier));
+        CFG_TIME_LIMIT_SEC = (BASE_TIME_LIMIT_SEC > 0.0) ? BASE_TIME_LIMIT_SEC * config.segment_multiplier : 0.0;
 
-    auto end_time = std::chrono::high_resolution_clock::now();
-    double elapsed_seconds = std::chrono::duration<double>(end_time - start_time).count();
+        vector<AttemptResult> all_results;
+        all_results.reserve(CFG_NUM_INITIAL);
+        auto start_time = std::chrono::high_resolution_clock::now();
+        int ablation_seed = CFG_SEED_BASE;
 
-    // Mean and worst computed from top-10 (best runs only)
-    const int TOP_K = min(10, (int)all_results.size());
-    double sum_overall_cost = 0.0;
-    double worst_overall_cost = -1.0;
-    for (int i = 0; i < TOP_K; ++i) {
-        double mk = all_results[i].sol.total_makespan;
-        sum_overall_cost += mk;
-        if (mk > worst_overall_cost) worst_overall_cost = mk;
-    }
-    double mean_overall_cost = sum_overall_cost / TOP_K;
-    bool have_best = !all_results.empty();
+        cout << "\n\n==============================\n";
+        cout << "Running mode-selection config: " << config.label << "\n";
+        cout << "Segments=" << CFG_MAX_SEGMENT << ", iters_per_seg=" << CFG_MAX_ITER_PER_SEGMENT
+             << ", attempts=" << CFG_NUM_INITIAL << "\n";
+        cout << "==============================\n";
 
-    if (have_best) {
-        const auto& best = all_results[0]; // lowest makespan
-        cout << "\n=== Best Across Attempts (top " << TOP_K << "/" << (int)all_results.size() << ") ===\n";
+        for (int attempt = 0; attempt < CFG_NUM_INITIAL; ++attempt) {
+            Solution initial_solution = generate_initial_solution(ablation_seed + attempt);
+            srand(ablation_seed + attempt);
+            vd iter_current, iter_best;
+            vector<bool> current_feasibility;
+            Solution improved_sol = tabu_search(initial_solution, CFG_NUM_INITIAL, iter_current, iter_best, current_feasibility, config);
+            cout.setf(std::ios::fixed); cout << setprecision(6);
+            cout << "Attempt " << attempt + 1 << " cost: " << improved_sol.total_makespan << "\n";
+            print_solution_stream(improved_sol, cout);
+            all_results.push_back({improved_sol, initial_solution.total_makespan, iter_current, iter_best, current_feasibility});
+        }
+
+        sort(all_results.begin(), all_results.end(),
+             [](const AttemptResult& a, const AttemptResult& b) {
+                 return a.sol.total_makespan < b.sol.total_makespan;
+             });
+
+        auto end_time = std::chrono::high_resolution_clock::now();
+        double elapsed_seconds = std::chrono::duration<double>(end_time - start_time).count();
+        const int TOP_K = min(10, (int)all_results.size());
+        double sum_overall_cost = 0.0;
+        double worst_overall_cost = -1.0;
+        for (int i = 0; i < TOP_K; ++i) {
+            double mk = all_results[i].sol.total_makespan;
+            sum_overall_cost += mk;
+            worst_overall_cost = max(worst_overall_cost, mk);
+        }
+        double mean_overall_cost = sum_overall_cost / TOP_K;
+        const auto& best = all_results[0];
+        bool final_feas = solution_is_feasible(best.sol);
+
+        cout << "\n=== Best Across Attempts: " << config.label << " (top " << TOP_K << "/" << (int)all_results.size() << ") ===\n";
         cout << "Initial Solution Cost: " << best.initial_cost << "\n";
         cout << "Improved Solution Cost: " << best.sol.total_makespan << "\n";
         cout << "Worst Solution Cost (top-" << TOP_K << "): " << worst_overall_cost << "\n";
         cout << "Mean Solution Cost (top-" << TOP_K << "): " << mean_overall_cost << "\n";
         cout << "Mean elapsed Time: " << (elapsed_seconds / all_results.size()) << " seconds\n";
+        cout << "Final solution feasibility: " << (final_feas ? "FEASIBLE" : "INFEASIBLE") << "\n";
         print_solution_stream(best.sol, cout);
-        // check final feasibility
-        bool final_feas = true;
-        for (const vi &r : best.sol.truck_routes) {
-            vd truck_metric = check_route_feasibility(r, 0.0, true);
-            bool feas = (truck_metric[1] <= 1e-8 && truck_metric[2] <= 1e-8 && truck_metric[3] <= 1e-8);
-            if (!feas) { final_feas = false; break; }
-        }
-        for (const vi &r : best.sol.drone_routes) {
-            vd truck_metric = check_route_feasibility(r, 0.0, false);
-            bool feas = (truck_metric[1] <= 1e-8 && truck_metric[2] <= 1e-8 && truck_metric[3] <= 1e-8);
-            if (!feas) { final_feas = false; break; }
-        }
-        if (final_feas) {
-            cout << "Final solution feasibility: FEASIBLE\n";
-        } else {
-            cout << "Final solution feasibility: INFEASIBLE\n";
-        }
-        string out_best = "output_solution_best.txt";
-        if (write_output_file(out_best, best.sol, best.initial_cost, elapsed_seconds / all_results.size(), final_feas, worst_overall_cost, mean_overall_cost)) {
-            cout << "Best solution written to " << out_best << "\n";
-        } else {
-            cout << "Failed to write best solution to " << out_best << "\n";
-        }
-        string out_iter = "output_mode_0.txt";
-        if (write_iteration_file(out_iter, best.iter_current, best.iter_best, best.iter_feasible)) {
-            cout << "Iteration data written to " << out_iter << "\n";
-        } else {
-            cout << "Failed to write iteration data to " << out_iter << "\n";
-        }
-    }
+
+        string safe_key = sanitize_filename(config.key);
+        string out_best = CFG_ABLATION_PREFIX + "_" + safe_key + "_solution_best.txt";
+        string out_iter = CFG_ABLATION_PREFIX + "_" + safe_key + "_iterations.csv";
+        write_output_file(out_best, best.sol, best.initial_cost, elapsed_seconds / all_results.size(), final_feas, worst_overall_cost, mean_overall_cost);
+        write_iteration_file(out_iter, best.iter_current, best.iter_best, best.iter_feasible);
+        summaries.push_back({config.key, config.label, best.sol.total_makespan, mean_overall_cost, worst_overall_cost, elapsed_seconds / all_results.size(), final_feas});
+    };
+
+    for (const auto& config : configs) run_config(config);
+
+    CFG_MAX_SEGMENT = BASE_MAX_SEGMENT;
+    CFG_TIME_LIMIT_SEC = BASE_TIME_LIMIT_SEC;
+
+    string csv_path = CFG_ABLATION_PREFIX + "_summary.csv";
+    string tex_path = CFG_ABLATION_PREFIX + "_summary.tex";
+    if (write_ablation_summary_csv(csv_path, summaries)) cout << "Ablation summary written to " << csv_path << "\n";
+    else cout << "Failed to write ablation summary to " << csv_path << "\n";
+    if (write_ablation_summary_tex(tex_path, summaries)) cout << "LaTeX ablation table written to " << tex_path << "\n";
+    else cout << "Failed to write LaTeX ablation table to " << tex_path << "\n";
 
     return 0;
 }
 
-// Run with : g++ -O3 -std=c++20 tabubu.cpp -o tabubu && ./tabubu instance/50.20.4.txt
+// Run with : g++ -O3 -std=c++20 tabubu_time_dependent_ModeSelectionAblation.cpp -o tabubu_time_dependent_mode_ablation
+// Example  : ./tabubu_time_dependent_mode_ablation instance_time_dependent/50.10.4.txt --attempts=10 --strategy=all --ablation-prefix=ablation_mode
 // Plot history iteration: python plot_iteration.py --input output.txt --save iterations.png
 // Plot route: python3 plot_sol.py instance/50.20.4.txt output_solution_best.txt

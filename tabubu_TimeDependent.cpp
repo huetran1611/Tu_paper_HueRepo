@@ -98,12 +98,10 @@ const int NUM_OF_INITIAL_SOLUTIONS = 200;
 const int MAX_SEGMENT = 200;
 const int MAX_NO_IMPROVE = 1000;
 const int MAX_ITER_PER_SEGMENT = 1000;
-static double CFG_GAMMA1 = 0.5;
-static double CFG_GAMMA2 = 0.3;
-static double CFG_GAMMA3 = 0.1;
-static double CFG_GAMMA4 = 0.3;
-static string CFG_NEIGHBORHOOD_SELECTION = "adaptive";
-static unsigned int CFG_RANDOM_SEED = 42;
+const double gamma1 = 0.5;
+const double gamma2 = 0.3;
+const double gamma3 = 0.1;
+const double gamma4 = 0.3;
 
 // Runtime-configurable search knobs (initialized from compile-time defaults)
 static int CFG_NUM_INITIAL = NUM_OF_INITIAL_SOLUTIONS;
@@ -124,6 +122,9 @@ static const double PENALTY_INCREASE = 1.2;       // multiply when violated *
 static const double PENALTY_DECREASE = 1.2;       // divide when satisfied *
 static const double PENALTY_MIN = 0.5;            // minimum λ value
 static const double PENALTY_MAX = 1000.0;
+
+static const double T0 = 150.0; // initial temperature for simulated annealing acceptance
+double alpha = 0.9998; // cooling rate for simulated annealing
 
 // Destroy and repair helper
 vvd edge_records; // edge_records[i][j]: stores working times for edge (i,j)
@@ -5886,10 +5887,6 @@ Solution destroy_sisr_repair(Solution sol) {
     return repair_solution_common(sol, to_destroy);
 }
 
-static bool write_output_file(const std::string& out_path, const Solution& sol, double cost,
-                              double mean_elapsed_sec, bool final_feasibility,
-                              double worst_cost, double mean_cost);
-
 Solution tabu_search(const Solution& initial_solution, int num_initial_sol,  vector<double>& iter_current, vector<double>& iter_best, vector<bool>& iter_feasible) {
     auto ts_start = std::chrono::high_resolution_clock::now();
     auto is_feasible = [](const Solution& sol) {
@@ -5916,60 +5913,79 @@ Solution tabu_search(const Solution& initial_solution, int num_initial_sol,  vec
     iter_best.clear();
     iter_feasible.clear();
 
+    int destroy_repair_count = 0;
+    int no_improve_segments = 0;
+
     Solution current_sol = initial_solution;
+    double current_cost = initial_solution.total_makespan;
 
     int iter = 0;
     int total_iters = CFG_MAX_SEGMENT * CFG_MAX_ITER_PER_SEGMENT;
     int no_improve_iters = 0;
+    int scoring_mode_iter = 0; // 0: makespan, 1: L2 norm, 2: total time
     Solution best_segment_sol = current_sol;
-    double best_segment_score = solution_score_makespan(current_sol);
-    double best_solution_score_now = best_segment_score;
-    cout << "=== Starting Tabu Search (Neighborhood Selection Experiment) ===\n";
-    cout << "Neighborhood selection: " << CFG_NEIGHBORHOOD_SELECTION << "\n";
-    if (CFG_NEIGHBORHOOD_SELECTION == "adaptive") {
-        cout << "Adaptive parameters: [" << CFG_GAMMA1 << ", " << CFG_GAMMA2
-             << ", " << CFG_GAMMA3 << ", " << CFG_GAMMA4 << "]\n";
-    }
+    double best_segment_score = scoring_mode_iter == 0 ? solution_score_makespan(current_sol) :
+                                (scoring_mode_iter == 1 ? solution_score_l2_norm(current_sol) : solution_score_total_time(current_sol));
+    double best_solution_score_now;
+        if (scoring_mode_iter == 1) {
+            best_solution_score_now = solution_score_l2_norm(current_sol);
+        }
+        else if (scoring_mode_iter == 0){
+            best_solution_score_now = solution_score_makespan(current_sol);
+        }
+        else if (scoring_mode_iter == 2){
+            best_solution_score_now = solution_score_total_time(current_sol);
+        }
+    cout << "=== Starting Unified Tabu Search (Minimizing Weighted Cost) ===\n";
     cout << "Initial Cost: " << best_solution_score_now << "\n";
 
     double current_score = best_solution_score_now;
-    write_output_file("output_solution_best.txt", initial_solution,
-                      initial_solution.total_makespan, 0.0, initial_feasible,
-                      initial_solution.total_makespan, initial_solution.total_makespan);
+    int segments_per_mode[3] = {0, 0, 0};
     while (iter < total_iters) {
         if (CFG_TIME_LIMIT_SEC > 0.0) {
             double elapsed = std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - ts_start).count();
             if (elapsed >= CFG_TIME_LIMIT_SEC) break;
         }
         
-        current_score = solution_score_makespan(current_sol);
+        if (scoring_mode_iter == 1) {
+            current_score = solution_score_l2_norm(current_sol);
+            //best_solution_score_now = solution_score_l2_norm(best_solution);
+        }
+        else if (scoring_mode_iter == 0){
+            current_score = solution_score_makespan(current_sol);
+            //best_solution_score_now = solution_score_makespan(best_solution);
+        }
+        else if (scoring_mode_iter == 2){
+            current_score = solution_score_total_time(current_sol);
+            //best_solution_score_now = solution_score_total_time(best_solution);
+        }
         double current_pure_cost = current_sol.total_makespan;
         iter_current.push_back(current_pure_cost);;
         iter_best.push_back(best_feasible_solution.total_makespan);
         iter_feasible.push_back(is_feasible(current_sol));
 
 
-        int selected_neighbor = 0;
-        if (CFG_NEIGHBORHOOD_SELECTION == "random") {
-            selected_neighbor = rand() % NUM_NEIGHBORHOODS;
-        } else if (CFG_NEIGHBORHOOD_SELECTION == "cyclic") {
-            selected_neighbor = iter % NUM_NEIGHBORHOODS;
-        } else {
-            double total_weight = 0.0;
-            for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) {
-                total_weight += weight[i];
-            }
-            double random_value = static_cast<double>(rand()) / RAND_MAX;
-            selected_neighbor = NUM_NEIGHBORHOODS - 1;
-            double cumulative = 0.0;
-            for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) {
-                cumulative += weight[i] / total_weight;
-                if (random_value < cumulative) {
-                    selected_neighbor = i;
-                    break;
-                }
+        // Roulette Wheel Selection
+        double total_weight = 0.0;
+        for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) {
+            total_weight += weight[i];
+        }
+        double r = ((double) rand() / (RAND_MAX));
+        int selected_neighbor = NUM_NEIGHBORHOODS - 1; // fallback: last bucket absorbs rounding
+        double cumulative = 0.0;
+        for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) {
+            cumulative += weight[i] / total_weight;
+            if (r < cumulative) {
+                selected_neighbor = i;
+                break;
             }
         }
+
+        // Change it to random selection for testing
+        //selected_neighbor = rand() % NUM_NEIGHBORHOODS;
+
+        //Change it to round-robin/cyclic for testing
+        //selected_neighbor = iter % NUM_NEIGHBORHOODS;
         count[selected_neighbor]++;
 
         
@@ -5977,7 +5993,15 @@ Solution tabu_search(const Solution& initial_solution, int num_initial_sol,  vec
         Solution init_neighbor;
         Solution neighbor;
         try {
-            init_neighbor = local_search(current_sol, selected_neighbor, iter, best_solution_score_now, solution_score_makespan);
+            if (scoring_mode_iter == 0) {
+                init_neighbor = local_search(current_sol, selected_neighbor, iter, best_solution_score_now, solution_score_makespan);
+            }
+            else if (scoring_mode_iter == 1){
+                init_neighbor = local_search(current_sol, selected_neighbor, iter, best_solution_score_now, solution_score_l2_norm);
+            }
+            else if (scoring_mode_iter == 2){
+                init_neighbor = local_search_all_vehicle(current_sol, selected_neighbor, iter, best_solution_score_now, solution_score_total_time);
+            }
             neighbor = recalculate_solution(init_neighbor);
             if (std::abs(neighbor.deadline_violation - init_neighbor.deadline_violation) > 1e-8 ||
                 std::abs(neighbor.capacity_violation - init_neighbor.capacity_violation) > 1e-8 ||
@@ -6014,27 +6038,41 @@ Solution tabu_search(const Solution& initial_solution, int num_initial_sol,  vec
         }
 
         bool neighbor_feasible = is_feasible(neighbor);
-        double neighbor_score = solution_score_makespan(neighbor);
+        double neighbor_score;
+        if (scoring_mode_iter == 1) {
+            neighbor_score = solution_score_l2_norm(neighbor);
+        } else if (scoring_mode_iter == 0) {
+            neighbor_score = solution_score_makespan(neighbor);
+        } else if (scoring_mode_iter == 2){
+            neighbor_score = solution_score_total_time(neighbor);
+        }
 
         // Acceptance
-        bool checkpoint_dirty = false;
         if (neighbor_score + 1e-12 < best_solution_score_now) {
             
             current_sol = neighbor;
             best_solution = neighbor;
             best_solution_score_now = neighbor_score;
-            checkpoint_dirty = !std::isfinite(best_feasible_makespan);
-            score[selected_neighbor] += CFG_GAMMA1;
+            score[selected_neighbor] += gamma1;
             current_score = neighbor_score;
             no_improve_iters = 0;
             
         } else if (neighbor_score + 1e-12 < current_score) {
             current_sol = neighbor;
-            score[selected_neighbor] += CFG_GAMMA2;
+            score[selected_neighbor] += gamma2;
             current_score = neighbor_score;
             no_improve_iters++;
         } else {
-            score[selected_neighbor] += CFG_GAMMA3;
+            double T = T0 * pow(alpha, iter);
+            double delta = current_score - neighbor_score;
+            double ap = exp(delta / T);
+            double rand_val = ((double) rand() / (RAND_MAX));
+            if (rand_val < ap) {
+                current_sol = neighbor;
+                current_cost = neighbor.total_makespan;
+                current_score = neighbor_score;
+            }
+            score[selected_neighbor] += gamma3;
             no_improve_iters++;
         }
 
@@ -6044,18 +6082,8 @@ Solution tabu_search(const Solution& initial_solution, int num_initial_sol,  vec
              if (n_cost + 1e-12 < best_feasible_makespan) {
                  best_feasible_solution = neighbor;
                  best_feasible_makespan = n_cost;
-                 checkpoint_dirty = true;
                  cout << "Iter " << iter << " New Best Feasible Makespan: " << best_feasible_makespan << "\n";
              }
-        }
-
-        if (checkpoint_dirty) {
-            const bool have_feasible = std::isfinite(best_feasible_makespan);
-            const Solution& checkpoint_solution = have_feasible ? best_feasible_solution : best_solution;
-            double elapsed = std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - ts_start).count();
-            write_output_file("output_solution_best.txt", checkpoint_solution,
-                              initial_solution.total_makespan, elapsed, have_feasible,
-                              checkpoint_solution.total_makespan, checkpoint_solution.total_makespan);
         }
 
         // Update best segment solution
@@ -6066,34 +6094,75 @@ Solution tabu_search(const Solution& initial_solution, int num_initial_sol,  vec
         
         update_penalties(current_sol);
 
-        // Adaptive weights are updated after each complete segment.
-        if ((iter + 1) % CFG_MAX_ITER_PER_SEGMENT == 0) {
-            cout << "=== End of Segment " << ((iter + 1) / CFG_MAX_ITER_PER_SEGMENT) << " ===\n";
+        // Periodic Weight & Segment Mode Update
+        if (iter % CFG_MAX_ITER_PER_SEGMENT == 0) {
+            segments_per_mode[scoring_mode_iter]++;
+            cout << "=== End of Segment " << (iter / CFG_MAX_ITER_PER_SEGMENT) << " ===\n";
             cout << "Best Current Solution Score: " << best_solution_score_now << " with makespan " << best_solution.total_makespan << "\n";
             cout << "Current Solution Score: " << current_score << " with makespan " << current_sol.total_makespan << "\n";
+            cout << "Current mode: " << (scoring_mode_iter == 0 ? "Makespan" : (scoring_mode_iter == 1 ? "L2 Norm" : "Total Time")) << "\n";
             cout << "Current Weights and Count of neighborhoods: ";
             for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) {
                 cout << "N" << i << ": " << weight[i] << " " << count[i] << " | ";
             }
             cout << "\n";
             if (best_segment_score + 1e-12 < best_solution_score_now) {
+                no_improve_segments = 0;
                 best_solution = best_segment_sol;
                 best_solution_score_now = best_segment_score;
             }
+            else {
+                no_improve_segments++;
+            }
 
-            if (CFG_NEIGHBORHOOD_SELECTION == "adaptive") {
-                for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) {
-                    if (count[i] != 0) {
-                        weight[i] = (1.0 - CFG_GAMMA4) * weight[i] + CFG_GAMMA4 * (score[i] / count[i]);
-                    }
+            if (scoring_mode_iter == 2) {
+                scoring_mode_iter = 0;
+                best_solution_score_now = solution_score_makespan(best_solution);
+                best_segment_sol = best_solution;
+                best_segment_score = best_solution_score_now;
+            }
+
+            if (no_improve_segments % 4 == 2 && no_improve_segments > 0) {
+                // If no improvement for 2 consecutive segments, switch scoring mode to encourage different search behavior
+                if (scoring_mode_iter == 0) {
+                    scoring_mode_iter = 2;
                 }
-                double sum_weights = 0.0;
-                for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) sum_weights += weight[i];
-                if (sum_weights > 0.0) {
-                    for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) weight[i] /= sum_weights;
-                } else {
-                    for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) weight[i] = 1.0 / NUM_NEIGHBORHOODS;
+                else if (scoring_mode_iter == 2) {
+                    scoring_mode_iter = 0;
                 }
+                best_solution_score_now = scoring_mode_iter == 0 ? solution_score_makespan(best_solution) :
+                                            (scoring_mode_iter == 1 ? solution_score_l2_norm(best_solution) : solution_score_total_time(best_solution));
+                best_segment_sol = best_solution;
+                best_segment_score = best_solution_score_now;
+            }
+            if (no_improve_segments % 4 == 0 && no_improve_segments > 0) {
+                // If no improvement for 4 consecutive segments, destroy and repair;
+                current_sol = destroy_worst_repair_random(current_sol);
+                current_sol = recalculate_solution(current_sol);
+                current_score = best_solution_score_now;
+                cout << "No improvement for " << no_improve_segments << " segments, applying perturbation. New makespan: " << current_sol.total_makespan << "\n";
+                tabu_list_10.clear();
+                tabu_list_11.clear();
+                tabu_list_20.clear();
+                tabu_list_2opt.clear();
+                tabu_list_2opt_star.clear();
+                tabu_list_22.clear();
+                tabu_list_21.clear();
+                tabu_list_ejection.clear();
+            } 
+
+            // Update weights based on scores
+            for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) {
+                if (count[i] != 0) {
+                    weight[i] = (1.0 - gamma4) * weight[i] + gamma4 * (score[i] / count[i]);
+                }
+            }
+            double sum_weights = 0.0;
+            for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) sum_weights += weight[i];
+            if (sum_weights > 0.0) {
+                for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) weight[i] /= sum_weights;
+            } else {
+                 for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) weight[i] = 1.0 / NUM_NEIGHBORHOODS;
             }
             for (int i = 0; i < NUM_NEIGHBORHOODS; ++i) {
                 score[i] = 0.0;
@@ -6125,6 +6194,8 @@ Solution tabu_search(const Solution& initial_solution, int num_initial_sol,  vec
         }
     } */
 
+    //cout << "Destroy/Repair applied " << destroy_repair_count << " times during the search.\n";
+    cout << "Segments per mode: Makespan " << segments_per_mode[0] << ", L2 Norm " << segments_per_mode[1] << ", Total Time " << segments_per_mode[2] << "\n";
     if (best_feasible_makespan < std::numeric_limits<double>::infinity()) {
         return best_feasible_solution;
     }
@@ -6181,18 +6252,9 @@ static int compute_segment_count(int total_iters, int iters_per_segment) {
 }
 
 static bool write_output_file(const std::string& out_path, const Solution& sol, double cost, double mean_elapsed_sec, bool final_feasibility, double worst_cost, double mean_cost) {
-    const std::string temporary_path = out_path + ".tmp";
-    std::ofstream ofs(temporary_path);
+    std::ofstream ofs(out_path);
     if (!ofs) return false;
     ofs.setf(std::ios::fixed); ofs << setprecision(6);
-    ofs << "Neighborhood selection: " << CFG_NEIGHBORHOOD_SELECTION << "\n";
-    if (CFG_NEIGHBORHOOD_SELECTION == "adaptive") {
-        ofs << "Adaptive parameters: " << CFG_GAMMA1 << " " << CFG_GAMMA2 << " "
-            << CFG_GAMMA3 << " " << CFG_GAMMA4 << "\n";
-    }
-    ofs << "Random seed: " << CFG_RANDOM_SEED << "\n";
-    ofs << "Simulated annealing: disabled\n";
-    ofs << "Diversification: disabled\n";
     ofs << "Initial solution cost: " << cost << "\n";
     ofs << "Improved solution cost: " << sol.total_makespan << "\n";
     ofs << "Worst solution cost: " << worst_cost << "\n";
@@ -6201,9 +6263,7 @@ static bool write_output_file(const std::string& out_path, const Solution& sol, 
     ofs << "Final solution feasibility: " << (final_feasibility ? "FEASIBLE" : "INFEASIBLE") << "\n";
     ofs << "Solution Details:\n";
     print_solution_stream(sol, ofs);
-    ofs.close();
-    if (!ofs) return false;
-    return std::rename(temporary_path.c_str(), out_path.c_str()) == 0;
+    return true;
 }
 
 int main(int argc, char* argv[]) {
@@ -6213,8 +6273,6 @@ int main(int argc, char* argv[]) {
              << " [--attempts=N] [--segments=N] [--iters=N] [--no-improve=N] [--time-limit=SEC] [--auto-tune]"
              << " [--knn-k=K] [--knn-window=W]"
              << " [--truck-vmax-file=PATH] [--truck-theta-file=PATH]"
-             << " [--neighborhood-selection=random|cyclic|adaptive]"
-             << " [--gamma1=X] [--gamma2=X] [--gamma3=X] [--gamma4=X] [--seed=N]"
              << "\n";
         return 1;
     }
@@ -6235,28 +6293,8 @@ int main(int argc, char* argv[]) {
         if (parse_kv_flag(arg, "--knn-window", v)) { CFG_KNN_WINDOW = max(0, stoi(v)); continue; }
         if (parse_kv_flag(arg, "--truck-vmax-file", v)) { CFG_TRUCK_VMAX_FILE = v; continue; }
         if (parse_kv_flag(arg, "--truck-theta-file", v)) { CFG_TRUCK_THETA_FILE = v; continue; }
-        if (parse_kv_flag(arg, "--neighborhood-selection", v)) { CFG_NEIGHBORHOOD_SELECTION = v; continue; }
-        if (parse_kv_flag(arg, "--gamma1", v)) { CFG_GAMMA1 = stod(v); continue; }
-        if (parse_kv_flag(arg, "--gamma2", v)) { CFG_GAMMA2 = stod(v); continue; }
-        if (parse_kv_flag(arg, "--gamma3", v)) { CFG_GAMMA3 = stod(v); continue; }
-        if (parse_kv_flag(arg, "--gamma4", v)) { CFG_GAMMA4 = stod(v); continue; }
-        if (parse_kv_flag(arg, "--seed", v)) { CFG_RANDOM_SEED = stoul(v); continue; }
         if (arg == "--auto-tune") { auto_tune = true; continue; }
     }
-
-    if (CFG_NEIGHBORHOOD_SELECTION != "random" &&
-        CFG_NEIGHBORHOOD_SELECTION != "cyclic" &&
-        CFG_NEIGHBORHOOD_SELECTION != "adaptive") {
-        cerr << "Invalid --neighborhood-selection: " << CFG_NEIGHBORHOOD_SELECTION
-             << ". Expected random, cyclic, or adaptive.\n";
-        return 1;
-    }
-    if (CFG_GAMMA1 < 0.0 || CFG_GAMMA2 < 0.0 || CFG_GAMMA3 < 0.0 ||
-        CFG_GAMMA4 < 0.0 || CFG_GAMMA4 > 1.0) {
-        cerr << "Invalid adaptive parameters: gamma1..gamma3 must be non-negative and gamma4 must be in [0,1].\n";
-        return 1;
-    }
-    srand(CFG_RANDOM_SEED);
 
     // Read input instance
     input(input_file);
@@ -6327,7 +6365,7 @@ int main(int argc, char* argv[]) {
     all_results.reserve(CFG_NUM_INITIAL);
 
     auto start_time = std::chrono::high_resolution_clock::now();
-    int ablation_seed = static_cast<int>(CFG_RANDOM_SEED);
+    int ablation_seed = 42;
     for (int attempt = 0; attempt < CFG_NUM_INITIAL; ++attempt) {
         Solution initial_solution = generate_initial_solution(ablation_seed + attempt);
         vd iter_current, iter_best;

@@ -11,29 +11,59 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   GROUP_1_RUN_ID: "28310990837"
   GROUP_2_RUN_ID: "28310990818"
+  PRIOR_RESUME_RUN_ID: "28364577147"
   SOLVER_TIME_LIMIT_SEC: "18000"
 
 jobs:
   prepare:
-    name: Build solver and failed-job matrix
+    name: Recover existing results and build missing-job matrix
     runs-on: ubuntu-latest
     outputs:
       resume_matrix: ${{ steps.matrix.outputs.matrix }}
       resume_count: ${{ steps.matrix.outputs.count }}
+      recovered_count: ${{ steps.matrix.outputs.recovered_count }}
     steps:
       - uses: actions/checkout@v5
+
+      - name: Download successful group-1 results from old run
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ env.GROUP_1_RUN_ID }}
+          pattern: neighborhood-200-group-1-200.*
+          path: recovered_sources
+          merge-multiple: true
+
+      - name: Download successful group-2 results from old run
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ env.GROUP_2_RUN_ID }}
+          pattern: neighborhood-200-group-2-200.*
+          path: recovered_sources
+          merge-multiple: true
+
+      - name: Download results from the previous resume run
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ env.PRIOR_RESUME_RUN_ID }}
+          pattern: neighborhood-200-resumed-*
+          path: recovered_sources
+          merge-multiple: true
 
       - name: Compile solver from current code
         run: |
           g++ -O2 -std=c++20 tabubu_TimeDependent_neighbourhoddSelection.cpp \
             -o tabubu_neighborhood_200_resume_two_runs
 
-      - name: Build failed-job matrix
+      - name: Build matrix from configurations still missing
         id: matrix
         run: |
           python3 - <<'PYEOF'
           import json
           import os
+          from pathlib import Path
 
           gamma = {
               "g1": [0.3, 0.2, 0.1, 0.3],
@@ -41,40 +71,69 @@ jobs:
               "g3": [0.3, 0.2, 0.1, 0.6],
               "g4": [0.5, 0.3, 0.1, 0.6],
           }
-          failed = [
-              # Run 28310990837: cyclic, random, adaptive g1
-              ("200.40.3", "adaptive", "g1", [1, 2, 3, 4, 5]),
-              ("200.40.4", "cyclic", "", [1, 2, 3, 4, 5]),
-              ("200.40.4", "random", "", [1, 2, 3, 4, 5]),
-              ("200.40.4", "adaptive", "g1", [1, 2, 3, 4, 5]),
-              # Run 28310990818: adaptive g2, g3, g4
-              ("200.40.3", "adaptive", "g4", [1, 2, 3, 4, 5]),
-              ("200.40.4", "adaptive", "g2", [1, 2, 3, 4, 5]),
-              ("200.40.4", "adaptive", "g3", [1, 2, 3, 4, 5]),
-              ("200.40.4", "adaptive", "g4", [1, 2, 3, 4, 5]),
+          methods = [
+              {"strategy": "cyclic"},
+              {"strategy": "random"},
+              {"strategy": "adaptive", "gamma_set": "g1", "gamma": gamma["g1"]},
+              {"strategy": "adaptive", "gamma_set": "g2", "gamma": gamma["g2"]},
+              {"strategy": "adaptive", "gamma_set": "g3", "gamma": gamma["g3"]},
+              {"strategy": "adaptive", "gamma_set": "g4", "gamma": gamma["g4"]},
+          ]
+          instances = [
+              f"200.{drone_customers}.{variant}"
+              for drone_customers in (10, 20, 30, 40)
+              for variant in (1, 2, 3, 4)
           ]
 
-          matrix = []
-          for instance, strategy, gamma_set, repetitions in failed:
-              for repetition in repetitions:
-                  task = {"instance": instance, "repetition": repetition, "strategy": strategy}
-                  task_id = f"{instance}-run-{repetition}-{strategy}"
-                  if strategy == "adaptive":
-                      task["gamma_set"] = gamma_set
-                      task["gamma"] = gamma[gamma_set]
-                      task_id += f"-{gamma_set}"
-                  matrix.append({
-                      "task_id": task_id,
-                      "tasks_json": json.dumps([task], separators=(",", ":")),
-                  })
+          def result_name(task):
+              suffix = f"_strategy_{task['strategy']}"
+              if task["strategy"] == "adaptive":
+                  suffix += f"_gamma_{task['gamma_set']}"
+              return f"{task['instance']}_run_{task['repetition']}{suffix}.txt"
 
-          if len(matrix) != 40:
-              raise SystemExit(f"Expected 40 failed jobs to resume, found {len(matrix)}")
+          existing = {
+              path.name
+              for path in Path("recovered_sources").rglob("*_run_*.txt")
+              if path.is_file()
+          }
+          expected_tasks = [
+              {"instance": instance, "repetition": repetition, **method}
+              for instance in instances
+              for method in methods
+              for repetition in range(1, 6)
+          ]
+          missing_tasks = [
+              task for task in expected_tasks
+              if result_name(task) not in existing
+          ]
+          if len(missing_tasks) > 256:
+              raise SystemExit(f"Missing matrix has {len(missing_tasks)} jobs, exceeding GitHub's 256-job limit")
+
+          matrix = []
+          for task in missing_tasks:
+              task_id = f"{task['instance']}-run-{task['repetition']}-{task['strategy']}"
+              if task["strategy"] == "adaptive":
+                  task_id += f"-{task['gamma_set']}"
+              matrix.append({
+                  "task_id": task_id,
+                  "tasks_json": json.dumps([task], separators=(",", ":")),
+              })
+
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
               output.write(f"matrix={json.dumps(matrix, separators=(',', ':'))}\n")
               output.write(f"count={len(matrix)}\n")
-          print(f"Prepared {len(matrix)} failed configurations to rerun")
+              output.write(f"recovered_count={len(existing)}\n")
+          print(f"Recovered {len(existing)} existing configurations")
+          print(f"Prepared {len(matrix)} missing configurations to rerun")
           PYEOF
+
+      - name: Upload recovered source results
+        uses: actions/upload-artifact@v4
+        with:
+          name: neighborhood-200-recovered-before-final-resume
+          path: recovered_sources/*.txt
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Upload resume solver
         uses: actions/upload-artifact@v4
@@ -131,25 +190,14 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Download successful group-1 results from old run
+      - name: Download recovered old and prior-resume results
         uses: actions/download-artifact@v4
         with:
-          github-token: ${{ github.token }}
-          run-id: ${{ env.GROUP_1_RUN_ID }}
-          pattern: neighborhood-200-group-1-200.*
-          path: recovered_group_1
+          name: neighborhood-200-recovered-before-final-resume
+          path: recovered_results
           merge-multiple: true
 
-      - name: Download successful group-2 results from old run
-        uses: actions/download-artifact@v4
-        with:
-          github-token: ${{ github.token }}
-          run-id: ${{ env.GROUP_2_RUN_ID }}
-          pattern: neighborhood-200-group-2-200.*
-          path: recovered_group_2
-          merge-multiple: true
-
-      - name: Download resumed results from this run
+      - name: Download newly resumed results from this run
         uses: actions/download-artifact@v4
         with:
           pattern: neighborhood-200-resumed-*
@@ -165,8 +213,7 @@ jobs:
           combined = Path("combined_results")
           combined.mkdir(exist_ok=True)
           sources = [
-              Path("recovered_group_1"),
-              Path("recovered_group_2"),
+              Path("recovered_results"),
               Path("resumed_results"),
           ]
           copied = 0

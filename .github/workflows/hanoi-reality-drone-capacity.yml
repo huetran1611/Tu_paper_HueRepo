@@ -1,0 +1,339 @@
+name: Hanoi reality - drone capacity sweep
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  prepare:
+    name: Build Hanoi reality solvers and prepare tasks
+    runs-on: ubuntu-latest
+    outputs:
+      experiment_matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build solver variants from drone_config.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/hanoi_reality
+
+          readarray -t cfg < <(python3 - <<'PYEOF'
+          import json
+          with open("drone_config.json", encoding="utf-8") as f:
+              cfg = json.load(f)
+          print(cfg["energy_capacity_j"])
+          print(cfg["speed"]["fly_m_per_s"])
+          print(cfg["speed"]["take_off_m_per_s"])
+          print(cfg["speed"]["landing_m_per_s"])
+          print(cfg["flight_height_m"])
+          print(cfg["power_model"]["beta"])
+          print(cfg["power_model"]["gamma"])
+          PYEOF
+          )
+
+          energy="${cfg[0]}"
+          fly_speed="${cfg[1]}"
+          takeoff_speed="${cfg[2]}"
+          landing_speed="${cfg[3]}"
+          flight_height="${cfg[4]}"
+          beta="${cfg[5]}"
+          gamma="${cfg[6]}"
+
+          for dd in 2.7 5 10; do
+            suffix="${dd//./p}"
+            src="build/hanoi_reality/tabubu_hanoi_reality_Dd${suffix}.cpp"
+            bin="build/hanoi_reality/tabubu_hanoi_reality_Dd${suffix}"
+            cp tabubu_TimeDependent_hanoi_reality.cpp "$src"
+            python3 - "$src" "$dd" "$energy" "$fly_speed" "$takeoff_speed" "$landing_speed" "$flight_height" "$beta" "$gamma" <<'PYEOF'
+          import re
+          import sys
+
+          path, dd, energy, fly, takeoff, landing, height, beta, gamma = sys.argv[1:]
+          text = open(path, encoding="utf-8").read()
+          text = re.sub(
+              r"^double Dh = [^;]+;",
+              "double Dh = 1000.0;",
+              text,
+              count=1,
+              flags=re.MULTILINE,
+          )
+          text = re.sub(
+              r"^double Dd = [^,;]+,\s*E = [^;]+;",
+              f"double Dd = {dd}, E = {energy};",
+              text,
+              count=1,
+              flags=re.MULTILINE,
+          )
+          text = re.sub(
+              r"^double v_fly_drone = [^,;]+,\s*v_take_off = [^,;]+,\s*v_landing = [^;]+;",
+              f"double v_fly_drone = {fly}, v_take_off = {takeoff}, v_landing = {landing};",
+              text,
+              count=1,
+              flags=re.MULTILINE,
+          )
+          text = re.sub(
+              r"^double height = [^;]+;",
+              f"double height = {height};",
+              text,
+              count=1,
+              flags=re.MULTILINE,
+          )
+          text = re.sub(
+              r"^double power_beta = [^,;]+,\s*power_gamma = [^;]+;",
+              f"double power_beta = {beta}, power_gamma = {gamma};",
+              text,
+              count=1,
+              flags=re.MULTILINE,
+          )
+          open(path, "w", encoding="utf-8").write(text)
+          PYEOF
+            g++ -O2 -std=c++20 "$src" -o "$bin"
+            echo "Built $bin with Dh=1000 kg, Dd=${dd} kg, E=${energy} J"
+          done
+
+      - name: Verify compiled constants
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -E "double Dh =|double Dd =|double v_fly_drone =|double height =|double power_beta =" build/hanoi_reality/*.cpp
+
+      - name: Generate 192 one-task jobs
+        id: matrix
+        shell: bash
+        run: |
+          python3 - <<'PYEOF'
+          import glob
+          import json
+          import os
+
+          instances = []
+          for path in glob.glob("instance_hanoi/reality/reality.*.*.*.txt"):
+              name = os.path.basename(path)
+              base = name.removeprefix("reality.").removesuffix(".txt")
+              parts = base.split(".")
+              if len(parts) != 3:
+                  continue
+              n = int(parts[0])
+              if n in (200, 500):
+                  instances.append(base)
+          instances.sort(key=lambda name: tuple(int(part) for part in name.split(".")))
+          expected = 32
+          if len(instances) != expected:
+              raise SystemExit(f"Expected {expected} Hanoi reality instances for 200/500, found {len(instances)}: {instances}")
+
+          drone_capacities = ["2.7", "5", "10"]
+          runs = [1, 2]
+          tasks = [
+              {
+                  "job_id": f"{index + 1:03d}",
+                  "instance": instance,
+                  "drone_capacity": dd,
+                  "run": run,
+              }
+              for index, (instance, dd, run) in enumerate(
+                  (instance, dd, run)
+                  for instance in instances
+                  for dd in drone_capacities
+                  for run in runs
+              )
+          ]
+          if len(tasks) != 192:
+              raise SystemExit(f"Expected 192 tasks, found {len(tasks)}")
+
+          matrix = [
+              {
+                  "job_id": task["job_id"],
+                  "instance": task["instance"],
+                  "drone_capacity": task["drone_capacity"],
+                  "run": task["run"],
+              }
+              for task in tasks
+          ]
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"matrix={json.dumps(matrix, separators=(',', ':'))}\n")
+          print(f"Created {len(tasks)} one-task jobs")
+          PYEOF
+
+      - name: Upload solver variants
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-reality-solvers
+          path: |
+            build/hanoi_reality/tabubu_hanoi_reality_Dd2p7
+            build/hanoi_reality/tabubu_hanoi_reality_Dd5
+            build/hanoi_reality/tabubu_hanoi_reality_Dd10
+          retention-days: 1
+
+  solve:
+    name: ${{ matrix.job_id }} | reality.${{ matrix.instance }} | Dd=${{ matrix.drone_capacity }} | run ${{ matrix.run }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 32
+      matrix:
+        include: ${{ fromJson(needs.prepare.outputs.experiment_matrix) }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: hanoi-reality-solvers
+          path: build/hanoi_reality
+
+      - name: Run one Hanoi reality task
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x build/hanoi_reality/tabubu_hanoi_reality_Dd*
+          mkdir -p hanoi_reality_results
+
+          python3 - <<'PYEOF'
+          import os
+          import shutil
+          import subprocess
+          from pathlib import Path
+
+          root = Path.cwd()
+          out_root = root / "hanoi_reality_results"
+          solver_dir = root / "build" / "hanoi_reality"
+
+          instance = "${{ matrix.instance }}"
+          dd = "${{ matrix.drone_capacity }}"
+          run_id = "${{ matrix.run }}"
+          dd_suffix = dd.replace(".", "p")
+          solver = solver_dir / f"tabubu_hanoi_reality_Dd{dd_suffix}"
+          input_file = root / "instance_hanoi" / "reality" / f"reality.{instance}.txt"
+          run_dir = out_root / f"reality.{instance}" / f"Dd{dd_suffix}" / f"run{run_id}"
+          run_dir.mkdir(parents=True, exist_ok=True)
+          log_path = run_dir / "run.log"
+          cmd = [
+              str(solver),
+              str(input_file),
+              "--attempts=1",
+          ]
+          with log_path.open("w", encoding="utf-8") as log:
+              log.write("Command: " + " ".join(cmd) + "\n")
+              log.write(f"Instance: reality.{instance}\n")
+              log.write(f"Drone capacity kg: {dd}\n")
+              log.write(f"Run: {run_id}\n")
+              log.write("Truck capacity kg: 1000\n\n")
+              completed = subprocess.run(
+                  cmd,
+                  cwd=run_dir,
+                  stdout=log,
+                  stderr=subprocess.STDOUT,
+                  text=True,
+              )
+          if completed.returncode != 0:
+              raise SystemExit(f"Task failed: reality.{instance}, Dd={dd}, run={run_id}; see {log_path}")
+
+          for filename in ("output_solution_best.txt", "output_mode_0.txt"):
+              src = run_dir / filename
+              if src.exists():
+                  dst = run_dir / f"reality.{instance}.Dd{dd_suffix}.run{run_id}.{filename}"
+                  shutil.copy2(src, dst)
+          PYEOF
+
+      - name: Upload job result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-reality-drone-capacity-job-${{ matrix.job_id }}-${{ matrix.instance }}-Dd${{ matrix.drone_capacity }}-run${{ matrix.run }}
+          path: hanoi_reality_results/**
+          if-no-files-found: warn
+          retention-days: 14
+
+  aggregate:
+    name: Collect all Hanoi reality results
+    needs: solve
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download all result artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: hanoi-reality-drone-capacity-job-*
+          path: collected_hanoi_reality_results
+          merge-multiple: true
+
+      - name: Create summary CSV
+        shell: bash
+        run: |
+          python3 - <<'PYEOF'
+          import csv
+          import re
+          from pathlib import Path
+
+          rows = []
+          for path in sorted(Path("collected_hanoi_reality_results").rglob("reality.*.Dd*.output_solution_best.txt")):
+              text = path.read_text(encoding="utf-8", errors="replace")
+              match = re.search(r"reality\.(\d+\.\d+\.\d+)\.Dd([^.]+)\.run(\d+)\.output_solution_best\.txt$", path.name)
+              if not match:
+                  continue
+              instance = match.group(1)
+              dd = match.group(2).replace("p", ".")
+              run_id = match.group(3)
+              def find_value(label):
+                  m = re.search(rf"{re.escape(label)}:\s*([^\n]+)", text)
+                  return m.group(1).strip() if m else ""
+              rows.append({
+                  "Instance": instance,
+                  "Drone capacity kg": dd,
+                  "Run": run_id,
+                  "Initial solution cost": find_value("Initial solution cost"),
+                  "Improved solution cost": find_value("Improved solution cost"),
+                  "Worst solution cost": find_value("Worst solution cost"),
+                  "Mean solution cost": find_value("Mean solution cost"),
+                  "Mean elapsed time": find_value("Mean elapsed time"),
+                  "Final solution feasibility": find_value("Final solution feasibility"),
+                  "Result file": str(path),
+              })
+
+          rows.sort(key=lambda row: (
+              tuple(int(part) for part in row["Instance"].split(".")),
+              float(row["Drone capacity kg"]),
+              int(row["Run"]),
+          ))
+          expected = 192
+          if len(rows) != expected:
+              raise SystemExit(f"Expected {expected} result rows, found {len(rows)}")
+          with open("hanoi_reality_drone_capacity_summary.csv", "w", encoding="utf-8", newline="") as f:
+              writer = csv.DictWriter(f, fieldnames=[
+                  "Instance",
+                  "Drone capacity kg",
+                  "Run",
+                  "Initial solution cost",
+                  "Improved solution cost",
+                  "Worst solution cost",
+                  "Mean solution cost",
+                  "Mean elapsed time",
+                  "Final solution feasibility",
+                  "Result file",
+              ])
+              writer.writeheader()
+              writer.writerows(rows)
+          print(f"Wrote {len(rows)} summary rows")
+          PYEOF
+
+      - name: Upload consolidated results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-reality-drone-capacity-results
+          path: |
+            hanoi_reality_drone_capacity_summary.csv
+            collected_hanoi_reality_results/**
+          if-no-files-found: warn
+          retention-days: 30

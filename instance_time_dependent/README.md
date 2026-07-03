@@ -144,3 +144,84 @@ Solver sẽ tính vận tốc xe tải trên từng cạnh và từng khung gi�
 ```text
 v_ijl = theta_ijl * vmax_ij
 ```
+
+## Bộ Hanoi Reality `light` và `heavy`
+
+Ngoài bộ time-dependent trong thư mục này, dữ liệu Hanoi reality có hai biến thể
+được tạo tại:
+
+```text
+../instance_hanoi/reality/light
+../instance_hanoi/reality/heavy
+```
+
+Hai thư mục này được tạo bằng cách copy toàn bộ file của các instance
+`reality.200.*` và `reality.500.*` từ:
+
+```text
+../instance_hanoi/reality
+```
+
+Các file dữ liệu khác được giữ nguyên. Chỉ các file `*.theta_ijl.txt` được sinh
+lại để mô phỏng hai mức giao thông:
+
+- `light`: giao thông nhẹ hơn, hệ số vận tốc cao hơn.
+- `heavy`: giao thông nặng hơn, hệ số vận tốc thấp hơn.
+
+Các file backup như `*.bak_theta1_20260702` không được copy sang hai thư mục mới.
+
+### Quy Luật Sinh `theta_ijl` Cho `light`
+
+Vector hệ số cơ sở:
+
+```text
+base_L = [0.8, 0.6, 0.7, 0.8, 0.9, 0.7,
+          0.8, 1.0, 0.9, 0.85, 0.6, 0.8]
+```
+
+Với mỗi dòng `i j l theta_ijl`:
+
+```text
+theta_ijl = round(Uniform(0.9, 1.0) * base_L[l], 2)
+```
+
+### Quy Luật Sinh `theta_ijl` Cho `heavy`
+
+Vector hệ số cơ sở:
+
+```text
+base_L = [0.6, 0.4, 0.5, 0.6, 0.7, 0.5,
+          0.6, 0.8, 0.7, 0.65, 0.4, 0.6]
+```
+
+Với mỗi dòng `i j l theta_ijl`:
+
+```text
+theta_ijl = round(Uniform(0.9, 1.0) * base_L[l], 2)
+```
+
+### Ghi Chú Về Số Khung Giờ
+
+Các file `theta_ijl` của bộ Hanoi reality đang dùng `12` khung giờ:
+
+```text
+l = 0, 1, ..., 11
+```
+
+Do đó `base_L` trong hai biến thể `light` và `heavy` cũng được dùng với `12`
+giá trị. Nếu công thức ban đầu chỉ liệt kê `11` giá trị, giá trị cuối được bổ
+sung theo cùng pattern:
+
+```text
+light: base_L[11] = 0.8
+heavy: base_L[11] = 0.6
+```
+
+Random seed được đặt deterministic theo tên scenario và tên file:
+
+```text
+seed = f"{scenario}:{file_name}:20260703"
+```
+
+Vì vậy, cùng một file sẽ sinh lại cùng các giá trị `theta_ijl` nếu dùng cùng
+quy luật trên.

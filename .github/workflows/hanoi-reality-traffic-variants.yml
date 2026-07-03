@@ -1,0 +1,455 @@
+name: Hanoi reality - traffic variants
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  prepare:
+    name: Build Hanoi reality solver and prepare traffic-variant tasks
+    runs-on: ubuntu-latest
+    outputs:
+      experiment_matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build solver
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/hanoi_reality_traffic
+          g++ -O2 -std=c++20 tabubu_TimeDependent_hanoi_reality.cpp \
+            -o build/hanoi_reality_traffic/tabubu_hanoi_reality
+
+      - name: Generate weighted sequential solve jobs
+        id: matrix
+        shell: bash
+        run: |
+          python3 - <<'PYEOF'
+          import glob
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path("instance_hanoi/reality")
+          variants = [
+              {"variant": "normal", "dir": "."},
+              {"variant": "heavy", "dir": "heavy"},
+              {"variant": "light", "dir": "light"},
+          ]
+          instances = []
+          for path in glob.glob(str(root / "reality.*.*.*.txt")):
+              name = os.path.basename(path)
+              base = name.removeprefix("reality.").removesuffix(".txt")
+              parts = base.split(".")
+              if len(parts) != 3:
+                  continue
+              customer_count = int(parts[0])
+              if customer_count in (200, 500):
+                  instances.append(base)
+          instances.sort(key=lambda name: tuple(int(part) for part in name.split(".")))
+          if len(instances) != 32:
+              raise SystemExit(f"Expected 32 normal Hanoi reality instances for 200/500, found {len(instances)}")
+
+          tasks = []
+          task_id = 0
+          for instance in instances:
+              customer_count = int(instance.split(".", 1)[0])
+              trucks_count = 4 if customer_count == 200 else 9
+              drones_count = 6 if customer_count == 200 else 11
+              for variant in variants:
+                  dataset_dir = root / variant["dir"]
+                  required = [
+                      dataset_dir / f"reality.{instance}.txt",
+                      dataset_dir / f"reality.{instance}.truck_distance_m.txt",
+                      dataset_dir / f"reality.{instance}.drone_distance_m.txt",
+                      dataset_dir / f"reality.{instance}.vmax_ij.txt",
+                      dataset_dir / f"reality.{instance}.theta_ijl.txt",
+                  ]
+                  missing = [str(path) for path in required if not path.exists()]
+                  if missing:
+                      raise SystemExit(f"Missing required files for {variant['variant']} reality.{instance}: {missing}")
+                  for run in (1, 2, 3, 4, 5):
+                      task_id += 1
+                      tasks.append({
+                          "task_id": f"{task_id:03d}",
+                          "variant": variant["variant"],
+                          "variant_dir": variant["dir"],
+                          "instance": instance,
+                          "customer_count": customer_count,
+                          "trucks_count": trucks_count,
+                          "drones_count": drones_count,
+                          "run": run,
+                          "weight": 1 if customer_count == 200 else 3,
+                      })
+          if len(tasks) != 480:
+              raise SystemExit(f"Expected 480 tasks, found {len(tasks)}")
+
+          tasks_200 = [task for task in tasks if task["customer_count"] == 200]
+          tasks_500 = [task for task in tasks if task["customer_count"] == 500]
+          if len(tasks_200) != 240 or len(tasks_500) != 240:
+              raise SystemExit(f"Expected 240 tasks per size, found 200={len(tasks_200)}, 500={len(tasks_500)}")
+
+          # One 500-customer process is treated as roughly as slow as three
+          # 200-customer processes. With five runs there are 480 tasks, so the
+          # buckets pair one 500 task with one 200 task to stay below 250 jobs.
+          # Jobs run tasks sequentially; each bucket has total weight 4.
+          buckets = []
+          for task_500, task_200 in zip(tasks_500, tasks_200):
+              buckets.append([task_500, task_200])
+
+          matrix = []
+          for index, bucket in enumerate(buckets):
+              total_weight = sum(task["weight"] for task in bucket)
+              matrix.append({
+                  "job_id": f"{index + 1:03d}",
+                  "task_count": len(bucket),
+                  "total_weight": total_weight,
+                  "customer_mix": "500+200",
+                  "tasks_json": json.dumps(bucket, separators=(",", ":")),
+              })
+
+          if len(matrix) != 240:
+              raise SystemExit(f"Expected 240 non-empty solve jobs, found {len(matrix)}")
+          if any(item["task_count"] != 2 or item["total_weight"] != 4 for item in matrix):
+              raise SystemExit("Expected every job to pair one 500-customer task and one 200-customer task")
+          if len(matrix) > 250:
+              raise SystemExit(f"Workflow would create {len(matrix)} solve jobs, exceeding 250")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"matrix={json.dumps(matrix, separators=(',', ':'))}\n")
+          print(f"Created {len(tasks)} tasks across {len(matrix)} weighted sequential solve jobs")
+          print("Each job runs sequentially: one 500-customer task and one 200-customer task")
+          PYEOF
+
+      - name: Upload solver
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-reality-traffic-solver
+          path: build/hanoi_reality_traffic/tabubu_hanoi_reality
+          retention-days: 1
+
+  solve:
+    name: solve ${{ matrix.job_id }} | ${{ matrix.task_count }} task(s) | weight ${{ matrix.total_weight }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 720
+    strategy:
+      fail-fast: false
+      max-parallel: 250
+      matrix:
+        include: ${{ fromJson(needs.prepare.outputs.experiment_matrix) }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: hanoi-reality-traffic-solver
+          path: build/hanoi_reality_traffic
+
+      - name: Run assigned traffic-variant tasks sequentially
+        shell: bash
+        env:
+          TASKS_JSON: ${{ matrix.tasks_json }}
+        run: |
+          set -euo pipefail
+          chmod +x build/hanoi_reality_traffic/tabubu_hanoi_reality
+          mkdir -p hanoi_reality_traffic_results
+
+          python3 - <<'PYEOF'
+          import json
+          import os
+          import re
+          import shutil
+          import subprocess
+          import time
+          from pathlib import Path
+
+          root = Path.cwd()
+          out_root = root / "hanoi_reality_traffic_results"
+          solver = root / "build" / "hanoi_reality_traffic" / "tabubu_hanoi_reality"
+          tasks = json.loads(os.environ["TASKS_JSON"])
+
+          def rewrite_vehicle_counts(src, dst, trucks_count, drones_count):
+              text = src.read_text(encoding="utf-8")
+              text, truck_replacements = re.subn(
+                  r"^trucks_count\s+\d+\s*$",
+                  f"trucks_count {trucks_count}",
+                  text,
+                  count=1,
+                  flags=re.MULTILINE,
+              )
+              text, drone_replacements = re.subn(
+                  r"^drones_count\s+\d+\s*$",
+                  f"drones_count {drones_count}",
+                  text,
+                  count=1,
+                  flags=re.MULTILINE,
+              )
+              if truck_replacements != 1 or drone_replacements != 1:
+                  raise RuntimeError(f"Failed to rewrite vehicle counts in {src}")
+              dst.write_text(text, encoding="utf-8")
+
+          def task_dataset_dir(task):
+              base = root / "instance_hanoi" / "reality"
+              return base if task["variant"] == "normal" else base / task["variant"]
+
+          for task in tasks:
+              instance = task["instance"]
+              variant = task["variant"]
+              run_id = str(task["run"])
+              task_id = task["task_id"]
+              trucks_count = int(task["trucks_count"])
+              drones_count = int(task["drones_count"])
+              dataset_dir = task_dataset_dir(task)
+              input_file = dataset_dir / f"reality.{instance}.txt"
+              run_dir = (
+                  out_root
+                  / f"variant.{variant}"
+                  / f"reality.{instance}"
+                  / f"run{run_id}"
+              )
+              run_dir.mkdir(parents=True, exist_ok=True)
+              temp_input = run_dir / f"reality.{instance}.trucks{trucks_count}.drones{drones_count}.txt"
+              rewrite_vehicle_counts(input_file, temp_input, trucks_count, drones_count)
+
+              truck_distance_file = dataset_dir / f"reality.{instance}.truck_distance_m.txt"
+              drone_distance_file = dataset_dir / f"reality.{instance}.drone_distance_m.txt"
+              truck_vmax_file = dataset_dir / f"reality.{instance}.vmax_ij.txt"
+              truck_theta_file = dataset_dir / f"reality.{instance}.theta_ijl.txt"
+              log_path = run_dir / "run.log"
+              metadata_path = run_dir / "run_metadata.json"
+              cmd = [
+                  str(solver),
+                  str(temp_input),
+                  "--attempts=1",
+                  f"--truck-distance-file={truck_distance_file}",
+                  f"--drone-distance-file={drone_distance_file}",
+                  f"--truck-vmax-file={truck_vmax_file}",
+                  f"--truck-theta-file={truck_theta_file}",
+              ]
+              started = time.monotonic()
+              with log_path.open("w", encoding="utf-8") as log:
+                  log.write("Command: " + " ".join(cmd) + "\n")
+                  log.write(f"Task: {task_id}\n")
+                  log.write(f"Variant: {variant}\n")
+                  log.write(f"Instance: reality.{instance}\n")
+                  log.write(f"Customer count: {task['customer_count']}\n")
+                  log.write(f"Trucks count: {trucks_count}\n")
+                  log.write(f"Drones count: {drones_count}\n")
+                  log.write(f"Run: {run_id}\n\n")
+                  completed = subprocess.run(
+                      cmd,
+                      cwd=run_dir,
+                      stdout=log,
+                      stderr=subprocess.STDOUT,
+                      text=True,
+                  )
+              elapsed = time.monotonic() - started
+              metadata = {
+                  "task_id": task_id,
+                  "variant": variant,
+                  "instance": instance,
+                  "customer_count": task["customer_count"],
+                  "trucks_count": trucks_count,
+                  "drones_count": drones_count,
+                  "run": run_id,
+                  "wall_time_seconds": round(elapsed, 6),
+                  "returncode": completed.returncode,
+              }
+              metadata_path.write_text(json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+              if completed.returncode != 0:
+                  raise SystemExit(f"Task failed: {variant}, reality.{instance}, run={run_id}; see {log_path}")
+
+              prefix = f"reality.{instance}.{variant}.run{run_id}.trucks{trucks_count}.drones{drones_count}"
+              for filename in ("output_solution_best.txt", "output_mode_0.txt"):
+                  src = run_dir / filename
+                  if src.exists():
+                      shutil.copy2(src, run_dir / f"{prefix}.{filename}")
+              print(f"Completed {task_id}: {variant} reality.{instance} run={run_id} in {elapsed:.3f}s")
+          PYEOF
+
+      - name: Upload job result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-reality-traffic-variants-job-${{ matrix.job_id }}
+          path: hanoi_reality_traffic_results/**
+          if-no-files-found: warn
+          retention-days: 14
+
+  aggregate:
+    name: Collect Hanoi reality traffic-variant results
+    needs: solve
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download all result artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: hanoi-reality-traffic-variants-job-*
+          path: collected_hanoi_reality_traffic_results
+          merge-multiple: true
+
+      - name: Create summary CSV
+        shell: bash
+        run: |
+          python3 - <<'PYEOF'
+          import csv
+          import glob
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          def find_value(text, label):
+              match = re.search(rf"{re.escape(label)}:\s*([^\n]+)", text)
+              return match.group(1).strip() if match else ""
+
+          def parse_routes(text, header, next_header=None):
+              start = text.find(header)
+              if start < 0:
+                  return [], 0
+              start += len(header)
+              end = len(text)
+              if next_header:
+                  next_pos = text.find(next_header, start)
+                  if next_pos >= 0:
+                      end = next_pos
+              block = text[start:end]
+              routes = []
+              customer_count = 0
+              for raw_line in block.splitlines():
+                  line = raw_line.strip()
+                  if not line or not re.match(r"^(Truck|Drone)\s+\d+:", line):
+                      continue
+                  route_part = line.split(":", 1)[1].split("|", 1)[0].strip()
+                  nodes = [int(value) for value in re.findall(r"-?\d+", route_part)]
+                  customer_count += sum(1 for node in nodes if node != 0)
+                  routes.append(route_part)
+              return routes, customer_count
+
+          instances = []
+          for path in glob.glob("instance_hanoi/reality/reality.*.*.*.txt"):
+              name = os.path.basename(path)
+              base = name.removeprefix("reality.").removesuffix(".txt")
+              parts = base.split(".")
+              if len(parts) == 3 and int(parts[0]) in (200, 500):
+                  instances.append(base)
+          instances.sort(key=lambda name: tuple(int(part) for part in name.split(".")))
+          expected = {
+              (instance, variant, str(run_id))
+              for instance in instances
+              for variant in ("normal", "heavy", "light")
+              for run_id in (1, 2, 3, 4, 5)
+          }
+
+          metadata_by_dir = {}
+          for meta_path in Path("collected_hanoi_reality_traffic_results").rglob("run_metadata.json"):
+              metadata_by_dir[meta_path.parent] = json.loads(meta_path.read_text(encoding="utf-8"))
+
+          rows = []
+          seen = set()
+          pattern = re.compile(
+              r"reality\.(\d+\.\d+\.\d+)\.(normal|heavy|light)\.run(\d+)\.trucks(\d+)\.drones(\d+)\.output_solution_best\.txt$"
+          )
+          for path in sorted(Path("collected_hanoi_reality_traffic_results").rglob("reality.*.*.run*.trucks*.drones*.output_solution_best.txt")):
+              match = pattern.search(path.name)
+              if not match:
+                  continue
+              instance = match.group(1)
+              variant = match.group(2)
+              run_id = match.group(3)
+              trucks_count = match.group(4)
+              drones_count = match.group(5)
+              text = path.read_text(encoding="utf-8", errors="replace")
+              truck_routes, truck_customer_count = parse_routes(text, "Truck Routes:", "Drone Routes:")
+              drone_routes, drone_customer_count = parse_routes(text, "Drone Routes:", "Total validation:")
+              metadata = metadata_by_dir.get(path.parent, {})
+              key = (instance, variant, run_id)
+              seen.add(key)
+              rows.append({
+                  "instance": instance,
+                  "variant": variant,
+                  "run": run_id,
+                  "customer_count": instance.split(".", 1)[0],
+                  "trucks_count": trucks_count,
+                  "drones_count": drones_count,
+                  "wall_time_seconds": metadata.get("wall_time_seconds", ""),
+                  "best_solution": find_value(text, "Improved solution cost"),
+                  "initial_solution_cost": find_value(text, "Initial solution cost"),
+                  "mean_elapsed_time_reported": find_value(text, "Mean elapsed time"),
+                  "final_solution_feasibility": find_value(text, "Final solution feasibility"),
+                  "truck_route": " ; ".join(truck_routes),
+                  "drone_route": " ; ".join(drone_routes),
+                  "truck_customer_count": truck_customer_count,
+                  "drone_customer_count": drone_customer_count,
+                  "result_file": str(path),
+              })
+
+          rows.sort(key=lambda row: (
+              tuple(int(part) for part in row["instance"].split(".")),
+              {"normal": 0, "light": 1, "heavy": 2}[row["variant"]],
+              int(row["run"]),
+          ))
+          fieldnames = [
+              "instance",
+              "variant",
+              "run",
+              "customer_count",
+              "trucks_count",
+              "drones_count",
+              "wall_time_seconds",
+              "best_solution",
+              "initial_solution_cost",
+              "mean_elapsed_time_reported",
+              "final_solution_feasibility",
+              "truck_route",
+              "drone_route",
+              "truck_customer_count",
+              "drone_customer_count",
+              "result_file",
+          ]
+          with open("hanoi_reality_traffic_variants_summary.csv", "w", encoding="utf-8", newline="") as f:
+              writer = csv.DictWriter(f, fieldnames=fieldnames)
+              writer.writeheader()
+              writer.writerows(rows)
+
+          missing = [
+              {"instance": instance, "variant": variant, "run": run_id}
+              for instance, variant, run_id in sorted(
+                  expected - seen,
+                  key=lambda item: (tuple(int(part) for part in item[0].split(".")), item[1], int(item[2])),
+              )
+          ]
+          with open("hanoi_reality_traffic_variants_missing.csv", "w", encoding="utf-8", newline="") as f:
+              writer = csv.DictWriter(f, fieldnames=["instance", "variant", "run"])
+              writer.writeheader()
+              writer.writerows(missing)
+
+          print(f"Wrote {len(rows)} summary rows")
+          if missing:
+              print(f"Missing {len(missing)} expected result rows; see hanoi_reality_traffic_variants_missing.csv")
+          else:
+              print("All 480 expected result rows were found")
+          PYEOF
+
+      - name: Upload consolidated results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-reality-traffic-variants-results
+          path: |
+            hanoi_reality_traffic_variants_summary.csv
+            hanoi_reality_traffic_variants_missing.csv
+            collected_hanoi_reality_traffic_results/**
+          if-no-files-found: warn
+          retention-days: 30

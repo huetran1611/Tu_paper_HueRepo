@@ -1,0 +1,463 @@
+name: Hanoi reality - trip scenario sweep
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  prepare:
+    name: Build Hanoi reality trip solvers and prepare tasks
+    runs-on: ubuntu-latest
+    outputs:
+      experiment_matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build solver variants from drone_config.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/hanoi_reality_trip
+
+          readarray -t cfg < <(python3 - <<'PYEOF'
+          import json
+          with open("drone_config.json", encoding="utf-8") as f:
+              cfg = json.load(f)
+          print(cfg["energy_capacity_j"])
+          print(cfg["speed"]["fly_m_per_s"])
+          print(cfg["speed"]["take_off_m_per_s"])
+          print(cfg["speed"]["landing_m_per_s"])
+          print(cfg["flight_height_m"])
+          print(cfg["power_model"]["beta"])
+          print(cfg["power_model"]["gamma"])
+          PYEOF
+          )
+
+          energy="${cfg[0]}"
+          fly_speed="${cfg[1]}"
+          takeoff_speed="${cfg[2]}"
+          landing_speed="${cfg[3]}"
+          flight_height="${cfg[4]}"
+          beta="${cfg[5]}"
+          gamma="${cfg[6]}"
+
+          build_variant() {
+            local scenario="$1"
+            local source_file="$2"
+            local dd="$3"
+            local suffix="${dd//./p}"
+            local src="build/hanoi_reality_trip/tabubu_hanoi_reality_${scenario}_Dd${suffix}.cpp"
+            local bin="build/hanoi_reality_trip/tabubu_hanoi_reality_${scenario}_Dd${suffix}"
+            cp "$source_file" "$src"
+            python3 - "$src" "$dd" "$energy" "$fly_speed" "$takeoff_speed" "$landing_speed" "$flight_height" "$beta" "$gamma" <<'PYEOF'
+          import re
+          import sys
+
+          path, dd, energy, fly, takeoff, landing, height, beta, gamma = sys.argv[1:]
+          text = open(path, encoding="utf-8").read()
+          replacements = [
+              (
+                  r"^double Dh = [^;]+;",
+                  "double Dh = 1000.0;",
+              ),
+              (
+                  r"^double Dd = [^,;]+,\s*E = [^;]+;",
+                  f"double Dd = {dd}, E = {energy};",
+              ),
+              (
+                  r"^double v_fly_drone = [^,;]+,\s*v_take_off = [^,;]+,\s*v_landing = [^;]+;",
+                  f"double v_fly_drone = {fly}, v_take_off = {takeoff}, v_landing = {landing};",
+              ),
+              (
+                  r"^double height = [^;]+;",
+                  f"double height = {height};",
+              ),
+              (
+                  r"^double power_beta = [^,;]+,\s*power_gamma = [^;]+;",
+                  f"double power_beta = {beta}, power_gamma = {gamma};",
+              ),
+          ]
+          for pattern, repl in replacements:
+              text, count = re.subn(pattern, repl, text, count=1, flags=re.MULTILINE)
+              if count != 1:
+                  raise SystemExit(f"Replacement failed for pattern: {pattern}")
+          open(path, "w", encoding="utf-8").write(text)
+          PYEOF
+            g++ -O2 -std=c++20 "$src" -o "$bin"
+            echo "Built $bin with scenario=${scenario}, Dh=1000 kg, Dd=${dd} kg, E=${energy} J"
+          }
+
+          build_variant "1_trip" "tabubu_TimeDependent_hanoi_reality_truck1trip.cpp" "2.27"
+          build_variant "1_trip" "tabubu_TimeDependent_hanoi_reality_truck1trip.cpp" "5"
+          build_variant "1_trip" "tabubu_TimeDependent_hanoi_reality_truck1trip.cpp" "10"
+          build_variant "multi_trip" "tabubu_TimeDependent_hanoi_reality.cpp" "2.27"
+
+      - name: Verify compiled constants
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -E "double Dh =|double Dd =|double v_fly_drone =|double height =|double power_beta =" build/hanoi_reality_trip/*.cpp
+
+      - name: Generate size-aware solve jobs
+        id: matrix
+        shell: bash
+        run: |
+          python3 - <<'PYEOF'
+          import glob
+          import json
+          import os
+
+          instances = []
+          for path in glob.glob("instance_hanoi/reality/reality.*.*.*.txt"):
+              name = os.path.basename(path)
+              base = name.removeprefix("reality.").removesuffix(".txt")
+              parts = base.split(".")
+              if len(parts) != 3:
+                  continue
+              customer_count = int(parts[0])
+              if customer_count in (200, 500):
+                  instances.append(base)
+          instances.sort(key=lambda name: tuple(int(part) for part in name.split(".")))
+          if len(instances) != 32:
+              raise SystemExit(f"Expected 32 Hanoi reality instances for 200/500, found {len(instances)}: {instances}")
+
+          configs = [
+              {"scenario": "1_trip", "drone_capacity": "2.27"},
+              {"scenario": "1_trip", "drone_capacity": "5"},
+              {"scenario": "1_trip", "drone_capacity": "10"},
+              {"scenario": "multi_trip", "drone_capacity": "2.27"},
+          ]
+          runs = [1, 2]
+          tasks = []
+          task_index = 0
+          for instance in instances:
+              customer_count = int(instance.split(".", 1)[0])
+              for config in configs:
+                  for run in runs:
+                      task_index += 1
+                      tasks.append({
+                          "task_id": f"{task_index:03d}",
+                          "instance": instance,
+                          "customer_count": customer_count,
+                          "scenario": config["scenario"],
+                          "drone_capacity": config["drone_capacity"],
+                          "run": run,
+                      })
+          if len(tasks) != 256:
+              raise SystemExit(f"Expected 256 tasks, found {len(tasks)}")
+
+          tasks_200 = [task for task in tasks if task["customer_count"] == 200]
+          tasks_500 = [task for task in tasks if task["customer_count"] == 500]
+          if len(tasks_200) != 128 or len(tasks_500) != 128:
+              raise SystemExit(f"Expected 128 tasks for each size, found 200={len(tasks_200)}, 500={len(tasks_500)}")
+
+          buckets = []
+          for index in range(0, len(tasks_200), 2):
+              buckets.append(tasks_200[index:index + 2])
+          for task in tasks_500:
+              buckets.append([task])
+
+          matrix = [
+              {
+                  "job_id": f"{index + 1:03d}",
+                  "customer_count": bucket[0]["customer_count"],
+                  "task_count": len(bucket),
+                  "tasks_json": json.dumps(bucket, separators=(",", ":")),
+              }
+              for index, bucket in enumerate(buckets)
+              if bucket
+          ]
+          if len(matrix) != 192:
+              raise SystemExit(f"Expected 192 solve jobs, found {len(matrix)}")
+          jobs_200 = [item for item in matrix if item["customer_count"] == 200]
+          jobs_500 = [item for item in matrix if item["customer_count"] == 500]
+          if len(jobs_200) != 64 or any(item["task_count"] != 2 for item in jobs_200):
+              raise SystemExit("Expected 64 jobs with two tasks each for 200-customer instances")
+          if len(jobs_500) != 128 or any(item["task_count"] != 1 for item in jobs_500):
+              raise SystemExit("Expected 128 jobs with one task each for 500-customer instances")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"matrix={json.dumps(matrix, separators=(',', ':'))}\n")
+          print(f"Created {len(tasks)} tasks across {len(matrix)} solve jobs")
+          print("200-customer jobs: 64 jobs with 2 tasks each")
+          print("500-customer jobs: 128 jobs with 1 task each")
+          PYEOF
+
+      - name: Upload solver variants
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-reality-trip-solvers
+          path: |
+            build/hanoi_reality_trip/tabubu_hanoi_reality_1_trip_Dd2p27
+            build/hanoi_reality_trip/tabubu_hanoi_reality_1_trip_Dd5
+            build/hanoi_reality_trip/tabubu_hanoi_reality_1_trip_Dd10
+            build/hanoi_reality_trip/tabubu_hanoi_reality_multi_trip_Dd2p27
+          retention-days: 1
+
+  solve:
+    name: solve ${{ matrix.job_id }} | ${{ matrix.task_count }} task(s)
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 720
+    strategy:
+      fail-fast: false
+      max-parallel: 250
+      matrix:
+        include: ${{ fromJson(needs.prepare.outputs.experiment_matrix) }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: hanoi-reality-trip-solvers
+          path: build/hanoi_reality_trip
+
+      - name: Run assigned Hanoi reality tasks
+        shell: bash
+        env:
+          TASKS_JSON: ${{ matrix.tasks_json }}
+        run: |
+          set -euo pipefail
+          chmod +x build/hanoi_reality_trip/tabubu_hanoi_reality_*
+          mkdir -p hanoi_reality_trip_results
+
+          python3 - <<'PYEOF'
+          import concurrent.futures
+          import json
+          import os
+          import shutil
+          import subprocess
+          from pathlib import Path
+
+          root = Path.cwd()
+          out_root = root / "hanoi_reality_trip_results"
+          solver_dir = root / "build" / "hanoi_reality_trip"
+          tasks = json.loads(os.environ["TASKS_JSON"])
+
+          def run_task(task):
+              instance = task["instance"]
+              scenario = task["scenario"]
+              dd = task["drone_capacity"]
+              run_id = str(task["run"])
+              task_id = task["task_id"]
+              dd_suffix = dd.replace(".", "p")
+              solver = solver_dir / f"tabubu_hanoi_reality_{scenario}_Dd{dd_suffix}"
+              input_file = root / "instance_hanoi" / "reality" / f"reality.{instance}.txt"
+              run_dir = out_root / f"scenario.{scenario}" / f"reality.{instance}" / f"Dd{dd_suffix}" / f"run{run_id}"
+              run_dir.mkdir(parents=True, exist_ok=True)
+              log_path = run_dir / "run.log"
+              cmd = [
+                  str(solver),
+                  str(input_file),
+                  "--attempts=1",
+              ]
+              with log_path.open("w", encoding="utf-8") as log:
+                  log.write("Command: " + " ".join(cmd) + "\n")
+                  log.write(f"Task: {task_id}\n")
+                  log.write(f"Scenario: {scenario}\n")
+                  log.write(f"Instance: reality.{instance}\n")
+                  log.write(f"Drone capacity kg: {dd}\n")
+                  log.write(f"Run: {run_id}\n")
+                  log.write("Truck capacity kg: 1000\n\n")
+                  completed = subprocess.run(
+                      cmd,
+                      cwd=run_dir,
+                      stdout=log,
+                      stderr=subprocess.STDOUT,
+                      text=True,
+                  )
+              if completed.returncode != 0:
+                  raise RuntimeError(
+                      f"Task failed: {scenario}, reality.{instance}, Dd={dd}, run={run_id}; see {log_path}"
+                  )
+
+              prefix = f"reality.{instance}.{scenario}.Dd{dd_suffix}.run{run_id}"
+              for filename in ("output_solution_best.txt", "output_mode_0.txt"):
+                  src = run_dir / filename
+                  if src.exists():
+                      shutil.copy2(src, run_dir / f"{prefix}.{filename}")
+              return f"{task_id}: {scenario} reality.{instance} Dd={dd} run={run_id}"
+
+          max_workers = max(1, len(tasks))
+          with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+              futures = [executor.submit(run_task, task) for task in tasks]
+              for future in concurrent.futures.as_completed(futures):
+                  print("Completed", future.result())
+          PYEOF
+
+      - name: Upload job result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-reality-trip-scenarios-job-${{ matrix.job_id }}
+          path: hanoi_reality_trip_results/**
+          if-no-files-found: warn
+          retention-days: 14
+
+  aggregate:
+    name: Collect Hanoi reality trip best solutions
+    needs: solve
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download all result artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: hanoi-reality-trip-scenarios-job-*
+          path: collected_hanoi_reality_trip_results
+          merge-multiple: true
+
+      - name: Create best-solution summary CSV
+        shell: bash
+        run: |
+          python3 - <<'PYEOF'
+          import csv
+          import glob
+          import os
+          import re
+          from pathlib import Path
+
+          def find_value(text, label):
+              match = re.search(rf"{re.escape(label)}:\s*([^\n]+)", text)
+              return match.group(1).strip() if match else ""
+
+          def parse_routes(text, header, next_header=None):
+              start = text.find(header)
+              if start < 0:
+                  return [], 0
+              start += len(header)
+              end = len(text)
+              if next_header:
+                  next_pos = text.find(next_header, start)
+                  if next_pos >= 0:
+                      end = next_pos
+              block = text[start:end]
+              routes = []
+              customer_count = 0
+              for raw_line in block.splitlines():
+                  line = raw_line.strip()
+                  if not line or not re.match(r"^(Truck|Drone)\s+\d+:", line):
+                      continue
+                  route_part = line.split(":", 1)[1].split("|", 1)[0].strip()
+                  nodes = [int(value) for value in re.findall(r"-?\d+", route_part)]
+                  customer_count += sum(1 for node in nodes if node != 0)
+                  routes.append(route_part)
+              return routes, customer_count
+
+          expected = []
+          instances = []
+          for path in glob.glob("instance_hanoi/reality/reality.*.*.*.txt"):
+              name = os.path.basename(path)
+              base = name.removeprefix("reality.").removesuffix(".txt")
+              parts = base.split(".")
+              if len(parts) == 3 and int(parts[0]) in (200, 500):
+                  instances.append(base)
+          instances.sort(key=lambda name: tuple(int(part) for part in name.split(".")))
+          configs = [
+              ("1_trip", "2.27"),
+              ("1_trip", "5"),
+              ("1_trip", "10"),
+              ("multi_trip", "2.27"),
+          ]
+          for instance in instances:
+              for scenario, dd in configs:
+                  for run_id in (1, 2):
+                      expected.append((instance, scenario, dd, str(run_id)))
+
+          rows = []
+          seen = set()
+          pattern = re.compile(
+              r"reality\.(\d+\.\d+\.\d+)\.(1_trip|multi_trip)\.Dd([^.]+)\.run(\d+)\.output_solution_best\.txt$"
+          )
+          for path in sorted(Path("collected_hanoi_reality_trip_results").rglob("reality.*.*.Dd*.run*.output_solution_best.txt")):
+              match = pattern.search(path.name)
+              if not match:
+                  continue
+              instance = match.group(1)
+              scenario = match.group(2)
+              dd = match.group(3).replace("p", ".")
+              run_id = match.group(4)
+              text = path.read_text(encoding="utf-8", errors="replace")
+              truck_routes, truck_customer_count = parse_routes(text, "Truck Routes:", "Drone Routes:")
+              drone_routes, drone_customer_count = parse_routes(text, "Drone Routes:", "Total validation:")
+              key = (instance, scenario, dd, run_id)
+              seen.add(key)
+              rows.append({
+                  "instance": instance,
+                  "scenario": scenario,
+                  "drone_capacity_kg": dd,
+                  "run": run_id,
+                  "best_solution": find_value(text, "Improved solution cost"),
+                  "final_solution_feasibility": find_value(text, "Final solution feasibility"),
+                  "truck_route": " ; ".join(truck_routes),
+                  "drone_route": " ; ".join(drone_routes),
+                  "truck_customer_count": truck_customer_count,
+                  "drone_customer_count": drone_customer_count,
+                  "result_file": str(path),
+              })
+
+          rows.sort(key=lambda row: (
+              tuple(int(part) for part in row["instance"].split(".")),
+              0 if row["scenario"] == "1_trip" else 1,
+              float(row["drone_capacity_kg"]),
+              int(row["run"]),
+          ))
+          fieldnames = [
+              "instance",
+              "scenario",
+              "drone_capacity_kg",
+              "run",
+              "best_solution",
+              "final_solution_feasibility",
+              "truck_route",
+              "drone_route",
+              "truck_customer_count",
+              "drone_customer_count",
+              "result_file",
+          ]
+          with open("hanoi_reality_trip_scenarios_best_summary.csv", "w", encoding="utf-8", newline="") as f:
+              writer = csv.DictWriter(f, fieldnames=fieldnames)
+              writer.writeheader()
+              writer.writerows(rows)
+
+          missing = [
+              {
+                  "instance": instance,
+                  "scenario": scenario,
+                  "drone_capacity_kg": dd,
+                  "run": run_id,
+              }
+              for instance, scenario, dd, run_id in expected
+              if (instance, scenario, dd, run_id) not in seen
+          ]
+          with open("hanoi_reality_trip_scenarios_missing.csv", "w", encoding="utf-8", newline="") as f:
+              writer = csv.DictWriter(f, fieldnames=["instance", "scenario", "drone_capacity_kg", "run"])
+              writer.writeheader()
+              writer.writerows(missing)
+
+          print(f"Wrote {len(rows)} best-solution rows")
+          if missing:
+              print(f"Missing {len(missing)} expected result rows; see hanoi_reality_trip_scenarios_missing.csv")
+          else:
+              print("All 256 expected result rows were found")
+          PYEOF
+
+      - name: Upload consolidated results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-reality-trip-scenarios-results
+          path: |
+            hanoi_reality_trip_scenarios_best_summary.csv
+            hanoi_reality_trip_scenarios_missing.csv
+            collected_hanoi_reality_trip_results/**
+          if-no-files-found: warn
+          retention-days: 30

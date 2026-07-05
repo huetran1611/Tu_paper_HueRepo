@@ -1,0 +1,414 @@
+name: Hanoi reality - 30new vs 40new
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  prepare:
+    name: Build solver and prepare 30new/40new comparison tasks
+    runs-on: ubuntu-latest
+    outputs:
+      experiment_matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build Hanoi reality solver
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/hanoi_reality_new_rings
+          g++ -O2 -std=c++20 tabubu_TimeDependent_hanoi_reality.cpp \
+            -o build/hanoi_reality_new_rings/tabubu_hanoi_reality
+
+      - name: Generate 30new/40new task matrix
+        id: matrix
+        shell: bash
+        run: |
+          python3 - <<'PYEOF'
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path("instance_hanoi/reality/heavy")
+          sizes = (200, 500)
+          grids = ("30new", "40new")
+          indexes = (1, 2, 3, 4)
+          runs = (1, 2)
+
+          tasks = []
+          task_id = 0
+          for customer_count in sizes:
+              trucks_count = 4 if customer_count == 200 else 9
+              drones_count = 6 if customer_count == 200 else 11
+              for grid in grids:
+                  for index in indexes:
+                      instance = f"{customer_count}.{grid}.{index}"
+                      required = [
+                          root / f"reality.{instance}.txt",
+                          root / f"reality.{instance}.truck_distance_m.txt",
+                          root / f"reality.{instance}.drone_distance_m.txt",
+                          root / f"reality.{instance}.vmax_ij.txt",
+                          root / f"reality.{instance}.theta_ijl.txt",
+                      ]
+                      missing = [str(path) for path in required if not path.exists()]
+                      if missing:
+                          raise SystemExit(f"Missing required files for reality.{instance}: {missing}")
+                      for run in runs:
+                          task_id += 1
+                          tasks.append({
+                              "task_id": f"{task_id:03d}",
+                              "dataset_variant": "heavy",
+                              "grid": grid,
+                              "instance": instance,
+                              "customer_count": customer_count,
+                              "trucks_count": trucks_count,
+                              "drones_count": drones_count,
+                              "run": run,
+                              "weight": 1 if customer_count == 200 else 3,
+                          })
+
+          if len(tasks) != 32:
+              raise SystemExit(f"Expected 32 tasks, found {len(tasks)}")
+
+          # Keep each GitHub job small and sequential: one solver process per job.
+          matrix = []
+          for task in tasks:
+              matrix.append({
+                  "job_id": task["task_id"],
+                  "instance": task["instance"],
+                  "grid": task["grid"],
+                  "customer_count": task["customer_count"],
+                  "run": task["run"],
+                  "weight": task["weight"],
+                  "tasks_json": json.dumps([task], separators=(",", ":")),
+              })
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"matrix={json.dumps(matrix, separators=(',', ':'))}\n")
+          print(f"Created {len(tasks)} tasks across {len(matrix)} jobs")
+          PYEOF
+
+      - name: Upload solver
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-reality-new-rings-solver
+          path: build/hanoi_reality_new_rings/tabubu_hanoi_reality
+          retention-days: 1
+
+  solve:
+    name: solve ${{ matrix.instance }} run${{ matrix.run }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 720
+    strategy:
+      fail-fast: false
+      max-parallel: 32
+      matrix:
+        include: ${{ fromJson(needs.prepare.outputs.experiment_matrix) }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: hanoi-reality-new-rings-solver
+          path: build/hanoi_reality_new_rings
+
+      - name: Run assigned comparison task
+        shell: bash
+        env:
+          TASKS_JSON: ${{ matrix.tasks_json }}
+        run: |
+          set -euo pipefail
+          chmod +x build/hanoi_reality_new_rings/tabubu_hanoi_reality
+          mkdir -p hanoi_reality_new_rings_results
+
+          python3 - <<'PYEOF'
+          import json
+          import os
+          import re
+          import shutil
+          import subprocess
+          import time
+          from pathlib import Path
+
+          root = Path.cwd()
+          out_root = root / "hanoi_reality_new_rings_results"
+          solver = root / "build" / "hanoi_reality_new_rings" / "tabubu_hanoi_reality"
+          dataset_dir = root / "instance_hanoi" / "reality" / "heavy"
+          tasks = json.loads(os.environ["TASKS_JSON"])
+
+          def rewrite_vehicle_counts(src, dst, trucks_count, drones_count):
+              text = src.read_text(encoding="utf-8")
+              text, truck_replacements = re.subn(
+                  r"^trucks_count\s+\d+\s*$",
+                  f"trucks_count {trucks_count}",
+                  text,
+                  count=1,
+                  flags=re.MULTILINE,
+              )
+              text, drone_replacements = re.subn(
+                  r"^drones_count\s+\d+\s*$",
+                  f"drones_count {drones_count}",
+                  text,
+                  count=1,
+                  flags=re.MULTILINE,
+              )
+              if truck_replacements != 1 or drone_replacements != 1:
+                  raise RuntimeError(f"Failed to rewrite vehicle counts in {src}")
+              dst.write_text(text, encoding="utf-8")
+
+          for task in tasks:
+              instance = task["instance"]
+              grid = task["grid"]
+              run_id = str(task["run"])
+              trucks_count = int(task["trucks_count"])
+              drones_count = int(task["drones_count"])
+              input_file = dataset_dir / f"reality.{instance}.txt"
+              run_dir = (
+                  out_root
+                  / f"grid.{grid}"
+                  / f"reality.{instance}"
+                  / f"run{run_id}"
+              )
+              run_dir.mkdir(parents=True, exist_ok=True)
+              temp_input = run_dir / f"reality.{instance}.trucks{trucks_count}.drones{drones_count}.txt"
+              rewrite_vehicle_counts(input_file, temp_input, trucks_count, drones_count)
+
+              truck_distance_file = dataset_dir / f"reality.{instance}.truck_distance_m.txt"
+              drone_distance_file = dataset_dir / f"reality.{instance}.drone_distance_m.txt"
+              truck_vmax_file = dataset_dir / f"reality.{instance}.vmax_ij.txt"
+              truck_theta_file = dataset_dir / f"reality.{instance}.theta_ijl.txt"
+              log_path = run_dir / "run.log"
+              metadata_path = run_dir / "run_metadata.json"
+              cmd = [
+                  str(solver),
+                  str(temp_input),
+                  "--attempts=1",
+                  f"--truck-distance-file={truck_distance_file}",
+                  f"--drone-distance-file={drone_distance_file}",
+                  f"--truck-vmax-file={truck_vmax_file}",
+                  f"--truck-theta-file={truck_theta_file}",
+              ]
+              started = time.monotonic()
+              with log_path.open("w", encoding="utf-8") as log:
+                  log.write("Command: " + " ".join(cmd) + "\n")
+                  log.write(f"Task: {task['task_id']}\n")
+                  log.write(f"Grid: {grid}\n")
+                  log.write(f"Instance: reality.{instance}\n")
+                  log.write(f"Customer count: {task['customer_count']}\n")
+                  log.write(f"Trucks count: {trucks_count}\n")
+                  log.write(f"Drones count: {drones_count}\n")
+                  log.write(f"Run: {run_id}\n\n")
+                  completed = subprocess.run(
+                      cmd,
+                      cwd=run_dir,
+                      stdout=log,
+                      stderr=subprocess.STDOUT,
+                      text=True,
+                  )
+              elapsed = time.monotonic() - started
+              metadata = {
+                  "task_id": task["task_id"],
+                  "dataset_variant": task["dataset_variant"],
+                  "grid": grid,
+                  "instance": instance,
+                  "customer_count": task["customer_count"],
+                  "trucks_count": trucks_count,
+                  "drones_count": drones_count,
+                  "run": run_id,
+                  "wall_time_seconds": round(elapsed, 6),
+                  "returncode": completed.returncode,
+              }
+              metadata_path.write_text(json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+              if completed.returncode != 0:
+                  raise SystemExit(f"Task failed: reality.{instance}, run={run_id}; see {log_path}")
+
+              prefix = f"reality.{instance}.heavy.run{run_id}.trucks{trucks_count}.drones{drones_count}"
+              for filename in ("output_solution_best.txt", "output_mode_0.txt"):
+                  src = run_dir / filename
+                  if src.exists():
+                      shutil.copy2(src, run_dir / f"{prefix}.{filename}")
+              print(f"Completed {task['task_id']}: reality.{instance} run={run_id} in {elapsed:.3f}s")
+          PYEOF
+
+      - name: Upload job result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-reality-new-rings-job-${{ matrix.job_id }}
+          path: hanoi_reality_new_rings_results/**
+          if-no-files-found: warn
+          retention-days: 14
+
+  aggregate:
+    name: Collect 30new/40new comparison results
+    needs: solve
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download all result artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: hanoi-reality-new-rings-job-*
+          path: collected_hanoi_reality_new_rings_results
+          merge-multiple: true
+
+      - name: Create comparison summary CSV
+        shell: bash
+        run: |
+          python3 - <<'PYEOF'
+          import csv
+          import json
+          import re
+          from pathlib import Path
+
+          def find_value(text, label):
+              match = re.search(rf"{re.escape(label)}:\s*([^\n]+)", text)
+              return match.group(1).strip() if match else ""
+
+          def parse_routes(text, header, next_header=None):
+              start = text.find(header)
+              if start < 0:
+                  return [], 0
+              start += len(header)
+              end = len(text)
+              if next_header:
+                  next_pos = text.find(next_header, start)
+                  if next_pos >= 0:
+                      end = next_pos
+              block = text[start:end]
+              routes = []
+              customer_count = 0
+              for raw_line in block.splitlines():
+                  line = raw_line.strip()
+                  if not line or not re.match(r"^(Truck|Drone)\s+\d+:", line):
+                      continue
+                  route_part = line.split(":", 1)[1].split("|", 1)[0].strip()
+                  nodes = [int(value) for value in re.findall(r"-?\d+", route_part)]
+                  customer_count += sum(1 for node in nodes if node != 0)
+                  routes.append(route_part)
+              return routes, customer_count
+
+          expected = {
+              (f"{customer_count}.{grid}.{index}", grid, str(run_id))
+              for customer_count in (200, 500)
+              for grid in ("30new", "40new")
+              for index in (1, 2, 3, 4)
+              for run_id in (1, 2)
+          }
+
+          metadata_by_dir = {}
+          for meta_path in Path("collected_hanoi_reality_new_rings_results").rglob("run_metadata.json"):
+              metadata_by_dir[meta_path.parent] = json.loads(meta_path.read_text(encoding="utf-8"))
+
+          rows = []
+          seen = set()
+          pattern = re.compile(
+              r"reality\.(\d+\.(30new|40new)\.\d+)\.heavy\.run(\d+)\.trucks(\d+)\.drones(\d+)\.output_solution_best\.txt$"
+          )
+          for path in sorted(Path("collected_hanoi_reality_new_rings_results").rglob("reality.*.heavy.run*.trucks*.drones*.output_solution_best.txt")):
+              match = pattern.search(path.name)
+              if not match:
+                  continue
+              instance = match.group(1)
+              grid = match.group(2)
+              run_id = match.group(3)
+              trucks_count = match.group(4)
+              drones_count = match.group(5)
+              text = path.read_text(encoding="utf-8", errors="replace")
+              truck_routes, truck_customer_count = parse_routes(text, "Truck Routes:", "Drone Routes:")
+              drone_routes, drone_customer_count = parse_routes(text, "Drone Routes:", "Total validation:")
+              metadata = metadata_by_dir.get(path.parent, {})
+              key = (instance, grid, run_id)
+              seen.add(key)
+              rows.append({
+                  "instance": instance,
+                  "grid": grid,
+                  "run": run_id,
+                  "customer_count": instance.split(".", 1)[0],
+                  "trucks_count": trucks_count,
+                  "drones_count": drones_count,
+                  "wall_time_seconds": metadata.get("wall_time_seconds", ""),
+                  "best_solution": find_value(text, "Improved solution cost"),
+                  "initial_solution_cost": find_value(text, "Initial solution cost"),
+                  "mean_elapsed_time_reported": find_value(text, "Mean elapsed time"),
+                  "final_solution_feasibility": find_value(text, "Final solution feasibility"),
+                  "truck_route": " ; ".join(truck_routes),
+                  "drone_route": " ; ".join(drone_routes),
+                  "truck_customer_count": truck_customer_count,
+                  "drone_customer_count": drone_customer_count,
+                  "result_file": str(path),
+              })
+
+          def row_key(row):
+              n, grid, index = row["instance"].split(".")
+              return (int(n), {"30new": 0, "40new": 1}[grid], int(index), int(row["run"]))
+
+          rows.sort(key=row_key)
+          fieldnames = [
+              "instance",
+              "grid",
+              "run",
+              "customer_count",
+              "trucks_count",
+              "drones_count",
+              "wall_time_seconds",
+              "best_solution",
+              "initial_solution_cost",
+              "mean_elapsed_time_reported",
+              "final_solution_feasibility",
+              "truck_route",
+              "drone_route",
+              "truck_customer_count",
+              "drone_customer_count",
+              "result_file",
+          ]
+          with open("hanoi_reality_new_rings_summary.csv", "w", encoding="utf-8", newline="") as f:
+              writer = csv.DictWriter(f, fieldnames=fieldnames)
+              writer.writeheader()
+              writer.writerows(rows)
+
+          missing = [
+              {"instance": instance, "grid": grid, "run": run_id}
+              for instance, grid, run_id in sorted(
+                  expected - seen,
+                  key=lambda item: (
+                      int(item[0].split(".", 1)[0]),
+                      {"30new": 0, "40new": 1}[item[1]],
+                      int(item[0].rsplit(".", 1)[1]),
+                      int(item[2]),
+                  ),
+              )
+          ]
+          with open("hanoi_reality_new_rings_missing.csv", "w", encoding="utf-8", newline="") as f:
+              writer = csv.DictWriter(f, fieldnames=["instance", "grid", "run"])
+              writer.writeheader()
+              writer.writerows(missing)
+
+          print(f"Wrote {len(rows)} summary rows")
+          if missing:
+              print(f"Missing {len(missing)} expected result rows; see hanoi_reality_new_rings_missing.csv")
+          else:
+              print("All 32 expected result rows were found")
+          PYEOF
+
+      - name: Upload consolidated comparison results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-reality-new-rings-results
+          path: |
+            hanoi_reality_new_rings_summary.csv
+            hanoi_reality_new_rings_missing.csv
+            collected_hanoi_reality_new_rings_results/**
+          if-no-files-found: warn
+          retention-days: 30

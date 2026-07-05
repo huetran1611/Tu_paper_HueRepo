@@ -1,0 +1,440 @@
+name: Hanoi reality - Lw scenarios
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  prepare:
+    name: Build solver and prepare Lw scenario tasks
+    runs-on: ubuntu-latest
+    outputs:
+      experiment_matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build Hanoi reality solver
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/hanoi_reality_lw
+          g++ -O2 -std=c++20 tabubu_TimeDependent_hanoi_reality.cpp \
+            -o build/hanoi_reality_lw/tabubu_hanoi_reality
+
+      - name: Generate Lw scenario task matrix
+        id: matrix
+        shell: bash
+        run: |
+          python3 - <<'PYEOF'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          root = Path("instance_hanoi/reality")
+          lw_values = (1800, 2700, 3600)
+          runs = (1, 2)
+          instance_pattern = re.compile(r"^\d+\.(?:\d+|30new|40new)(?:\.\d+)?$")
+
+          instances = []
+          for path in root.glob("reality.*.txt"):
+              instance = path.name.removeprefix("reality.").removesuffix(".txt")
+              if not instance_pattern.match(instance):
+                  continue
+              required = [
+                  root / f"reality.{instance}.txt",
+                  root / f"reality.{instance}.truck_distance_m.txt",
+                  root / f"reality.{instance}.drone_distance_m.txt",
+                  root / f"reality.{instance}.vmax_ij.txt",
+                  root / f"reality.{instance}.theta_ijl.txt",
+              ]
+              if all(required_path.exists() for required_path in required):
+                  instances.append(instance)
+
+          def instance_key(name):
+              parts = name.split(".")
+              key = []
+              for part in parts:
+                  if part.isdigit():
+                      key.append((0, int(part)))
+                  else:
+                      key.append((1, part))
+              return key
+
+          instances.sort(key=instance_key)
+          if not instances:
+              raise SystemExit("No Hanoi reality instances found in instance_hanoi/reality")
+
+          tasks = []
+          task_id = 0
+          for instance in instances:
+              customer_count = int(instance.split(".", 1)[0])
+              for lw in lw_values:
+                  for run in runs:
+                      task_id += 1
+                      tasks.append({
+                          "task_id": f"{task_id:03d}",
+                          "instance": instance,
+                          "customer_count": customer_count,
+                          "lw": lw,
+                          "run": run,
+                          "weight": 1 if customer_count <= 200 else (3 if customer_count <= 500 else 6),
+                      })
+
+          if len(tasks) > 250:
+              raise SystemExit(f"Workflow would create {len(tasks)} jobs, exceeding 250")
+
+          matrix = []
+          for task in tasks:
+              matrix.append({
+                  "job_id": task["task_id"],
+                  "instance": task["instance"],
+                  "lw": task["lw"],
+                  "run": task["run"],
+                  "weight": task["weight"],
+                  "tasks_json": json.dumps([task], separators=(",", ":")),
+              })
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"matrix={json.dumps(matrix, separators=(',', ':'))}\n")
+          print(f"Found {len(instances)} instances")
+          print(f"Created {len(tasks)} Lw scenario tasks")
+          PYEOF
+
+      - name: Upload solver
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-reality-lw-solver
+          path: build/hanoi_reality_lw/tabubu_hanoi_reality
+          retention-days: 1
+
+  solve:
+    name: solve ${{ matrix.instance }} | Lw=${{ matrix.lw }} | run${{ matrix.run }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 720
+    strategy:
+      fail-fast: false
+      max-parallel: 250
+      matrix:
+        include: ${{ fromJson(needs.prepare.outputs.experiment_matrix) }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: hanoi-reality-lw-solver
+          path: build/hanoi_reality_lw
+
+      - name: Run assigned Lw scenario task
+        shell: bash
+        env:
+          TASKS_JSON: ${{ matrix.tasks_json }}
+        run: |
+          set -euo pipefail
+          chmod +x build/hanoi_reality_lw/tabubu_hanoi_reality
+          mkdir -p hanoi_reality_lw_results
+
+          python3 - <<'PYEOF'
+          import json
+          import os
+          import re
+          import shutil
+          import subprocess
+          import time
+          from pathlib import Path
+
+          root = Path.cwd()
+          out_root = root / "hanoi_reality_lw_results"
+          solver = root / "build" / "hanoi_reality_lw" / "tabubu_hanoi_reality"
+          dataset_dir = root / "instance_hanoi" / "reality"
+          tasks = json.loads(os.environ["TASKS_JSON"])
+
+          def rewrite_all_lw(src, dst, lw_value):
+              lines = src.read_text(encoding="utf-8").splitlines()
+              if len(lines) < 6:
+                  raise RuntimeError(f"Unexpected short input file: {src}")
+              out = lines[:6]
+              changed = 0
+              for raw in lines[6:]:
+                  if not raw.strip():
+                      out.append(raw)
+                      continue
+                  parts = raw.split()
+                  if len(parts) < 7:
+                      raise RuntimeError(f"Unexpected customer row in {src}: {raw}")
+                  parts[-1] = str(lw_value)
+                  out.append("\t".join(parts))
+                  changed += 1
+              if changed == 0:
+                  raise RuntimeError(f"No customer rows rewritten in {src}")
+              dst.write_text("\n".join(out) + "\n", encoding="utf-8")
+              return changed
+
+          for task in tasks:
+              instance = task["instance"]
+              lw_value = int(task["lw"])
+              run_id = str(task["run"])
+              input_file = dataset_dir / f"reality.{instance}.txt"
+              run_dir = (
+                  out_root
+                  / f"Lw{lw_value}"
+                  / f"reality.{instance}"
+                  / f"run{run_id}"
+              )
+              run_dir.mkdir(parents=True, exist_ok=True)
+              temp_input = run_dir / f"reality.{instance}.Lw{lw_value}.txt"
+              rewritten_customers = rewrite_all_lw(input_file, temp_input, lw_value)
+
+              truck_distance_file = dataset_dir / f"reality.{instance}.truck_distance_m.txt"
+              drone_distance_file = dataset_dir / f"reality.{instance}.drone_distance_m.txt"
+              truck_vmax_file = dataset_dir / f"reality.{instance}.vmax_ij.txt"
+              truck_theta_file = dataset_dir / f"reality.{instance}.theta_ijl.txt"
+              log_path = run_dir / "run.log"
+              metadata_path = run_dir / "run_metadata.json"
+              cmd = [
+                  str(solver),
+                  str(temp_input),
+                  "--attempts=1",
+                  f"--truck-distance-file={truck_distance_file}",
+                  f"--drone-distance-file={drone_distance_file}",
+                  f"--truck-vmax-file={truck_vmax_file}",
+                  f"--truck-theta-file={truck_theta_file}",
+              ]
+              started = time.monotonic()
+              with log_path.open("w", encoding="utf-8") as log:
+                  log.write("Command: " + " ".join(cmd) + "\n")
+                  log.write(f"Task: {task['task_id']}\n")
+                  log.write(f"Instance: reality.{instance}\n")
+                  log.write(f"Customer count: {task['customer_count']}\n")
+                  log.write(f"Lw: {lw_value}\n")
+                  log.write(f"Rewritten customers: {rewritten_customers}\n")
+                  log.write(f"Run: {run_id}\n\n")
+                  completed = subprocess.run(
+                      cmd,
+                      cwd=run_dir,
+                      stdout=log,
+                      stderr=subprocess.STDOUT,
+                      text=True,
+                  )
+              elapsed = time.monotonic() - started
+              metadata = {
+                  "task_id": task["task_id"],
+                  "instance": instance,
+                  "customer_count": task["customer_count"],
+                  "lw": lw_value,
+                  "rewritten_customers": rewritten_customers,
+                  "run": run_id,
+                  "wall_time_seconds": round(elapsed, 6),
+                  "returncode": completed.returncode,
+              }
+              metadata_path.write_text(json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+              if completed.returncode != 0:
+                  raise SystemExit(f"Task failed: reality.{instance}, Lw={lw_value}, run={run_id}; see {log_path}")
+
+              prefix = f"reality.{instance}.Lw{lw_value}.run{run_id}"
+              for filename in ("output_solution_best.txt", "output_mode_0.txt"):
+                  src = run_dir / filename
+                  if src.exists():
+                      shutil.copy2(src, run_dir / f"{prefix}.{filename}")
+              print(f"Completed {task['task_id']}: reality.{instance} Lw={lw_value} run={run_id} in {elapsed:.3f}s")
+          PYEOF
+
+      - name: Upload job result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-reality-lw-job-${{ matrix.job_id }}
+          path: hanoi_reality_lw_results/**
+          if-no-files-found: warn
+          retention-days: 14
+
+  aggregate:
+    name: Collect Lw scenario results
+    needs: solve
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download all result artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: hanoi-reality-lw-job-*
+          path: collected_hanoi_reality_lw_results
+          merge-multiple: true
+
+      - name: Create Lw scenario summary CSV
+        shell: bash
+        run: |
+          python3 - <<'PYEOF'
+          import csv
+          import json
+          import re
+          from collections import defaultdict
+          from pathlib import Path
+
+          def find_value(text, label):
+              match = re.search(rf"{re.escape(label)}:\s*([^\n]+)", text)
+              return match.group(1).strip() if match else ""
+
+          def parse_float(value):
+              try:
+                  return float(str(value).split()[0])
+              except Exception:
+                  return None
+
+          def parse_routes(text, header, next_header=None):
+              start = text.find(header)
+              if start < 0:
+                  return [], 0
+              start += len(header)
+              end = len(text)
+              if next_header:
+                  next_pos = text.find(next_header, start)
+                  if next_pos >= 0:
+                      end = next_pos
+              block = text[start:end]
+              routes = []
+              customer_count = 0
+              for raw_line in block.splitlines():
+                  line = raw_line.strip()
+                  if not line or not re.match(r"^(Truck|Drone)\s+\d+:", line):
+                      continue
+                  route_part = line.split(":", 1)[1].split("|", 1)[0].strip()
+                  nodes = [int(value) for value in re.findall(r"-?\d+", route_part)]
+                  customer_count += sum(1 for node in nodes if node != 0)
+                  routes.append(route_part)
+              return routes, customer_count
+
+          metadata_by_dir = {}
+          for meta_path in Path("collected_hanoi_reality_lw_results").rglob("run_metadata.json"):
+              metadata_by_dir[meta_path.parent] = json.loads(meta_path.read_text(encoding="utf-8"))
+
+          rows = []
+          pattern = re.compile(r"reality\.(.+)\.Lw(\d+)\.run(\d+)\.output_solution_best\.txt$")
+          for path in sorted(Path("collected_hanoi_reality_lw_results").rglob("reality.*.Lw*.run*.output_solution_best.txt")):
+              match = pattern.search(path.name)
+              if not match:
+                  continue
+              instance = match.group(1)
+              lw_value = match.group(2)
+              run_id = match.group(3)
+              text = path.read_text(encoding="utf-8", errors="replace")
+              truck_routes, truck_customer_count = parse_routes(text, "Truck Routes:", "Drone Routes:")
+              drone_routes, drone_customer_count = parse_routes(text, "Drone Routes:", "Total validation:")
+              metadata = metadata_by_dir.get(path.parent, {})
+              best_solution = find_value(text, "Improved solution cost")
+              rows.append({
+                  "instance": instance,
+                  "lw": lw_value,
+                  "run": run_id,
+                  "customer_count": metadata.get("customer_count", instance.split(".", 1)[0]),
+                  "wall_time_seconds": metadata.get("wall_time_seconds", ""),
+                  "best_solution": best_solution,
+                  "initial_solution_cost": find_value(text, "Initial solution cost"),
+                  "mean_elapsed_time_reported": find_value(text, "Mean elapsed time"),
+                  "final_solution_feasibility": find_value(text, "Final solution feasibility"),
+                  "truck_route": " ; ".join(truck_routes),
+                  "drone_route": " ; ".join(drone_routes),
+                  "truck_customer_count": truck_customer_count,
+                  "drone_customer_count": drone_customer_count,
+                  "result_file": str(path),
+                  "best_solution_numeric": parse_float(best_solution),
+              })
+
+          def instance_key(name):
+              key = []
+              for part in name.split("."):
+                  if part.isdigit():
+                      key.append((0, int(part)))
+                  else:
+                      key.append((1, part))
+              return key
+
+          rows.sort(key=lambda row: (instance_key(row["instance"]), int(row["lw"]), int(row["run"])))
+          detail_fieldnames = [
+              "instance",
+              "lw",
+              "run",
+              "customer_count",
+              "wall_time_seconds",
+              "best_solution",
+              "initial_solution_cost",
+              "mean_elapsed_time_reported",
+              "final_solution_feasibility",
+              "truck_route",
+              "drone_route",
+              "truck_customer_count",
+              "drone_customer_count",
+              "result_file",
+          ]
+          with open("hanoi_reality_lw_summary.csv", "w", encoding="utf-8", newline="") as f:
+              writer = csv.DictWriter(f, fieldnames=detail_fieldnames)
+              writer.writeheader()
+              for row in rows:
+                  writer.writerow({key: row[key] for key in detail_fieldnames})
+
+          grouped = defaultdict(list)
+          for row in rows:
+              if row["best_solution_numeric"] is not None:
+                  grouped[(row["instance"], row["lw"])].append(row["best_solution_numeric"])
+
+          comparison_rows = []
+          for instance in sorted({row["instance"] for row in rows}, key=instance_key):
+              row = {"instance": instance}
+              for lw_value in ("1800", "2700", "3600"):
+                  vals = grouped.get((instance, lw_value), [])
+                  row[f"best_Lw{lw_value}"] = min(vals) if vals else ""
+                  row[f"mean_Lw{lw_value}"] = sum(vals) / len(vals) if vals else ""
+                  row[f"runs_Lw{lw_value}"] = len(vals)
+              if row["best_Lw1800"] != "" and row["best_Lw2700"] != "":
+                  row["delta_best_2700_minus_1800"] = row["best_Lw2700"] - row["best_Lw1800"]
+              else:
+                  row["delta_best_2700_minus_1800"] = ""
+              if row["best_Lw1800"] != "" and row["best_Lw3600"] != "":
+                  row["delta_best_3600_minus_1800"] = row["best_Lw3600"] - row["best_Lw1800"]
+              else:
+                  row["delta_best_3600_minus_1800"] = ""
+              comparison_rows.append(row)
+
+          comparison_fieldnames = [
+              "instance",
+              "best_Lw1800",
+              "mean_Lw1800",
+              "runs_Lw1800",
+              "best_Lw2700",
+              "mean_Lw2700",
+              "runs_Lw2700",
+              "best_Lw3600",
+              "mean_Lw3600",
+              "runs_Lw3600",
+              "delta_best_2700_minus_1800",
+              "delta_best_3600_minus_1800",
+          ]
+          with open("hanoi_reality_lw_comparison.csv", "w", encoding="utf-8", newline="") as f:
+              writer = csv.DictWriter(f, fieldnames=comparison_fieldnames)
+              writer.writeheader()
+              writer.writerows(comparison_rows)
+
+          print(f"Wrote {len(rows)} detail rows")
+          print(f"Wrote {len(comparison_rows)} comparison rows")
+          PYEOF
+
+      - name: Upload consolidated Lw scenario results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-reality-lw-results
+          path: |
+            hanoi_reality_lw_summary.csv
+            hanoi_reality_lw_comparison.csv
+            collected_hanoi_reality_lw_results/**
+          if-no-files-found: warn
+          retention-days: 30

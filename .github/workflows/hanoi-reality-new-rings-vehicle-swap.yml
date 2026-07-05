@@ -1,0 +1,515 @@
+name: Hanoi reality - new rings vehicle swap
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  prepare:
+    name: Build solver and prepare vehicle-swap tasks
+    runs-on: ubuntu-latest
+    outputs:
+      experiment_matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build Hanoi reality solver
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/hanoi_reality_vehicle_swap
+          g++ -O2 -std=c++20 tabubu_TimeDependent_hanoi_reality.cpp \
+            -o build/hanoi_reality_vehicle_swap/tabubu_hanoi_reality
+
+      - name: Generate vehicle-swap task matrix
+        id: matrix
+        shell: bash
+        run: |
+          python3 - <<'PYEOF'
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path("instance_hanoi/reality")
+          grids = ("30new", "40new")
+          indexes = (1, 2, 3, 4)
+          runs = (1, 2)
+          vehicle_configs = {
+              200: [
+                  {"scenario": "truck4_drone6", "trucks_count": 4, "drones_count": 6},
+                  {"scenario": "truck6_drone4", "trucks_count": 6, "drones_count": 4},
+              ],
+              500: [
+                  {"scenario": "truck11_drone9", "trucks_count": 11, "drones_count": 9},
+                  {"scenario": "truck9_drone11", "trucks_count": 9, "drones_count": 11},
+              ],
+          }
+
+          tasks = []
+          task_id = 0
+          for customer_count, configs in vehicle_configs.items():
+              for grid in grids:
+                  for index in indexes:
+                      instance = f"{customer_count}.{grid}.{index}"
+                      required = [
+                          root / f"reality.{instance}.txt",
+                          root / f"reality.{instance}.truck_distance_m.txt",
+                          root / f"reality.{instance}.drone_distance_m.txt",
+                          root / f"reality.{instance}.vmax_ij.txt",
+                          root / f"reality.{instance}.theta_ijl.txt",
+                      ]
+                      missing = [str(path) for path in required if not path.exists()]
+                      if missing:
+                          raise SystemExit(f"Missing required files for reality.{instance}: {missing}")
+                      for config in configs:
+                          for run in runs:
+                              task_id += 1
+                              tasks.append({
+                                  "task_id": f"{task_id:03d}",
+                                  "dataset_variant": "normal",
+                                  "grid": grid,
+                                  "instance": instance,
+                                  "customer_count": customer_count,
+                                  "scenario": config["scenario"],
+                                  "trucks_count": config["trucks_count"],
+                                  "drones_count": config["drones_count"],
+                                  "run": run,
+                                  "weight": 1 if customer_count == 200 else 3,
+                              })
+
+          if len(tasks) != 64:
+              raise SystemExit(f"Expected 64 tasks, found {len(tasks)}")
+
+          matrix = []
+          for task in tasks:
+              matrix.append({
+                  "job_id": task["task_id"],
+                  "instance": task["instance"],
+                  "scenario": task["scenario"],
+                  "run": task["run"],
+                  "weight": task["weight"],
+                  "tasks_json": json.dumps([task], separators=(",", ":")),
+              })
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"matrix={json.dumps(matrix, separators=(',', ':'))}\n")
+          print(f"Created {len(tasks)} tasks across {len(matrix)} jobs")
+          PYEOF
+
+      - name: Upload solver
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-reality-vehicle-swap-solver
+          path: build/hanoi_reality_vehicle_swap/tabubu_hanoi_reality
+          retention-days: 1
+
+  solve:
+    name: solve ${{ matrix.instance }} | ${{ matrix.scenario }} | run${{ matrix.run }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 720
+    strategy:
+      fail-fast: false
+      max-parallel: 64
+      matrix:
+        include: ${{ fromJson(needs.prepare.outputs.experiment_matrix) }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: hanoi-reality-vehicle-swap-solver
+          path: build/hanoi_reality_vehicle_swap
+
+      - name: Run assigned vehicle-swap task
+        shell: bash
+        env:
+          TASKS_JSON: ${{ matrix.tasks_json }}
+        run: |
+          set -euo pipefail
+          chmod +x build/hanoi_reality_vehicle_swap/tabubu_hanoi_reality
+          mkdir -p hanoi_reality_vehicle_swap_results
+
+          python3 - <<'PYEOF'
+          import json
+          import os
+          import re
+          import shutil
+          import subprocess
+          import time
+          from pathlib import Path
+
+          root = Path.cwd()
+          out_root = root / "hanoi_reality_vehicle_swap_results"
+          solver = root / "build" / "hanoi_reality_vehicle_swap" / "tabubu_hanoi_reality"
+          dataset_dir = root / "instance_hanoi" / "reality"
+          tasks = json.loads(os.environ["TASKS_JSON"])
+
+          def rewrite_vehicle_counts(src, dst, trucks_count, drones_count):
+              text = src.read_text(encoding="utf-8")
+              text, truck_replacements = re.subn(
+                  r"^trucks_count\s+\d+\s*$",
+                  f"trucks_count {trucks_count}",
+                  text,
+                  count=1,
+                  flags=re.MULTILINE,
+              )
+              text, drone_replacements = re.subn(
+                  r"^drones_count\s+\d+\s*$",
+                  f"drones_count {drones_count}",
+                  text,
+                  count=1,
+                  flags=re.MULTILINE,
+              )
+              if truck_replacements != 1 or drone_replacements != 1:
+                  raise RuntimeError(f"Failed to rewrite vehicle counts in {src}")
+              dst.write_text(text, encoding="utf-8")
+
+          for task in tasks:
+              instance = task["instance"]
+              scenario = task["scenario"]
+              grid = task["grid"]
+              run_id = str(task["run"])
+              trucks_count = int(task["trucks_count"])
+              drones_count = int(task["drones_count"])
+              input_file = dataset_dir / f"reality.{instance}.txt"
+              run_dir = (
+                  out_root
+                  / f"grid.{grid}"
+                  / f"scenario.{scenario}"
+                  / f"reality.{instance}"
+                  / f"run{run_id}"
+              )
+              run_dir.mkdir(parents=True, exist_ok=True)
+              temp_input = run_dir / f"reality.{instance}.{scenario}.txt"
+              rewrite_vehicle_counts(input_file, temp_input, trucks_count, drones_count)
+
+              truck_distance_file = dataset_dir / f"reality.{instance}.truck_distance_m.txt"
+              drone_distance_file = dataset_dir / f"reality.{instance}.drone_distance_m.txt"
+              truck_vmax_file = dataset_dir / f"reality.{instance}.vmax_ij.txt"
+              truck_theta_file = dataset_dir / f"reality.{instance}.theta_ijl.txt"
+              log_path = run_dir / "run.log"
+              metadata_path = run_dir / "run_metadata.json"
+              cmd = [
+                  str(solver),
+                  str(temp_input),
+                  "--attempts=1",
+                  f"--truck-distance-file={truck_distance_file}",
+                  f"--drone-distance-file={drone_distance_file}",
+                  f"--truck-vmax-file={truck_vmax_file}",
+                  f"--truck-theta-file={truck_theta_file}",
+              ]
+              started = time.monotonic()
+              with log_path.open("w", encoding="utf-8") as log:
+                  log.write("Command: " + " ".join(cmd) + "\n")
+                  log.write(f"Task: {task['task_id']}\n")
+                  log.write(f"Dataset variant: {task['dataset_variant']}\n")
+                  log.write(f"Grid: {grid}\n")
+                  log.write(f"Scenario: {scenario}\n")
+                  log.write(f"Instance: reality.{instance}\n")
+                  log.write(f"Customer count: {task['customer_count']}\n")
+                  log.write(f"Trucks count: {trucks_count}\n")
+                  log.write(f"Drones count: {drones_count}\n")
+                  log.write(f"Run: {run_id}\n\n")
+                  completed = subprocess.run(
+                      cmd,
+                      cwd=run_dir,
+                      stdout=log,
+                      stderr=subprocess.STDOUT,
+                      text=True,
+                  )
+              elapsed = time.monotonic() - started
+              metadata = {
+                  "task_id": task["task_id"],
+                  "dataset_variant": task["dataset_variant"],
+                  "grid": grid,
+                  "scenario": scenario,
+                  "instance": instance,
+                  "customer_count": task["customer_count"],
+                  "trucks_count": trucks_count,
+                  "drones_count": drones_count,
+                  "run": run_id,
+                  "wall_time_seconds": round(elapsed, 6),
+                  "returncode": completed.returncode,
+              }
+              metadata_path.write_text(json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+              if completed.returncode != 0:
+                  raise SystemExit(f"Task failed: reality.{instance}, scenario={scenario}, run={run_id}; see {log_path}")
+
+              prefix = f"reality.{instance}.normal.{scenario}.run{run_id}.trucks{trucks_count}.drones{drones_count}"
+              for filename in ("output_solution_best.txt", "output_mode_0.txt"):
+                  src = run_dir / filename
+                  if src.exists():
+                      shutil.copy2(src, run_dir / f"{prefix}.{filename}")
+              print(f"Completed {task['task_id']}: reality.{instance} {scenario} run={run_id} in {elapsed:.3f}s")
+          PYEOF
+
+      - name: Upload job result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-reality-vehicle-swap-job-${{ matrix.job_id }}
+          path: hanoi_reality_vehicle_swap_results/**
+          if-no-files-found: warn
+          retention-days: 14
+
+  aggregate:
+    name: Collect vehicle-swap comparison results
+    needs: solve
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download all result artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: hanoi-reality-vehicle-swap-job-*
+          path: collected_hanoi_reality_vehicle_swap_results
+          merge-multiple: true
+
+      - name: Create vehicle-swap summary CSV
+        shell: bash
+        run: |
+          python3 - <<'PYEOF'
+          import csv
+          import json
+          import re
+          from collections import defaultdict
+          from pathlib import Path
+
+          def find_value(text, label):
+              match = re.search(rf"{re.escape(label)}:\s*([^\n]+)", text)
+              return match.group(1).strip() if match else ""
+
+          def parse_float(value):
+              try:
+                  return float(str(value).split()[0])
+              except Exception:
+                  return None
+
+          def parse_routes(text, header, next_header=None):
+              start = text.find(header)
+              if start < 0:
+                  return [], 0
+              start += len(header)
+              end = len(text)
+              if next_header:
+                  next_pos = text.find(next_header, start)
+                  if next_pos >= 0:
+                      end = next_pos
+              block = text[start:end]
+              routes = []
+              customer_count = 0
+              for raw_line in block.splitlines():
+                  line = raw_line.strip()
+                  if not line or not re.match(r"^(Truck|Drone)\s+\d+:", line):
+                      continue
+                  route_part = line.split(":", 1)[1].split("|", 1)[0].strip()
+                  nodes = [int(value) for value in re.findall(r"-?\d+", route_part)]
+                  customer_count += sum(1 for node in nodes if node != 0)
+                  routes.append(route_part)
+              return routes, customer_count
+
+          configs = {
+              200: ("truck4_drone6", "truck6_drone4"),
+              500: ("truck11_drone9", "truck9_drone11"),
+          }
+          expected = {
+              (f"{customer_count}.{grid}.{index}", grid, scenario, str(run_id))
+              for customer_count, scenarios in configs.items()
+              for grid in ("30new", "40new")
+              for index in (1, 2, 3, 4)
+              for scenario in scenarios
+              for run_id in (1, 2)
+          }
+
+          metadata_by_dir = {}
+          for meta_path in Path("collected_hanoi_reality_vehicle_swap_results").rglob("run_metadata.json"):
+              metadata_by_dir[meta_path.parent] = json.loads(meta_path.read_text(encoding="utf-8"))
+
+          rows = []
+          seen = set()
+          pattern = re.compile(
+              r"reality\.(\d+\.(30new|40new)\.\d+)\.normal\.(truck\d+_drone\d+)\.run(\d+)\.trucks(\d+)\.drones(\d+)\.output_solution_best\.txt$"
+          )
+          for path in sorted(Path("collected_hanoi_reality_vehicle_swap_results").rglob("reality.*.normal.*.run*.trucks*.drones*.output_solution_best.txt")):
+              match = pattern.search(path.name)
+              if not match:
+                  continue
+              instance = match.group(1)
+              grid = match.group(2)
+              scenario = match.group(3)
+              run_id = match.group(4)
+              trucks_count = match.group(5)
+              drones_count = match.group(6)
+              text = path.read_text(encoding="utf-8", errors="replace")
+              truck_routes, truck_customer_count = parse_routes(text, "Truck Routes:", "Drone Routes:")
+              drone_routes, drone_customer_count = parse_routes(text, "Drone Routes:", "Total validation:")
+              metadata = metadata_by_dir.get(path.parent, {})
+              best_solution = find_value(text, "Improved solution cost")
+              key = (instance, grid, scenario, run_id)
+              seen.add(key)
+              rows.append({
+                  "instance": instance,
+                  "grid": grid,
+                  "scenario": scenario,
+                  "run": run_id,
+                  "customer_count": instance.split(".", 1)[0],
+                  "trucks_count": trucks_count,
+                  "drones_count": drones_count,
+                  "wall_time_seconds": metadata.get("wall_time_seconds", ""),
+                  "best_solution": best_solution,
+                  "initial_solution_cost": find_value(text, "Initial solution cost"),
+                  "mean_elapsed_time_reported": find_value(text, "Mean elapsed time"),
+                  "final_solution_feasibility": find_value(text, "Final solution feasibility"),
+                  "truck_route": " ; ".join(truck_routes),
+                  "drone_route": " ; ".join(drone_routes),
+                  "truck_customer_count": truck_customer_count,
+                  "drone_customer_count": drone_customer_count,
+                  "result_file": str(path),
+                  "best_solution_numeric": parse_float(best_solution),
+              })
+
+          def row_key(row):
+              n, grid, index = row["instance"].split(".")
+              return (
+                  int(n),
+                  {"30new": 0, "40new": 1}[grid],
+                  int(index),
+                  row["scenario"],
+                  int(row["run"]),
+              )
+
+          rows.sort(key=row_key)
+          detail_fieldnames = [
+              "instance",
+              "grid",
+              "scenario",
+              "run",
+              "customer_count",
+              "trucks_count",
+              "drones_count",
+              "wall_time_seconds",
+              "best_solution",
+              "initial_solution_cost",
+              "mean_elapsed_time_reported",
+              "final_solution_feasibility",
+              "truck_route",
+              "drone_route",
+              "truck_customer_count",
+              "drone_customer_count",
+              "result_file",
+          ]
+          with open("hanoi_reality_vehicle_swap_summary.csv", "w", encoding="utf-8", newline="") as f:
+              writer = csv.DictWriter(f, fieldnames=detail_fieldnames)
+              writer.writeheader()
+              for row in rows:
+                  writer.writerow({key: row[key] for key in detail_fieldnames})
+
+          grouped = defaultdict(list)
+          for row in rows:
+              grouped[(row["instance"], row["grid"], row["scenario"])].append(row)
+
+          comparison_rows = []
+          for customer_count, scenarios in configs.items():
+              base_scenario, swapped_scenario = scenarios
+              for grid in ("30new", "40new"):
+                  for index in (1, 2, 3, 4):
+                      instance = f"{customer_count}.{grid}.{index}"
+                      base_vals = [
+                          row["best_solution_numeric"]
+                          for row in grouped.get((instance, grid, base_scenario), [])
+                          if row["best_solution_numeric"] is not None
+                      ]
+                      swapped_vals = [
+                          row["best_solution_numeric"]
+                          for row in grouped.get((instance, grid, swapped_scenario), [])
+                          if row["best_solution_numeric"] is not None
+                      ]
+                      base_best = min(base_vals) if base_vals else ""
+                      swapped_best = min(swapped_vals) if swapped_vals else ""
+                      base_mean = sum(base_vals) / len(base_vals) if base_vals else ""
+                      swapped_mean = sum(swapped_vals) / len(swapped_vals) if swapped_vals else ""
+                      delta_best = swapped_best - base_best if base_vals and swapped_vals else ""
+                      delta_mean = swapped_mean - base_mean if base_vals and swapped_vals else ""
+                      comparison_rows.append({
+                          "instance": instance,
+                          "grid": grid,
+                          "customer_count": customer_count,
+                          "base_scenario": base_scenario,
+                          "swapped_scenario": swapped_scenario,
+                          "base_best_solution": base_best,
+                          "swapped_best_solution": swapped_best,
+                          "delta_best_swapped_minus_base": delta_best,
+                          "base_mean_solution": base_mean,
+                          "swapped_mean_solution": swapped_mean,
+                          "delta_mean_swapped_minus_base": delta_mean,
+                          "base_runs_found": len(base_vals),
+                          "swapped_runs_found": len(swapped_vals),
+                      })
+
+          with open("hanoi_reality_vehicle_swap_comparison.csv", "w", encoding="utf-8", newline="") as f:
+              fieldnames = [
+                  "instance",
+                  "grid",
+                  "customer_count",
+                  "base_scenario",
+                  "swapped_scenario",
+                  "base_best_solution",
+                  "swapped_best_solution",
+                  "delta_best_swapped_minus_base",
+                  "base_mean_solution",
+                  "swapped_mean_solution",
+                  "delta_mean_swapped_minus_base",
+                  "base_runs_found",
+                  "swapped_runs_found",
+              ]
+              writer = csv.DictWriter(f, fieldnames=fieldnames)
+              writer.writeheader()
+              writer.writerows(comparison_rows)
+
+          missing = [
+              {"instance": instance, "grid": grid, "scenario": scenario, "run": run_id}
+              for instance, grid, scenario, run_id in sorted(
+                  expected - seen,
+                  key=lambda item: (
+                      int(item[0].split(".", 1)[0]),
+                      {"30new": 0, "40new": 1}[item[1]],
+                      int(item[0].rsplit(".", 1)[1]),
+                      item[2],
+                      int(item[3]),
+                  ),
+              )
+          ]
+          with open("hanoi_reality_vehicle_swap_missing.csv", "w", encoding="utf-8", newline="") as f:
+              writer = csv.DictWriter(f, fieldnames=["instance", "grid", "scenario", "run"])
+              writer.writeheader()
+              writer.writerows(missing)
+
+          print(f"Wrote {len(rows)} detail rows")
+          print(f"Wrote {len(comparison_rows)} comparison rows")
+          if missing:
+              print(f"Missing {len(missing)} expected result rows; see hanoi_reality_vehicle_swap_missing.csv")
+          else:
+              print("All 64 expected result rows were found")
+          PYEOF
+
+      - name: Upload consolidated vehicle-swap results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-reality-vehicle-swap-results
+          path: |
+            hanoi_reality_vehicle_swap_summary.csv
+            hanoi_reality_vehicle_swap_comparison.csv
+            hanoi_reality_vehicle_swap_missing.csv
+            collected_hanoi_reality_vehicle_swap_results/**
+          if-no-files-found: warn
+          retention-days: 30

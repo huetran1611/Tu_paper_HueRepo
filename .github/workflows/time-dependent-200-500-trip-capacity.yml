@@ -10,7 +10,7 @@ on:
       max_parallel:
         description: "Maximum parallel GitHub jobs"
         required: true
-        default: "250"
+        default: "30"
 
 permissions:
   contents: read
@@ -56,6 +56,13 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/create_time_dependent_500_from_100_200.py --overwrite
+
+      - name: Upload generated 500-customer instances
+        uses: actions/upload-artifact@v4
+        with:
+          name: time-dependent-generated-500-instances
+          path: instance_time_dependent/500.*
+          retention-days: 1
 
       - name: Generate weighted sequential job matrix
         id: matrix
@@ -193,7 +200,7 @@ jobs:
     timeout-minutes: 720
     strategy:
       fail-fast: false
-      max-parallel: ${{ fromJson(github.event.inputs.max_parallel || '250') }}
+      max-parallel: ${{ fromJson(github.event.inputs.max_parallel || '30') }}
       matrix:
         include: ${{ fromJson(needs.prepare.outputs.experiment_matrix) }}
     steps:
@@ -203,6 +210,11 @@ jobs:
         with:
           name: time-dependent-trip-capacity-solvers
           path: build/time_dependent_trip_capacity
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: time-dependent-generated-500-instances
+          path: instance_time_dependent
 
       - name: Run assigned solver processes sequentially
         shell: bash
@@ -228,6 +240,7 @@ jobs:
           out_root = root / "td_trip_capacity_results"
           tasks = json.loads(os.environ["TASKS_JSON"])
           time_limit = os.environ.get("TIME_LIMIT_SEC", "7200")
+          failed_processes = 0
 
           def solver_path(mode, drone_capacity):
               suffix = drone_capacity.replace(".", "")
@@ -287,6 +300,13 @@ jobs:
               run_dir = out_root / f"{base}" / mode / f"Dd{dd}" / f"run{run_id}"
               run_dir.mkdir(parents=True, exist_ok=True)
               solver = solver_path(mode, dd)
+              required_paths = [
+                  root / task["file"],
+                  root / task["vmax_file"],
+                  root / task["theta_file"],
+                  solver,
+              ]
+              missing_paths = [str(path) for path in required_paths if not path.exists()]
               command = [
                   str(solver),
                   str(root / task["file"]),
@@ -301,25 +321,30 @@ jobs:
               stdout = ""
               stderr = ""
               return_code = 0
-              try:
-                  completed = subprocess.run(
-                      command,
-                      cwd=run_dir,
-                      text=True,
-                      stdout=subprocess.PIPE,
-                      stderr=subprocess.PIPE,
-                      timeout=int(float(time_limit)) + 300,
-                  )
-                  stdout = completed.stdout
-                  stderr = completed.stderr
-                  return_code = completed.returncode
-                  if return_code != 0:
-                      process_status = "failed"
-              except subprocess.TimeoutExpired as exc:
-                  stdout = exc.stdout or ""
-                  stderr = exc.stderr or ""
-                  return_code = 124
-                  process_status = "timeout"
+              if missing_paths:
+                  return_code = 2
+                  process_status = "missing_input"
+                  stderr = "Missing required input paths:\n" + "\n".join(missing_paths)
+              else:
+                  try:
+                      completed = subprocess.run(
+                          command,
+                          cwd=run_dir,
+                          text=True,
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE,
+                          timeout=int(float(time_limit)) + 300,
+                      )
+                      stdout = completed.stdout
+                      stderr = completed.stderr
+                      return_code = completed.returncode
+                      if return_code != 0:
+                          process_status = "failed"
+                  except subprocess.TimeoutExpired as exc:
+                      stdout = exc.stdout or ""
+                      stderr = exc.stderr or ""
+                      return_code = 124
+                      process_status = "timeout"
 
               elapsed = time.time() - start
               raw_output = stdout + "\n--- STDERR ---\n" + stderr
@@ -352,6 +377,11 @@ jobs:
               if solution_file.exists():
                   shutil.copy2(solution_file, run_dir / "solution_best.txt")
               print(f"{base} | {mode} | Dd={dd} | run={run_id} | {process_status} | {parsed['solution_status']} | {parsed['best_objective']}")
+              if process_status != "success":
+                  failed_processes += 1
+
+          if failed_processes:
+              raise SystemExit(f"{failed_processes} solver process(es) failed in this job")
           PYEOF
 
       - name: Upload sequential job results
@@ -416,12 +446,32 @@ jobs:
               writer.writeheader()
               writer.writerows(rows)
           print(f"rows={len(rows)}")
+          bad_rows = [r for r in rows if r.get("process_status") != "success"]
           if len(rows) != 576:
               print("Warning: expected 576 rows")
+          if bad_rows:
+              print(f"Warning: {len(bad_rows)} rows have non-success process_status")
           PYEOF
 
       - name: Upload summary CSV
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: time-dependent-trip-capacity-summary
           path: time_dependent_trip_capacity_summary.csv
+
+      - name: Validate summary completeness
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PYEOF'
+          import csv
+
+          with open("time_dependent_trip_capacity_summary.csv", newline="", encoding="utf-8") as f:
+              rows = list(csv.DictReader(f))
+          bad_rows = [r for r in rows if r.get("process_status") != "success"]
+          if len(rows) != 576:
+              raise SystemExit(f"Expected 576 rows, found {len(rows)}")
+          if bad_rows:
+              raise SystemExit(f"{len(bad_rows)} rows have non-success process_status")
+          PYEOF

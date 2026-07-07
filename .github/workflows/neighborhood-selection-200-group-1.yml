@@ -1,11 +1,6 @@
 name: Neighborhood selection 200 - cyclic, random, adaptive g1
 
 on:
-  push:
-    branches:
-      - main_huett
-    paths:
-      - .github/triggers/neighborhood-selection-200-group-1
   workflow_dispatch:
 
 permissions:

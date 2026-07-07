@@ -1,9 +1,6 @@
 name: Time-dependent mode selection ablation - 200 customers
 
 on:
-  push:
-    branches:
-      - Tu_paper
   workflow_dispatch:
 
 permissions:

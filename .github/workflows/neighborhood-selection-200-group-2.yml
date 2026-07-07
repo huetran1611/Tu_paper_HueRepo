@@ -1,11 +1,6 @@
 name: Neighborhood selection 200 - adaptive g2, g3, g4
 
 on:
-  push:
-    branches:
-      - main_huett
-    paths:
-      - .github/triggers/neighborhood-selection-200-group-2
   workflow_dispatch:
 
 permissions:

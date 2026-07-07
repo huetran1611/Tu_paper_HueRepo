@@ -1,0 +1,427 @@
+name: Time-dependent 200/500 - trip mode and drone capacity
+
+on:
+  workflow_dispatch:
+    inputs:
+      time_limit_sec:
+        description: "Per solver process time limit in seconds"
+        required: true
+        default: "7200"
+      max_parallel:
+        description: "Maximum parallel GitHub jobs"
+        required: true
+        default: "250"
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  prepare:
+    name: Build solvers and prepare 250 balanced jobs
+    runs-on: ubuntu-latest
+    outputs:
+      experiment_matrix: ${{ steps.matrix.outputs.matrix }}
+      task_count: ${{ steps.matrix.outputs.task_count }}
+      job_count: ${{ steps.matrix.outputs.job_count }}
+      total_weight: ${{ steps.matrix.outputs.total_weight }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build six solver binaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/time_dependent_trip_capacity
+          for dd in 2.27 5.0 10.0; do
+            suffix="${dd//./}"
+            for spec in \
+              "tabubu_TimeDependent.cpp:multi_trip" \
+              "tabubu_TimeDependent_1trip.cpp:one_trip"
+            do
+              src="${spec%%:*}"
+              mode="${spec##*:}"
+              patched="build/time_dependent_trip_capacity/patched_${mode}_dd${suffix}.cpp"
+              bin="build/time_dependent_trip_capacity/tabubu_${mode}_dd${suffix}"
+              sed -E "s/double Dd = [0-9.]+/double Dd = ${dd}/" "${src}" > "${patched}"
+              g++ -O2 -std=c++20 "${patched}" -o "${bin}"
+              echo "Built ${bin} with Dd=${dd}"
+            done
+          done
+
+      - name: Generate 500-customer instances for CI
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/create_time_dependent_500_from_100_200.py --overwrite
+
+      - name: Generate weighted sequential job matrix
+        id: matrix
+        shell: bash
+        run: |
+          python3 - <<'PYEOF'
+          import glob
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path("instance_time_dependent")
+          drone_caps = ["2.27", "5.0", "10.0"]
+          modes = ["multi_trip", "one_trip"]
+          runs = [1, 2, 3]
+
+          instances = []
+          for path in sorted(glob.glob(str(root / "*.txt"))):
+              name = Path(path).name
+              if name.endswith(".vmax_ij.txt") or name.endswith(".theta_ijl.txt"):
+                  continue
+              base = name.removesuffix(".txt")
+              parts = base.split(".")
+              if len(parts) != 3:
+                  continue
+              customer_count = int(parts[0])
+              if customer_count not in (200, 500):
+                  continue
+              gridsize = int(parts[1])
+              required = [
+                  root / f"{base}.txt",
+                  root / f"{base}.vmax_ij.txt",
+                  root / f"{base}.theta_ijl.txt",
+              ]
+              missing = [str(p) for p in required if not p.exists()]
+              if missing:
+                  raise SystemExit(f"Missing required files for {base}: {missing}")
+              instances.append({
+                  "base": base,
+                  "file": str(root / f"{base}.txt"),
+                  "vmax_file": str(root / f"{base}.vmax_ij.txt"),
+                  "theta_file": str(root / f"{base}.theta_ijl.txt"),
+                  "number_of_customer": customer_count,
+                  "gridsize": gridsize,
+                  "weight": 1 if customer_count == 200 else 3,
+              })
+
+          instances.sort(key=lambda x: (x["number_of_customer"], x["gridsize"], x["base"]))
+          if len(instances) != 32:
+              raise SystemExit(f"Expected 32 instances for 200/500, found {len(instances)}")
+
+          tasks_200 = []
+          tasks_500 = []
+          task_id = 0
+          for inst in instances:
+              bucket = tasks_200 if inst["number_of_customer"] == 200 else tasks_500
+              for mode in modes:
+                  for dd in drone_caps:
+                      for run in runs:
+                          task_id += 1
+                          task = dict(inst)
+                          task.update({
+                              "task_id": f"{task_id:04d}",
+                              "mode": mode,
+                              "drone_capacity": dd,
+                              "run": run,
+                          })
+                          bucket.append(task)
+
+          if len(tasks_200) != 288 or len(tasks_500) != 288:
+              raise SystemExit(f"Expected 288 tasks per size, found 200={len(tasks_200)}, 500={len(tasks_500)}")
+
+          # Exact 250-job balanced packing:
+          # 38 jobs: 2x500 => weight 6
+          # 76 jobs: 1x500 + 2x200 => weight 5
+          # 136 jobs: 1x500 + 1x200 => weight 4
+          buckets = []
+          idx_500 = 0
+          idx_200 = 0
+          for _ in range(38):
+              buckets.append([tasks_500[idx_500], tasks_500[idx_500 + 1]])
+              idx_500 += 2
+          for _ in range(76):
+              buckets.append([tasks_500[idx_500], tasks_200[idx_200], tasks_200[idx_200 + 1]])
+              idx_500 += 1
+              idx_200 += 2
+          for _ in range(136):
+              buckets.append([tasks_500[idx_500], tasks_200[idx_200]])
+              idx_500 += 1
+              idx_200 += 1
+
+          if idx_500 != len(tasks_500) or idx_200 != len(tasks_200):
+              raise SystemExit(f"Packing missed tasks: idx_500={idx_500}, idx_200={idx_200}")
+
+          matrix = []
+          total_weight = 0
+          for index, bucket in enumerate(buckets, start=1):
+              weight = sum(task["weight"] for task in bucket)
+              total_weight += weight
+              matrix.append({
+                  "job_id": f"{index:03d}",
+                  "task_count": len(bucket),
+                  "total_weight": weight,
+                  "tasks_json": json.dumps(bucket, separators=(",", ":")),
+              })
+
+          if len(matrix) != 250:
+              raise SystemExit(f"Expected 250 jobs, found {len(matrix)}")
+          if len(tasks_200) + len(tasks_500) != 576:
+              raise SystemExit("Expected 576 solver processes")
+          if total_weight != 1152:
+              raise SystemExit(f"Expected total weight 1152, found {total_weight}")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"matrix={json.dumps(matrix, separators=(',', ':'))}\n")
+              output.write("task_count=576\n")
+              output.write("job_count=250\n")
+              output.write("total_weight=1152\n")
+
+          print("Created 576 solver processes packed into 250 sequential GitHub jobs")
+          print("Job weights: 38 jobs weight 6, 76 jobs weight 5, 136 jobs weight 4")
+          PYEOF
+
+      - name: Upload solver binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: time-dependent-trip-capacity-solvers
+          path: build/time_dependent_trip_capacity/tabubu_*_dd*
+          retention-days: 1
+
+  solve:
+    name: job ${{ matrix.job_id }} | ${{ matrix.task_count }} process(es) | weight ${{ matrix.total_weight }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 720
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJson(github.event.inputs.max_parallel || '250') }}
+      matrix:
+        include: ${{ fromJson(needs.prepare.outputs.experiment_matrix) }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: time-dependent-trip-capacity-solvers
+          path: build/time_dependent_trip_capacity
+
+      - name: Run assigned solver processes sequentially
+        shell: bash
+        env:
+          TASKS_JSON: ${{ matrix.tasks_json }}
+          TIME_LIMIT_SEC: ${{ github.event.inputs.time_limit_sec }}
+        run: |
+          set -euo pipefail
+          chmod +x build/time_dependent_trip_capacity/tabubu_*_dd*
+          mkdir -p td_trip_capacity_results
+
+          python3 - <<'PYEOF'
+          import json
+          import os
+          import re
+          import shutil
+          import subprocess
+          import time
+          from pathlib import Path
+
+          root = Path.cwd()
+          solver_dir = root / "build" / "time_dependent_trip_capacity"
+          out_root = root / "td_trip_capacity_results"
+          tasks = json.loads(os.environ["TASKS_JSON"])
+          time_limit = os.environ.get("TIME_LIMIT_SEC", "7200")
+
+          def solver_path(mode, drone_capacity):
+              suffix = drone_capacity.replace(".", "")
+              return solver_dir / f"tabubu_{mode}_dd{suffix}"
+
+          def parse_routes(text, section_name):
+              lines = text.splitlines()
+              routes = []
+              in_section = False
+              for line in lines:
+                  stripped = line.strip()
+                  if stripped == f"{section_name} Routes:":
+                      in_section = True
+                      continue
+                  if in_section and stripped.endswith("Routes:") and stripped != f"{section_name} Routes:":
+                      break
+                  if in_section and stripped.startswith(section_name):
+                      route = stripped.split(":", 1)[1].split("|", 1)[0].strip()
+                      if route:
+                          routes.append(route)
+              return routes
+
+          def parse_result_text(text, number_of_customer):
+              improved = ""
+              solution_status = "UNKNOWN"
+              m = re.search(r"Improved solution cost:\s*([0-9.eE+-]+)", text)
+              if m:
+                  improved = m.group(1)
+              m = re.search(r"Final solution feasibility:\s*(\S+)", text)
+              if m:
+                  solution_status = m.group(1).upper()
+              truck_routes = parse_routes(text, "Truck")
+              drone_routes = parse_routes(text, "Drone")
+              drone_customers = set()
+              for route in drone_routes:
+                  for token in route.split():
+                      try:
+                          customer = int(token)
+                      except ValueError:
+                          continue
+                      if customer != 0:
+                          drone_customers.add(customer)
+              drone_ratio = len(drone_customers) / number_of_customer if number_of_customer else 0.0
+              return {
+                  "best_objective": improved,
+                  "solution_status": solution_status,
+                  "truck_route": " || ".join(truck_routes),
+                  "drone_route": " || ".join(drone_routes),
+                  "drone_ratio": f"{drone_ratio:.6f}",
+              }
+
+          for task in tasks:
+              base = task["base"]
+              mode = task["mode"]
+              dd = task["drone_capacity"]
+              run_id = str(task["run"])
+              run_dir = out_root / f"{base}" / mode / f"Dd{dd}" / f"run{run_id}"
+              run_dir.mkdir(parents=True, exist_ok=True)
+              solver = solver_path(mode, dd)
+              command = [
+                  str(solver),
+                  str(root / task["file"]),
+                  f"--truck-vmax-file={root / task['vmax_file']}",
+                  f"--truck-theta-file={root / task['theta_file']}",
+                  "--attempts=1",
+                  f"--time-limit={time_limit}",
+              ]
+
+              start = time.time()
+              process_status = "success"
+              stdout = ""
+              stderr = ""
+              return_code = 0
+              try:
+                  completed = subprocess.run(
+                      command,
+                      cwd=run_dir,
+                      text=True,
+                      stdout=subprocess.PIPE,
+                      stderr=subprocess.PIPE,
+                      timeout=int(float(time_limit)) + 300,
+                  )
+                  stdout = completed.stdout
+                  stderr = completed.stderr
+                  return_code = completed.returncode
+                  if return_code != 0:
+                      process_status = "failed"
+              except subprocess.TimeoutExpired as exc:
+                  stdout = exc.stdout or ""
+                  stderr = exc.stderr or ""
+                  return_code = 124
+                  process_status = "timeout"
+
+              elapsed = time.time() - start
+              raw_output = stdout + "\n--- STDERR ---\n" + stderr
+              (run_dir / "solver_stdout_stderr.txt").write_text(raw_output, encoding="utf-8")
+
+              solution_file = run_dir / "output_solution_best.txt"
+              if solution_file.exists():
+                  solution_text = solution_file.read_text(encoding="utf-8", errors="replace")
+              else:
+                  solution_text = raw_output
+
+              parsed = parse_result_text(solution_text, int(task["number_of_customer"]))
+              result = {
+                  "instance": base,
+                  "mode": mode,
+                  "drone_capacity": dd,
+                  "gridsize": task["gridsize"],
+                  "number_of_customer": task["number_of_customer"],
+                  "run": task["run"],
+                  "truck_route": parsed["truck_route"],
+                  "drone_route": parsed["drone_route"],
+                  "drone_ratio": parsed["drone_ratio"],
+                  "best_objective": parsed["best_objective"],
+                  "solution_status": parsed["solution_status"],
+                  "process_status": process_status,
+                  "return_code": return_code,
+                  "elapsed_seconds": f"{elapsed:.3f}",
+              }
+              (run_dir / "result.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+              if solution_file.exists():
+                  shutil.copy2(solution_file, run_dir / "solution_best.txt")
+              print(f"{base} | {mode} | Dd={dd} | run={run_id} | {process_status} | {parsed['solution_status']} | {parsed['best_objective']}")
+          PYEOF
+
+      - name: Upload sequential job results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: td-trip-capacity-job-${{ matrix.job_id }}
+          path: td_trip_capacity_results
+          if-no-files-found: warn
+
+  collect:
+    name: Collect result CSV
+    needs: solve
+    runs-on: ubuntu-latest
+    if: always()
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: all_td_trip_capacity_artifacts
+
+      - name: Build summary CSV
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PYEOF'
+          import csv
+          import json
+          from pathlib import Path
+
+          fields = [
+              "instance",
+              "mode",
+              "drone_capacity",
+              "gridsize",
+              "number_of_customer",
+              "run",
+              "truck_route",
+              "drone_route",
+              "drone_ratio",
+              "best_objective",
+              "solution_status",
+              "process_status",
+              "return_code",
+              "elapsed_seconds",
+          ]
+          rows = []
+          for path in Path("all_td_trip_capacity_artifacts").rglob("result.json"):
+              rows.append(json.loads(path.read_text(encoding="utf-8")))
+          rows.sort(key=lambda r: (
+              int(r["number_of_customer"]),
+              int(r["gridsize"]),
+              str(r["instance"]),
+              str(r["mode"]),
+              float(r["drone_capacity"]),
+              int(r["run"]),
+          ))
+          with open("time_dependent_trip_capacity_summary.csv", "w", newline="", encoding="utf-8") as f:
+              writer = csv.DictWriter(f, fieldnames=fields)
+              writer.writeheader()
+              writer.writerows(rows)
+          print(f"rows={len(rows)}")
+          if len(rows) != 576:
+              print("Warning: expected 576 rows")
+          PYEOF
+
+      - name: Upload summary CSV
+        uses: actions/upload-artifact@v4
+        with:
+          name: time-dependent-trip-capacity-summary
+          path: time_dependent_trip_capacity_summary.csv

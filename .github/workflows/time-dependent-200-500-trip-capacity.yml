@@ -51,19 +51,6 @@ jobs:
             done
           done
 
-      - name: Generate 500-customer instances for CI
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 scripts/create_time_dependent_500_from_100_200.py --overwrite
-
-      - name: Upload generated 500-customer instances
-        uses: actions/upload-artifact@v4
-        with:
-          name: time-dependent-generated-500-instances
-          path: instance_time_dependent/500.*
-          retention-days: 1
-
       - name: Generate weighted sequential job matrix
         id: matrix
         shell: bash
@@ -210,11 +197,6 @@ jobs:
         with:
           name: time-dependent-trip-capacity-solvers
           path: build/time_dependent_trip_capacity
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: time-dependent-generated-500-instances
-          path: instance_time_dependent
 
       - name: Run assigned solver processes sequentially
         shell: bash

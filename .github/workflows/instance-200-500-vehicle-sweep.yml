@@ -1,0 +1,536 @@
+name: Instance 200/500 - vehicle count sweep
+
+on:
+  workflow_dispatch:
+    inputs:
+      time_limit_sec:
+        description: "Per solver process time limit in seconds"
+        required: true
+        default: "7200"
+      max_parallel:
+        description: "Maximum parallel GitHub jobs"
+        required: true
+        default: "32"
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  prepare:
+    name: Build solver and prepare one-process jobs
+    runs-on: ubuntu-latest
+    outputs:
+      experiment_matrix: ${{ steps.matrix.outputs.matrix }}
+      task_count: ${{ steps.matrix.outputs.task_count }}
+      job_count: ${{ steps.matrix.outputs.job_count }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build tabubu_TimeDependent solver
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/instance_vehicle_sweep
+          g++ -O2 -std=c++20 tabubu_TimeDependent.cpp -o build/instance_vehicle_sweep/tabubu_TimeDependent
+
+      - name: Generate vehicle-count sweep matrix
+        id: matrix
+        shell: bash
+        run: |
+          python3 - <<'PYEOF'
+          import glob
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path("instance")
+          variants = {
+              200: [
+                  {"variant": "truck6_drone4", "trucks": 6, "drones": 4},
+                  {"variant": "truck4_drone6", "trucks": 4, "drones": 6},
+              ],
+              500: [
+                  {"variant": "truck11_drone9", "trucks": 11, "drones": 9},
+                  {"variant": "truck9_drone11", "trucks": 9, "drones": 11},
+              ],
+          }
+          expected_per_size = 16
+
+          instances_by_size = {}
+          for size in (200, 500):
+              paths = []
+              for path in glob.glob(str(root / f"{size}.*.txt")):
+                  name = Path(path).name
+                  if name.endswith((".vmax_ij.txt", ".theta_ijl.txt")):
+                      continue
+                  base = name.removesuffix(".txt")
+                  parts = base.split(".")
+                  if len(parts) != 3:
+                      continue
+                  paths.append({
+                      "base": base,
+                      "file": str(root / name),
+                      "customer_count": size,
+                  })
+              paths.sort(key=lambda row: tuple(int(part) for part in row["base"].split(".")))
+              instances_by_size[size] = paths
+
+          errors = []
+          for size, rows in instances_by_size.items():
+              if len(rows) != expected_per_size:
+                  errors.append(f"Expected {expected_per_size} instance/{size}.*.txt files, found {len(rows)}")
+          if errors:
+              raise SystemExit("; ".join(errors))
+
+          tasks = []
+          task_id = 0
+          for size in (200, 500):
+              for inst in instances_by_size[size]:
+                  for variant in variants[size]:
+                      for run in (1, 2, 3):
+                          task_id += 1
+                          tasks.append({
+                              "task_id": f"{task_id:04d}",
+                              **inst,
+                              **variant,
+                              "run": run,
+                          })
+
+          expected_tasks = 192
+          if len(tasks) != expected_tasks:
+              raise SystemExit(f"Expected {expected_tasks} solver tasks, found {len(tasks)}")
+
+          matrix = [
+              {
+                  "job_id": task["task_id"],
+                  "tasks_json": json.dumps([task], separators=(",", ":")),
+                  "instance": task["base"],
+                  "variant": task["variant"],
+                  "run": task["run"],
+              }
+              for task in tasks
+          ]
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"matrix={json.dumps(matrix, separators=(',', ':'))}\n")
+              output.write(f"task_count={len(tasks)}\n")
+              output.write(f"job_count={len(matrix)}\n")
+
+          print(f"Created {len(tasks)} one-process jobs")
+          print("Breakdown: 16x200 instances * 2 variants * 3 runs = 96")
+          print("Breakdown: 16x500 instances * 2 variants * 3 runs = 96")
+          PYEOF
+
+      - name: Upload solver
+        uses: actions/upload-artifact@v4
+        with:
+          name: instance-vehicle-sweep-solver
+          path: build/instance_vehicle_sweep/tabubu_TimeDependent
+          retention-days: 1
+
+  solve:
+    name: ${{ matrix.job_id }} | ${{ matrix.instance }} | ${{ matrix.variant }} | run ${{ matrix.run }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 720
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJson(github.event.inputs.max_parallel || '32') }}
+      matrix:
+        include: ${{ fromJson(needs.prepare.outputs.experiment_matrix) }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: instance-vehicle-sweep-solver
+          path: build/instance_vehicle_sweep
+
+      - name: Run assigned solver process
+        shell: bash
+        env:
+          TASKS_JSON: ${{ matrix.tasks_json }}
+          TIME_LIMIT_SEC: ${{ github.event.inputs.time_limit_sec }}
+        run: |
+          set -euo pipefail
+          chmod +x build/instance_vehicle_sweep/tabubu_TimeDependent
+          mkdir -p instance_vehicle_sweep_results
+
+          python3 - <<'PYEOF'
+          import json
+          import os
+          import re
+          import shutil
+          import subprocess
+          import tempfile
+          from pathlib import Path
+
+          root = Path.cwd()
+          solver = root / "build" / "instance_vehicle_sweep" / "tabubu_TimeDependent"
+          out_root = root / "instance_vehicle_sweep_results"
+          tasks = json.loads(os.environ["TASKS_JSON"])
+          time_limit = os.environ.get("TIME_LIMIT_SEC", "7200")
+
+          def patched_instance(source_path, destination_path, trucks, drones):
+              text = source_path.read_text(encoding="utf-8", errors="replace")
+              text = re.sub(r"^trucks_count\s+\d+", f"trucks_count {trucks}", text, count=1, flags=re.MULTILINE)
+              text = re.sub(r"^drones_count\s+\d+", f"drones_count {drones}", text, count=1, flags=re.MULTILINE)
+              destination_path.write_text(text, encoding="utf-8")
+
+          for task in tasks:
+              base = task["base"]
+              variant = task["variant"]
+              run_id = str(task["run"])
+              trucks = int(task["trucks"])
+              drones = int(task["drones"])
+              result_dir = out_root / str(task["customer_count"]) / base / variant / f"run{run_id}"
+              result_dir.mkdir(parents=True, exist_ok=True)
+              log_path = result_dir / "run.log"
+              result_path = result_dir / f"{base}.{variant}.run{run_id}.txt"
+
+              with tempfile.TemporaryDirectory(prefix=f"instance-{base}-{variant}-run{run_id}-") as tmp:
+                  tmp_path = Path(tmp)
+                  patched_input = tmp_path / f"{base}.{variant}.txt"
+                  patched_instance(root / task["file"], patched_input, trucks, drones)
+
+                  cmd = [
+                      str(solver),
+                      str(patched_input),
+                      "--attempts=1",
+                  ]
+                  if time_limit:
+                      cmd.append(f"--time-limit={time_limit}")
+
+                  with log_path.open("w", encoding="utf-8") as log:
+                      log.write("Command: " + " ".join(cmd) + "\n")
+                      log.write(f"Instance: {base}\n")
+                      log.write(f"Customer count: {task['customer_count']}\n")
+                      log.write(f"Variant: {variant}\n")
+                      log.write(f"Trucks: {trucks}\n")
+                      log.write(f"Drones: {drones}\n")
+                      log.write(f"Run: {run_id}\n\n")
+                      completed = subprocess.run(
+                          cmd,
+                          cwd=tmp_path,
+                          stdout=log,
+                          stderr=subprocess.STDOUT,
+                          text=True,
+                      )
+
+                  best_file = tmp_path / "output_solution_best.txt"
+                  with result_path.open("w", encoding="utf-8") as result:
+                      result.write(f"Instance: {base}\n")
+                      result.write(f"Customer count: {task['customer_count']}\n")
+                      result.write(f"Variant: {variant}\n")
+                      result.write(f"Trucks: {trucks}\n")
+                      result.write(f"Drones: {drones}\n")
+                      result.write(f"Run: {run_id}\n")
+                      result.write(f"Solver exit code: {completed.returncode}\n")
+                      result.write(f"Input file: {task['file']}\n\n")
+                      if best_file.exists():
+                          result.write(best_file.read_text(encoding="utf-8", errors="replace"))
+                      else:
+                          result.write("Final solution feasibility: FAILED\n")
+
+                  for filename in ("output_solution_best.txt", "output_mode_0.txt"):
+                      src = tmp_path / filename
+                      if src.exists():
+                          shutil.copy2(src, result_dir / f"{base}.{variant}.run{run_id}.{filename}")
+
+                  if completed.returncode != 0:
+                      raise SystemExit(
+                          f"Task failed: {base}, {variant}, run={run_id}; see {log_path}"
+                      )
+          PYEOF
+
+      - name: Upload job result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: instance-vehicle-sweep-job-${{ matrix.job_id }}
+          path: instance_vehicle_sweep_results/**
+          if-no-files-found: ignore
+          retention-days: 14
+
+  aggregate:
+    name: Collect and aggregate vehicle sweep results
+    needs: [prepare, solve]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: instance-vehicle-sweep-job-*
+          path: collected_instance_vehicle_sweep
+          merge-multiple: true
+
+      - name: Verify expected result count
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="${{ needs.prepare.outputs.task_count }}"
+          actual=$(find collected_instance_vehicle_sweep -type f -name '*.run[123].txt' | wc -l)
+          echo "Collected ${actual} result files of ${expected} expected"
+          test "$actual" -eq "$expected"
+
+      - name: Aggregate best objective, routes, drone ratio, and elapsed time
+        shell: bash
+        env:
+          EXPECTED_TASK_COUNT: ${{ needs.prepare.outputs.task_count }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PYEOF'
+          import csv
+          import math
+          import os
+          import re
+          import statistics
+          import zipfile
+          from collections import defaultdict
+          from pathlib import Path
+          from xml.sax.saxutils import escape
+
+          results_dir = Path("collected_instance_vehicle_sweep")
+          detail_csv = Path("instance_vehicle_sweep_all_runs.csv")
+          best_csv = Path("instance_vehicle_sweep_best_summary.csv")
+          xlsx_path = Path("instance_vehicle_sweep_summary.xlsx")
+
+          def natural_key(value):
+              return [int(part) if part.isdigit() else part for part in re.split(r"(\d+)", str(value))]
+
+          def read_value(text, label):
+              match = re.search(rf"^{re.escape(label)}:[ \t]*(.*?)[ \t]*$", text, re.MULTILINE)
+              return match.group(1) if match else ""
+
+          def as_float(value):
+              try:
+                  return float(value)
+              except (TypeError, ValueError):
+                  return ""
+
+          def as_int(value):
+              try:
+                  return int(value)
+              except (TypeError, ValueError):
+                  return ""
+
+          def read_elapsed_seconds(text):
+              value = read_value(text, "Mean elapsed time")
+              value = value.removesuffix(" seconds").strip()
+              return as_float(value)
+
+          def extract_section(text, start_label, end_label=None):
+              if start_label not in text:
+                  return ""
+              section = text.split(start_label, 1)[1]
+              if end_label and end_label in section:
+                  section = section.split(end_label, 1)[0]
+              return section.strip()
+
+          def route_customers(route_text):
+              customers = []
+              for line in route_text.splitlines():
+                  if ":" not in line:
+                      continue
+                  body = line.split(":", 1)[1].split("|", 1)[0]
+                  for token in re.findall(r"\d+", body):
+                      customer = int(token)
+                      if customer != 0:
+                          customers.append(customer)
+              return customers
+
+          rows = []
+          result_files = sorted(results_dir.rglob("*.run*.txt"), key=lambda path: natural_key(str(path)))
+          for path in result_files:
+              if not re.search(r"\.run[123]\.txt$", path.name):
+                  continue
+              text = path.read_text(encoding="utf-8", errors="replace")
+              instance = read_value(text, "Instance")
+              customer_count = as_int(read_value(text, "Customer count"))
+              variant = read_value(text, "Variant")
+              trucks = as_int(read_value(text, "Trucks"))
+              drones = as_int(read_value(text, "Drones"))
+              run = as_int(read_value(text, "Run"))
+              best_obj = as_float(read_value(text, "Improved solution cost"))
+              elapsed_seconds = read_elapsed_seconds(text)
+              feasibility = read_value(text, "Final solution feasibility")
+              truck_routes = extract_section(text, "Truck Routes:\n", "\nDrone Routes:")
+              drone_routes = extract_section(text, "Drone Routes:\n", "\nTotal validation:")
+              drone_customers = set(route_customers(drone_routes))
+              drone_ratio = len(drone_customers) / customer_count if customer_count else ""
+              rows.append({
+                  "customer_count": customer_count,
+                  "instance": instance,
+                  "variant": variant,
+                  "trucks": trucks,
+                  "drones": drones,
+                  "run": run,
+                  "best_obj": best_obj,
+                  "elapsed_seconds": elapsed_seconds,
+                  "feasibility": feasibility,
+                  "drone_customer_count": len(drone_customers),
+                  "drone_ratio": drone_ratio,
+                  "truck_routes": truck_routes,
+                  "drone_routes": drone_routes,
+                  "result_file": str(path),
+              })
+
+          expected_rows = int(os.environ["EXPECTED_TASK_COUNT"])
+          if len(rows) != expected_rows:
+              raise SystemExit(f"Expected {expected_rows} all-run rows, found {len(rows)}")
+
+          detail_fields = [
+              "customer_count", "instance", "variant", "trucks", "drones", "run",
+              "best_obj", "elapsed_seconds", "feasibility", "drone_customer_count",
+              "drone_ratio", "truck_routes", "drone_routes", "result_file",
+          ]
+          with detail_csv.open("w", newline="", encoding="utf-8") as f:
+              writer = csv.DictWriter(f, fieldnames=detail_fields)
+              writer.writeheader()
+              writer.writerows(rows)
+
+          best_rows = []
+          groups = defaultdict(list)
+          for row in rows:
+              groups[(row["customer_count"], row["instance"], row["variant"])].append(row)
+          for key, group in sorted(groups.items(), key=lambda item: (item[0][0], natural_key(item[0][1]), item[0][2])):
+              feasible = [row for row in group if row["feasibility"] == "FEASIBLE" and isinstance(row["best_obj"], float)]
+              candidates = feasible or [row for row in group if isinstance(row["best_obj"], float)]
+              best = min(candidates, key=lambda row: row["best_obj"]) if candidates else group[0]
+              numeric_objs = [row["best_obj"] for row in group if isinstance(row["best_obj"], float)]
+              numeric_elapsed = [row["elapsed_seconds"] for row in group if isinstance(row["elapsed_seconds"], float)]
+              best_rows.append({
+                  "customer_count": best["customer_count"],
+                  "instance": best["instance"],
+                  "variant": best["variant"],
+                  "trucks": best["trucks"],
+                  "drones": best["drones"],
+                  "best_run": best["run"],
+                  "best_obj": best["best_obj"],
+                  "best_elapsed_seconds": best["elapsed_seconds"],
+                  "mean_obj_3_runs": statistics.fmean(numeric_objs) if numeric_objs else "",
+                  "mean_elapsed_seconds_3_runs": statistics.fmean(numeric_elapsed) if numeric_elapsed else "",
+                  "feasible_runs": sum(row["feasibility"] == "FEASIBLE" for row in group),
+                  "drone_customer_count": best["drone_customer_count"],
+                  "drone_ratio": best["drone_ratio"],
+                  "truck_routes": best["truck_routes"],
+                  "drone_routes": best["drone_routes"],
+                  "result_file": best["result_file"],
+              })
+
+          best_fields = [
+              "customer_count", "instance", "variant", "trucks", "drones", "best_run",
+              "best_obj", "best_elapsed_seconds", "mean_obj_3_runs",
+              "mean_elapsed_seconds_3_runs", "feasible_runs", "drone_customer_count",
+              "drone_ratio", "truck_routes", "drone_routes", "result_file",
+          ]
+          with best_csv.open("w", newline="", encoding="utf-8") as f:
+              writer = csv.DictWriter(f, fieldnames=best_fields)
+              writer.writeheader()
+              writer.writerows(best_rows)
+
+          def col_name(index):
+              result = ""
+              while index:
+                  index, rem = divmod(index - 1, 26)
+                  result = chr(65 + rem) + result
+              return result
+
+          def cell_xml(row_index, col_index, value, style=0):
+              ref = f"{col_name(col_index)}{row_index}"
+              style_attr = f' s="{style}"' if style else ""
+              if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value):
+                  return f'<c r="{ref}"{style_attr}><v>{value}</v></c>'
+              return f'<c r="{ref}" t="inlineStr"{style_attr}><is><t>{escape(str(value))}</t></is></c>'
+
+          def worksheet(headers, data_rows):
+              wide_columns = {"truck_routes", "drone_routes"}
+              wrapped = {i for i, h in enumerate(headers, 1) if h in wide_columns}
+              xml_rows = []
+              for row_index, values in enumerate([headers, *data_rows], 1):
+                  cells = "".join(
+                      cell_xml(row_index, col_index, value, 1 if row_index == 1 else (2 if col_index in wrapped else 0))
+                      for col_index, value in enumerate(values, 1)
+                  )
+                  xml_rows.append(f'<row r="{row_index}">{cells}</row>')
+              cols = "".join(
+                  f'<col min="{i}" max="{i}" width="{55 if h in wide_columns else 18}" customWidth="1"/>'
+                  for i, h in enumerate(headers, 1)
+              )
+              last = f"{col_name(len(headers))}{len(data_rows) + 1}"
+              return (
+                  '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                  '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+                  f'<dimension ref="A1:{last}"/>'
+                  '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>'
+                  f'<cols>{cols}</cols><sheetData>{"".join(xml_rows)}</sheetData>'
+                  f'<autoFilter ref="A1:{last}"/></worksheet>'
+              )
+
+          sheets = [
+              ("Best", worksheet(best_fields, [[row[field] for field in best_fields] for row in best_rows])),
+              ("All Runs", worksheet(detail_fields, [[row[field] for field in detail_fields] for row in rows])),
+          ]
+          content_types = (
+              '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+              '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+              '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+              '<Default Extension="xml" ContentType="application/xml"/>'
+              '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+              '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+              + "".join(f'<Override PartName="/xl/worksheets/sheet{i}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' for i in range(1, len(sheets) + 1))
+              + '</Types>'
+          )
+          workbook = (
+              '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+              '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+              'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>'
+              + "".join(f'<sheet name="{escape(name)}" sheetId="{i}" r:id="rId{i}"/>' for i, (name, _) in enumerate(sheets, 1))
+              + '</sheets></workbook>'
+          )
+          workbook_rels = (
+              '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+              '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+              + "".join(f'<Relationship Id="rId{i}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet{i}.xml"/>' for i in range(1, len(sheets) + 1))
+              + f'<Relationship Id="rId{len(sheets) + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+              '</Relationships>'
+          )
+          styles = (
+              '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+              '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+              '<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>'
+              '<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>'
+              '<borders count="1"><border/></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+              '<cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
+              '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
+              '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf></cellXfs>'
+              '</styleSheet>'
+          )
+          with zipfile.ZipFile(xlsx_path, "w", zipfile.ZIP_DEFLATED) as z:
+              z.writestr("[Content_Types].xml", content_types)
+              z.writestr("_rels/.rels", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>')
+              z.writestr("xl/workbook.xml", workbook)
+              z.writestr("xl/_rels/workbook.xml.rels", workbook_rels)
+              z.writestr("xl/styles.xml", styles)
+              for i, (_, xml) in enumerate(sheets, 1):
+                  z.writestr(f"xl/worksheets/sheet{i}.xml", xml)
+
+          print(f"Wrote {best_csv}, {detail_csv}, and {xlsx_path}")
+          PYEOF
+
+      - name: Upload consolidated results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: instance-200-500-vehicle-sweep-results
+          path: |
+            collected_instance_vehicle_sweep/**
+            instance_vehicle_sweep_best_summary.csv
+            instance_vehicle_sweep_all_runs.csv
+            instance_vehicle_sweep_summary.xlsx
+          if-no-files-found: warn
+          retention-days: 30

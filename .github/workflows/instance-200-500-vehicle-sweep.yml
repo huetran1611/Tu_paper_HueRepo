@@ -1,4 +1,4 @@
-name: Instance 200/500 - vehicle count sweep
+name: Time-dependent instance 200/500 - vehicle count sweep
 
 on:
   workflow_dispatch:
@@ -46,7 +46,7 @@ jobs:
           import os
           from pathlib import Path
 
-          root = Path("instance")
+          root = Path("instance_time_dependent")
           variants = {
               200: [
                   {"variant": "truck6_drone4", "trucks": 6, "drones": 4},
@@ -70,9 +70,19 @@ jobs:
                   parts = base.split(".")
                   if len(parts) != 3:
                       continue
+                  required = [
+                      root / f"{base}.txt",
+                      root / f"{base}.vmax_ij.txt",
+                      root / f"{base}.theta_ijl.txt",
+                  ]
+                  missing = [str(p) for p in required if not p.exists()]
+                  if missing:
+                      raise SystemExit(f"Missing required files for {base}: {missing}")
                   paths.append({
                       "base": base,
-                      "file": str(root / name),
+                      "file": str(root / f"{base}.txt"),
+                      "vmax_file": str(root / f"{base}.vmax_ij.txt"),
+                      "theta_file": str(root / f"{base}.theta_ijl.txt"),
                       "customer_count": size,
                   })
               paths.sort(key=lambda row: tuple(int(part) for part in row["base"].split(".")))
@@ -199,6 +209,8 @@ jobs:
                   cmd = [
                       str(solver),
                       str(patched_input),
+                      f"--truck-vmax-file={root / task['vmax_file']}",
+                      f"--truck-theta-file={root / task['theta_file']}",
                       "--attempts=1",
                   ]
                   if time_limit:
@@ -230,6 +242,8 @@ jobs:
                       result.write(f"Run: {run_id}\n")
                       result.write(f"Solver exit code: {completed.returncode}\n")
                       result.write(f"Input file: {task['file']}\n\n")
+                      result.write(f"Truck vmax file: {task['vmax_file']}\n")
+                      result.write(f"Truck theta file: {task['theta_file']}\n\n")
                       if best_file.exists():
                           result.write(best_file.read_text(encoding="utf-8", errors="replace"))
                       else:

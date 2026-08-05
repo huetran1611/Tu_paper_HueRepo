@@ -1,0 +1,203 @@
+name: Solve instance_new TD and static, then summarize static-on-TD feasibility
+
+on:
+  workflow_dispatch:
+    inputs:
+      time_limit_sec:
+        description: "Search time limit per instance in seconds; 0 means solver default/no explicit time limit"
+        required: true
+        default: "10800"
+      attempts:
+        description: "Number of attempts per instance"
+        required: true
+        default: "1"
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  # Job count for the solve stage:
+  # 4 configurations x 10 instances x 2 models = 80 solve jobs.
+  # Total workflow jobs = 1 build + 80 solve + 1 summarize = 82 jobs.
+  build:
+    name: Build TD and static solvers
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup MinGW toolchain
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: mingw-w64-x86_64-gcc
+
+      - name: Build TD solver
+        shell: pwsh
+        run: |
+          C:\msys64\mingw64\bin\g++.exe -O3 -std=c++20 -static -static-libgcc -static-libstdc++ tabubu_TimeDependent_new_instance.cpp -o tabubu_TimeDependent_new_instance.exe
+
+      - name: Build static solver
+        shell: pwsh
+        run: |
+          C:\msys64\mingw64\bin\g++.exe -O3 -std=c++20 -static -static-libgcc -static-libstdc++ tabubu_TimeDependent_new_instance_static.cpp -o tabubu_TimeDependent_new_instance_static.exe
+
+      - name: Upload solver binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: solvers
+          path: |
+            tabubu_TimeDependent_new_instance.exe
+            tabubu_TimeDependent_new_instance_static.exe
+
+  solve:
+    name: Solve ${{ matrix.config }} / ${{ matrix.instance }} / ${{ matrix.model }}
+    runs-on: windows-latest
+    needs: build
+    timeout-minutes: 210
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - n50_1truck_1drone
+          - n100_2truck_2drone
+          - n200_3truck_3drone
+          - n500_7truck_7drone
+        instance:
+          - instance001
+          - instance002
+          - instance003
+          - instance004
+          - instance005
+          - instance006
+          - instance007
+          - instance008
+          - instance009
+          - instance010
+        model:
+          - td
+          - static
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download solver binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: solvers
+          path: .
+
+      - name: Show job count
+        shell: pwsh
+        run: |
+          Write-Host "Solve jobs: 4 configurations x 10 instances x 2 models = 80"
+          Write-Host "Total workflow jobs: 1 build + 80 solve + 1 summarize = 82"
+          Write-Host "This job runs exactly one solver process: ${{ matrix.config }} / ${{ matrix.instance }} / ${{ matrix.model }}"
+
+      - name: Run TD model
+        if: matrix.model == 'td'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $instDir = "${{ github.workspace }}\instance_new\${{ matrix.config }}\${{ matrix.instance }}"
+          $logPath = Join-Path $instDir "solve_log.txt"
+          $solutionPath = Join-Path $instDir "solution_best.txt"
+          $iterationPath = Join-Path $instDir "iteration_mode_0.txt"
+          Remove-Item -LiteralPath $logPath,$solutionPath,$iterationPath -Force -ErrorAction SilentlyContinue
+          Remove-Item -LiteralPath "${{ github.workspace }}\output_solution_best.txt","${{ github.workspace }}\output_mode_0.txt" -Force -ErrorAction SilentlyContinue
+          Push-Location "${{ github.workspace }}"
+          try {
+            $args = @($instDir, "--attempts=${{ github.event.inputs.attempts }}")
+            if ([int]"${{ github.event.inputs.time_limit_sec }}" -gt 0) {
+              $args += "--time-limit=${{ github.event.inputs.time_limit_sec }}"
+            }
+            & "${{ github.workspace }}\tabubu_TimeDependent_new_instance.exe" @args *> $logPath
+            if ($LASTEXITCODE -ne 0) { throw "TD solver failed with exit code $LASTEXITCODE" }
+            Move-Item -LiteralPath "${{ github.workspace }}\output_solution_best.txt" -Destination $solutionPath -Force
+            if (Test-Path -LiteralPath "${{ github.workspace }}\output_mode_0.txt") {
+              Move-Item -LiteralPath "${{ github.workspace }}\output_mode_0.txt" -Destination $iterationPath -Force
+            }
+          } finally {
+            Pop-Location
+          }
+
+      - name: Run static model
+        if: matrix.model == 'static'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $instDir = "${{ github.workspace }}\instance_new\${{ matrix.config }}\${{ matrix.instance }}"
+          $logPath = Join-Path $instDir "static_solve_log.txt"
+          $solutionPath = Join-Path $instDir "static_solution_best.txt"
+          $iterationPath = Join-Path $instDir "static_iteration_mode_0.txt"
+          Remove-Item -LiteralPath $logPath,$solutionPath,$iterationPath -Force -ErrorAction SilentlyContinue
+          Remove-Item -LiteralPath "${{ github.workspace }}\output_solution_best.txt","${{ github.workspace }}\output_mode_0.txt" -Force -ErrorAction SilentlyContinue
+          Push-Location "${{ github.workspace }}"
+          try {
+            $args = @($instDir, "--attempts=${{ github.event.inputs.attempts }}")
+            if ([int]"${{ github.event.inputs.time_limit_sec }}" -gt 0) {
+              $args += "--time-limit=${{ github.event.inputs.time_limit_sec }}"
+            }
+            & "${{ github.workspace }}\tabubu_TimeDependent_new_instance_static.exe" @args *> $logPath
+            if ($LASTEXITCODE -ne 0) { throw "Static solver failed with exit code $LASTEXITCODE" }
+            Move-Item -LiteralPath "${{ github.workspace }}\output_solution_best.txt" -Destination $solutionPath -Force
+            if (Test-Path -LiteralPath "${{ github.workspace }}\output_mode_0.txt") {
+              Move-Item -LiteralPath "${{ github.workspace }}\output_mode_0.txt" -Destination $iterationPath -Force
+            }
+          } finally {
+            Pop-Location
+          }
+
+      - name: Upload ${{ matrix.config }} ${{ matrix.model }} results
+        uses: actions/upload-artifact@v4
+        with:
+          name: results-${{ matrix.config }}-${{ matrix.instance }}-${{ matrix.model }}
+          path: |
+            instance_new/${{ matrix.config }}/${{ matrix.instance }}/*solution_best.txt
+            instance_new/${{ matrix.config }}/${{ matrix.instance }}/*solve_log.txt
+            instance_new/${{ matrix.config }}/${{ matrix.instance }}/*iteration_mode_0.txt
+
+  summarize:
+    name: Summarize static and TD results
+    runs-on: windows-latest
+    needs: solve
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download all solve results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: results-*
+          path: .
+          merge-multiple: true
+
+      - name: Generate static-on-TD feasibility summary
+        shell: pwsh
+        run: |
+          python scripts\summarize_static_td_all_instance_new.py
+
+      - name: Print summary
+        shell: pwsh
+        run: |
+          $summary = "instance_new\static_td_feasibility_summary_all_sets.csv"
+          Import-Csv -LiteralPath $summary |
+            Group-Object benchmark_set |
+            ForEach-Object {
+              $g = $_.Group
+              [PSCustomObject]@{
+                Set = $_.Name
+                Count = $g.Count
+                Infeasible = ($g | Where-Object { $_.static_to_td_is_feasible -eq "NO" }).Count
+                WaitingViolatedCustomers = ($g | Measure-Object static_to_td_waiting_violated_customer_count -Sum).Sum
+                WaitingViolationMin = [Math]::Round((($g | Measure-Object static_to_td_waiting_violation_total_min -Sum).Sum), 6)
+                MeanStaticObjective = [Math]::Round((($g | Measure-Object static_objective -Average).Average), 6)
+                MeanTdObjective = [Math]::Round((($g | Measure-Object td_objective -Average).Average), 6)
+              }
+            } | Format-Table -AutoSize
+          Write-Host "Summary CSV: $summary"
+
+      - name: Upload final summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: static-td-feasibility-summary-all-sets
+          path: |
+            instance_new/static_td_feasibility_summary_all_sets.csv

@@ -18,7 +18,7 @@ env:
 jobs:
   # Job count for the solve stage:
   # 4 configurations x 10 instances x 2 models = 80 solve jobs.
-  # Total workflow jobs = 1 build + 80 solve + 1 summarize = 82 jobs.
+  # Total workflow jobs = 1 build + 1 prepare-instances + 80 solve + 1 summarize = 83 jobs.
   build:
     name: Build TD and static solvers
     runs-on: windows-latest
@@ -50,10 +50,47 @@ jobs:
             tabubu_TimeDependent_new_instance.exe
             tabubu_TimeDependent_new_instance_static.exe
 
+  prepare-instances:
+    name: Generate instance_new benchmark inputs
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Generate all instance_new benchmark sets
+        shell: pwsh
+        run: |
+          python scripts\generate_instance_new_multi_sizes.py
+
+      - name: Upload n50 instances
+        uses: actions/upload-artifact@v4
+        with:
+          name: instances-n50_1truck_1drone
+          path: instance_new/n50_1truck_1drone
+
+      - name: Upload n100 instances
+        uses: actions/upload-artifact@v4
+        with:
+          name: instances-n100_2truck_2drone
+          path: instance_new/n100_2truck_2drone
+
+      - name: Upload n200 instances
+        uses: actions/upload-artifact@v4
+        with:
+          name: instances-n200_3truck_3drone
+          path: instance_new/n200_3truck_3drone
+
+      - name: Upload n500 instances
+        uses: actions/upload-artifact@v4
+        with:
+          name: instances-n500_7truck_7drone
+          path: instance_new/n500_7truck_7drone
+
   solve:
     name: Solve ${{ matrix.config }} / ${{ matrix.instance }} / ${{ matrix.model }}
     runs-on: windows-latest
-    needs: build
+    needs:
+      - build
+      - prepare-instances
     timeout-minutes: 210
     strategy:
       fail-fast: false
@@ -90,8 +127,14 @@ jobs:
         shell: pwsh
         run: |
           Write-Host "Solve jobs: 4 configurations x 10 instances x 2 models = 80"
-          Write-Host "Total workflow jobs: 1 build + 80 solve + 1 summarize = 82"
+          Write-Host "Total workflow jobs: 1 build + 1 prepare-instances + 80 solve + 1 summarize = 83"
           Write-Host "This job runs exactly one solver process: ${{ matrix.config }} / ${{ matrix.instance }} / ${{ matrix.model }}"
+
+      - name: Download benchmark inputs for ${{ matrix.config }}
+        uses: actions/download-artifact@v4
+        with:
+          name: instances-${{ matrix.config }}
+          path: instance_new/${{ matrix.config }}
 
       - name: Run TD model
         if: matrix.model == 'td'
@@ -169,6 +212,24 @@ jobs:
           pattern: results-*
           path: .
           merge-multiple: true
+
+      - name: Download all benchmark inputs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: instances-*
+          path: instance_new
+          merge-multiple: false
+
+      - name: Normalize downloaded instance artifact folders
+        shell: pwsh
+        run: |
+          foreach ($artifactDir in Get-ChildItem -LiteralPath "instance_new" -Directory | Where-Object { $_.Name -like "instances-*" }) {
+            $setName = $artifactDir.Name.Substring("instances-".Length)
+            $target = Join-Path "instance_new" $setName
+            New-Item -ItemType Directory -Path $target -Force | Out-Null
+            Copy-Item -Path (Join-Path $artifactDir.FullName "*") -Destination $target -Recurse -Force
+            Remove-Item -LiteralPath $artifactDir.FullName -Recurse -Force
+          }
 
       - name: Generate static-on-TD feasibility summary
         shell: pwsh

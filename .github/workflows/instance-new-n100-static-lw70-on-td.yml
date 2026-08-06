@@ -1,0 +1,212 @@
+name: instance_new n100 static Lw70 on TD feasibility
+
+on:
+  workflow_dispatch:
+    inputs:
+      time_limit_sec:
+        description: "Search time limit per instance in seconds; 0 means solver default/no explicit time limit"
+        required: true
+        default: "10800"
+      attempts:
+        description: "Number of attempts per instance"
+        required: true
+        default: "1"
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  CONFIG: n100_2truck_2drone
+  LW_SECONDS: "4200"
+
+jobs:
+  build:
+    name: Build static solver
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup MinGW toolchain
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: mingw-w64-x86_64-gcc
+
+      - name: Build static solver
+        shell: msys2 {0}
+        run: |
+          g++ -O3 -std=c++20 -static -static-libgcc -static-libstdc++ tabubu_TimeDependent_new_instance_static.cpp -o tabubu_TimeDependent_new_instance_static.exe
+
+      - name: Upload solver binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: static-solver
+          path: tabubu_TimeDependent_new_instance_static.exe
+
+  solve_static_lw70:
+    name: Static Lw70 ${{ matrix.instance }}
+    runs-on: windows-latest
+    needs: build
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        instance:
+          - instance001
+          - instance002
+          - instance003
+          - instance004
+          - instance005
+          - instance006
+          - instance007
+          - instance008
+          - instance009
+          - instance010
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download static solver
+        uses: actions/download-artifact@v4
+        with:
+          name: static-solver
+          path: .
+
+      - name: Prepare Lw70 instance copy
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $sourceDir = "${{ github.workspace }}\instance_new\${{ env.CONFIG }}\${{ matrix.instance }}"
+          $workDir = "${{ github.workspace }}\lw70_instances\${{ env.CONFIG }}\${{ matrix.instance }}"
+          New-Item -ItemType Directory -Path $workDir -Force | Out-Null
+          Copy-Item -LiteralPath (Join-Path $sourceDir "${{ matrix.instance }}_solver.txt") -Destination $workDir -Force
+          Copy-Item -LiteralPath (Join-Path $sourceDir "${{ matrix.instance }}_solver.vmax_ij.txt") -Destination $workDir -Force
+          Copy-Item -LiteralPath (Join-Path $sourceDir "${{ matrix.instance }}_solver.theta_ijl.txt") -Destination $workDir -Force
+          Copy-Item -LiteralPath (Join-Path $sourceDir "v_ij.txt") -Destination $workDir -Force -ErrorAction SilentlyContinue
+          Copy-Item -LiteralPath (Join-Path $sourceDir "theta_ij.txt") -Destination $workDir -Force -ErrorAction SilentlyContinue
+          Copy-Item -LiteralPath (Join-Path $sourceDir "metadata.json") -Destination $workDir -Force -ErrorAction SilentlyContinue
+
+          $solverPath = Join-Path $workDir "${{ matrix.instance }}_solver.txt"
+          $lines = Get-Content -LiteralPath $solverPath -Encoding UTF8
+          for ($i = 6; $i -lt $lines.Count; $i++) {
+            $parts = $lines[$i].Trim() -split "\s+"
+            if ($parts.Count -ge 7) {
+              $parts[6] = "${{ env.LW_SECONDS }}"
+              $lines[$i] = $parts -join "`t"
+            }
+          }
+          Set-Content -LiteralPath $solverPath -Value $lines -Encoding UTF8
+
+      - name: Run static solver with Lw70
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $instDir = "${{ github.workspace }}\lw70_instances\${{ env.CONFIG }}\${{ matrix.instance }}"
+          $logPath = Join-Path $instDir "lw70_static_solve_log.txt"
+          $solutionPath = Join-Path $instDir "static_solution_best.txt"
+          $iterationPath = Join-Path $instDir "lw70_static_iteration_mode_0.txt"
+          Remove-Item -LiteralPath $logPath,$solutionPath,$iterationPath -Force -ErrorAction SilentlyContinue
+          Remove-Item -LiteralPath "${{ github.workspace }}\output_solution_best.txt","${{ github.workspace }}\output_mode_0.txt" -Force -ErrorAction SilentlyContinue
+          Push-Location "${{ github.workspace }}"
+          try {
+            $args = @($instDir, "--attempts=${{ github.event.inputs.attempts }}")
+            if ([int]"${{ github.event.inputs.time_limit_sec }}" -gt 0) {
+              $args += "--time-limit=${{ github.event.inputs.time_limit_sec }}"
+            }
+            & "${{ github.workspace }}\tabubu_TimeDependent_new_instance_static.exe" @args *> $logPath
+            if ($LASTEXITCODE -ne 0) { throw "Static solver failed with exit code $LASTEXITCODE" }
+            Move-Item -LiteralPath "${{ github.workspace }}\output_solution_best.txt" -Destination $solutionPath -Force
+            if (Test-Path -LiteralPath "${{ github.workspace }}\output_mode_0.txt") {
+              Move-Item -LiteralPath "${{ github.workspace }}\output_mode_0.txt" -Destination $iterationPath -Force
+            }
+          } finally {
+            Pop-Location
+          }
+
+      - name: Upload Lw70 static result
+        uses: actions/upload-artifact@v4
+        with:
+          name: lw70-static-${{ matrix.instance }}
+          path: lw70_instances/
+
+  validate_static_on_td:
+    name: Validate static Lw70 solutions on TD speeds
+    runs-on: windows-latest
+    needs: solve_static_lw70
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download Lw70 static results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: lw70-static-*
+          path: .
+          merge-multiple: true
+
+      - name: Generate static-on-TD feasibility summary
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $env:INSTANCE_ROOT_OVERRIDE = "${{ github.workspace }}\lw70_instances"
+          $env:SUMMARY_OUT = "${{ github.workspace }}\lw70_static_on_td_feasibility_n100.csv"
+          $script = @'
+          import csv
+          import os
+          from pathlib import Path
+          import scripts.summarize_static_td_all_instance_new as s
+
+          instance_root = Path(os.environ["INSTANCE_ROOT_OVERRIDE"])
+          out_csv = Path(os.environ["SUMMARY_OUT"])
+          rows = []
+          for instance_path in sorted((instance_root / "n100_2truck_2drone").glob("instance*")):
+              trucks, drones, _, _, _, _, _, _ = s.parse_instance(instance_path)
+              static_solution = instance_path / "static_solution_best.txt"
+              if not static_solution.exists():
+                  continue
+              feasible, violated_count, wait_sec, cap_bad, energy_bad = s.validate_static_on_td(instance_path, static_solution)
+              rows.append({
+                  "benchmark_set": "n100_2truck_2drone",
+                  "lw_seconds": "4200",
+                  "lw_minutes": "70",
+                  "instance": instance_path.name,
+                  "trucks_count": trucks,
+                  "drones_count": drones,
+                  "static_objective": f"{s.read_objective(static_solution):.6f}",
+                  "static_to_td_is_feasible": "YES" if feasible else "NO",
+                  "static_to_td_waiting_violated_customer_count": violated_count,
+                  "static_to_td_waiting_violation_total_sec": f"{wait_sec:.6f}",
+                  "static_to_td_waiting_violation_total_min": f"{wait_sec / 60.0:.6f}",
+                  "static_to_td_capacity_violation": "YES" if cap_bad else "NO",
+                  "static_to_td_energy_violation": "YES" if energy_bad else "NO",
+                  "static_solution_file": str(static_solution),
+              })
+
+          if not rows:
+              raise SystemExit("No static Lw70 solutions were found to validate.")
+          with out_csv.open("w", encoding="utf-8", newline="") as f:
+              writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+              writer.writeheader()
+              writer.writerows(rows)
+
+          infeasible = sum(1 for r in rows if r["static_to_td_is_feasible"] == "NO")
+          wait_count = sum(int(r["static_to_td_waiting_violated_customer_count"]) for r in rows)
+          wait_sec = sum(float(r["static_to_td_waiting_violation_total_sec"]) for r in rows)
+          print(f"Rows: {len(rows)}")
+          print(f"Static Lw70 solutions infeasible on TD speeds: {infeasible}/{len(rows)}")
+          print(f"Total waiting violated customers: {wait_count}")
+          print(f"Total waiting violation: {wait_sec:.6f} sec = {wait_sec / 60.0:.6f} min")
+          '@
+          Set-Content -LiteralPath validate_lw70_static_on_td.py -Value $script -Encoding UTF8
+          python validate_lw70_static_on_td.py
+
+      - name: Print feasibility table
+        shell: pwsh
+        run: |
+          Import-Csv -LiteralPath "lw70_static_on_td_feasibility_n100.csv" |
+            Select-Object instance,static_objective,static_to_td_is_feasible,static_to_td_waiting_violated_customer_count,static_to_td_waiting_violation_total_min,static_to_td_capacity_violation,static_to_td_energy_violation |
+            Format-Table -AutoSize
+
+      - name: Upload Lw70 validation summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: lw70-static-on-td-feasibility-n100
+          path: |
+            lw70_static_on_td_feasibility_n100.csv

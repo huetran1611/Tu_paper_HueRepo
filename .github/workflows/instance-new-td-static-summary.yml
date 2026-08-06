@@ -148,13 +148,24 @@ jobs:
           }
 
       - name: Upload ${{ matrix.config }} ${{ matrix.model }} results
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $sourceDir = "instance_new\${{ matrix.config }}\${{ matrix.instance }}"
+          $bundleDir = "artifact-result\instance_new\${{ matrix.config }}\${{ matrix.instance }}"
+          New-Item -ItemType Directory -Path $bundleDir -Force | Out-Null
+          Get-ChildItem -LiteralPath $sourceDir -Filter "*solution_best.txt" -File |
+            Copy-Item -Destination $bundleDir -Force
+          Get-ChildItem -LiteralPath $sourceDir -Filter "*solve_log.txt" -File |
+            Copy-Item -Destination $bundleDir -Force
+          Get-ChildItem -LiteralPath $sourceDir -Filter "*iteration_mode_0.txt" -File -ErrorAction SilentlyContinue |
+            Copy-Item -Destination $bundleDir -Force
+
+      - name: Upload ${{ matrix.config }} ${{ matrix.model }} result artifact
         uses: actions/upload-artifact@v4
         with:
           name: results-${{ matrix.config }}-${{ matrix.instance }}-${{ matrix.model }}
-          path: |
-            instance_new/${{ matrix.config }}/${{ matrix.instance }}/*solution_best.txt
-            instance_new/${{ matrix.config }}/${{ matrix.instance }}/*solve_log.txt
-            instance_new/${{ matrix.config }}/${{ matrix.instance }}/*iteration_mode_0.txt
+          path: artifact-result/
 
   summarize:
     name: Summarize static and TD results

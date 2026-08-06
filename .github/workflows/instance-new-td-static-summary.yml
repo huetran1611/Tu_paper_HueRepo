@@ -205,6 +205,8 @@ jobs:
               }
             } | Format-Table -AutoSize
           Write-Host "Summary CSV: $summary"
+          Write-Host "Waiting violation detail CSV: instance_new\static_to_td_waiting_violations_detail_all_sets.csv"
+          Write-Host "Truck arrival CSV: instance_new\static_to_td_truck_arrivals_all_sets.csv"
 
       - name: Upload final summary
         uses: actions/upload-artifact@v4
@@ -212,3 +214,5 @@ jobs:
           name: static-td-feasibility-summary-all-sets
           path: |
             instance_new/static_td_feasibility_summary_all_sets.csv
+            instance_new/static_to_td_waiting_violations_detail_all_sets.csv
+            instance_new/static_to_td_truck_arrivals_all_sets.csv

@@ -49,11 +49,14 @@ vd deadline; //customer deadlines
 vd demand; // demand[i]: demand of customer i
 double Dh = 1000.0; // truck capacity (all trucks) (kg)
 double vmax = 15.6464; // truck base speed (m/s)
-int L = 24; //number of time segments in a day
-//vd time_segment = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}; // time segment boundaries in hours
+int L = 10; // number of truck time segments
+static const double SECONDS_PER_HOUR = 3600.0;
+static const double TIME_SEGMENT_DURATION_HOURS = 0.5;
+// Internal route/service/deadline times are seconds. time_segment boundaries are hours.
+//vd time_segment = {0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5}; // 10 half-hour segment boundaries
 //vd time_segments_sigma = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0}; //sigma (truck velocity coefficient) for each time segments
-vd time_segment = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}; // time segment boundaries in hours
-vd time_segments_sigma = {0.9, 0.8, 0.4, 0.6,0.9, 0.8, 0.6, 0.8, 0.8, 0.7, 0.5, 0.8}; //sigma (truck velocity coefficient) for each time segments
+vd time_segment = {0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5}; // 10 half-hour segment boundaries in hours
+vd time_segments_sigma = {0.65, 0.50, 0.40, 0.45, 0.60, 0.70, 0.80, 0.85, 0.80, 0.70}; // fallback truck velocity coefficient for each half-hour segment
 vvd truck_vmax_ij; // truck_vmax_ij[i][j]: edge-specific base speed vmax_ij (m/s)
 vector<vvd> truck_theta_ijl; // truck_theta_ijl[l][i][j]: edge/time-specific coefficient theta_ijl
 double Dd = 5.0, E = 1.59 * 3600000.0; // drone payload capacity (kg) and battery capacity (J)
@@ -473,7 +476,7 @@ int get_time_segment(double t) {
     // If outside boundaries, loop back to the start segment.
     if (time_segment.size() < 2) return 0;
     double period_hr = time_segment.back() - time_segment.front();
-    if (period_hr <= 1e-12) period_hr = 12.0;
+    if (period_hr <= 1e-12) period_hr = TIME_SEGMENT_DURATION_HOURS * truck_time_segment_count();
     t = fmod(t - time_segment.front(), period_hr);
     if (t < 0) t += period_hr;
     t += time_segment.front();
@@ -500,27 +503,27 @@ pair<double, double> compute_truck_route_time(const vi& route, double start=0) {
         while (dist_left > 1e-8) {
             if (++guard_steps > 1000000) {
                 // Fallback: assume constant speed and finish remaining distance
-                int seg_safe = get_time_segment(time / 3600.0);
+                int seg_safe = get_time_segment(time / SECONDS_PER_HOUR);
                 double v_safe = get_truck_edge_speed(from, to, seg_safe);
                 time += dist_left / v_safe;
                 dist_left = 0.0;
                 break;
             }
             // Convert time to hours for segment lookup
-            double t_hr = time / 3600.0;
+            double t_hr = time / SECONDS_PER_HOUR;
             int seg = get_time_segment(t_hr); // 0-based index into truck_theta_ijl
             double v = get_truck_edge_speed(from, to, seg); // v_ijl = theta_ijl * vmax_ij
             // Time left in this cyclic custom segment. If the trip goes beyond
             // one profile period, boundaries must advance to the current cycle.
             double period_hr = (time_segment.size() >= 2 && time_segment.back() > time_segment.front())
                                ? (time_segment.back() - time_segment.front())
-                               : 12.0;
+                               : TIME_SEGMENT_DURATION_HOURS * truck_time_segment_count();
             double cycle_start_hr = floor((t_hr - time_segment.front()) / period_hr) * period_hr + time_segment.front();
             double next_boundary_hr = (seg + 1 < (int)time_segment.size())
                                       ? cycle_start_hr + (time_segment[seg + 1] - time_segment.front())
                                       : cycle_start_hr + period_hr;
             if (next_boundary_hr <= t_hr + 1e-12) next_boundary_hr += period_hr;
-            double segment_end_time_sec = next_boundary_hr * 3600.0;
+            double segment_end_time_sec = next_boundary_hr * SECONDS_PER_HOUR;
             double t_seg_end = segment_end_time_sec - time; // seconds remaining in this segment
             if (t_seg_end < 1e-8) t_seg_end = 1e-6; // minimal progress to avoid stalling
             double max_dist_this_seg = v * t_seg_end;

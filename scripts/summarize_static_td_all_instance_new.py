@@ -7,6 +7,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 INSTANCE_ROOT = ROOT / "instance_new"
 OUT_CSV = INSTANCE_ROOT / "static_td_feasibility_summary_all_sets.csv"
+OUT_DETAIL_CSV = INSTANCE_ROOT / "static_to_td_waiting_violations_detail_all_sets.csv"
+OUT_TRUCK_ARRIVAL_CSV = INSTANCE_ROOT / "static_to_td_truck_arrivals_all_sets.csv"
 
 V_FLY_DRONE = 60.0 * 1000.0 / 3600.0
 V_TAKE_OFF = 30.0 * 1000.0 / 3600.0
@@ -17,8 +19,8 @@ DRONE_BATTERY_J = 1.59 * 3600000.0
 POWER_BETA = 66.0
 POWER_GAMMA = 397.0
 
-TIME_SEGMENT = list(range(13))
-DEFAULT_SIGMA = [0.9, 0.8, 0.4, 0.6, 0.9, 0.8, 0.6, 0.8, 0.8, 0.7, 0.5, 0.8]
+TIME_SEGMENT = [0.5 * i for i in range(11)]
+DEFAULT_SIGMA = [0.65, 0.50, 0.40, 0.45, 0.60, 0.70, 0.80, 0.85, 0.80, 0.70]
 
 
 def get_time_segment(t_hours):
@@ -79,7 +81,7 @@ def parse_routes(solution_path):
 def load_td_speed_model(instance_path, n):
     name = instance_path.name
     vmax = [[15.6464 for _ in range(n + 1)] for _ in range(n + 1)]
-    theta = [[[1.0 for _ in range(n + 1)] for _ in range(n + 1)] for _ in range(12)]
+    theta = [[[1.0 for _ in range(n + 1)] for _ in range(n + 1)] for _ in range(len(DEFAULT_SIGMA))]
     for l, default in enumerate(DEFAULT_SIGMA):
         for i in range(n + 1):
             for j in range(n + 1):
@@ -212,6 +214,112 @@ def compute_drone_route(route, dist, demand, serve_drone, deadline):
     return violations, capacity_bad, energy_bad
 
 
+def compute_truck_route_detail(route, dist, vmax, theta, serve_truck, deadline):
+    time = 0.0
+    visit_times = [0.0 for _ in deadline]
+    customers_since_depot = []
+    violations = {}
+    detail_rows = []
+    arrival_rows = []
+    route_nodes = " ".join(map(str, route))
+    trip = 1
+    for k in range(1, len(route)):
+        u, v = route[k - 1], route[k]
+        if u == v:
+            continue
+        travel_time = truck_edge_time(u, v, time, dist, vmax, theta)
+        time += travel_time
+        if v != 0:
+            arrival_time = time
+            time += serve_truck[v]
+            arrival_rows.append({
+                "step": k,
+                "trip": trip,
+                "from": u,
+                "customer": v,
+                "arc": f"{u}->{v}",
+                "arrival_td_sec": arrival_time,
+                "arrival_td_min": arrival_time / 60.0,
+                "after_service_td_sec": time,
+                "after_service_td_min": time / 60.0,
+                "travel_td_sec": travel_time,
+                "route_nodes": route_nodes,
+            })
+            customers_since_depot.append(v)
+        visit_times[v] = time
+        if v == 0 and k != 1:
+            for cust in customers_since_depot:
+                duration = time - visit_times[cust]
+                if duration > deadline[cust] + 1e-8:
+                    violation = duration - deadline[cust]
+                    violations[cust] = violations.get(cust, 0.0) + violation
+                    detail_rows.append({
+                        "vehicle_type": "Truck",
+                        "customer": cust,
+                        "route_return_time_sec": time,
+                        "pickup_to_return_duration_sec": duration,
+                        "deadline_sec": deadline[cust],
+                        "violation_sec": violation,
+                        "route_nodes": route_nodes,
+                    })
+            for cust in customers_since_depot:
+                visit_times[cust] = time
+            customers_since_depot.clear()
+            trip += 1
+    return time, violations, detail_rows, arrival_rows
+
+
+def compute_drone_route_detail(route, dist, demand, serve_drone, deadline):
+    time = 0.0
+    current_weight = 0.0
+    energy_used = 0.0
+    capacity_bad = False
+    energy_bad = False
+    visit_times = [0.0 for _ in deadline]
+    customers_since_depot = []
+    violations = {}
+    detail_rows = []
+    route_nodes = " ".join(map(str, route))
+    for k in range(1, len(route)):
+        u, v = route[k - 1], route[k]
+        if u == v:
+            continue
+        leg_time = dist[u][v] / V_FLY_DRONE + HEIGHT / V_TAKE_OFF + HEIGHT / V_LANDING
+        energy_used += (POWER_BETA * current_weight + POWER_GAMMA) * leg_time
+        if energy_used > DRONE_BATTERY_J + 1e-8:
+            energy_bad = True
+        time += leg_time
+        if v != 0:
+            current_weight += demand[v]
+            if current_weight > DRONE_CAPACITY + 1e-8:
+                capacity_bad = True
+            time += serve_drone[v]
+            customers_since_depot.append(v)
+            visit_times[v] = time
+        else:
+            for cust in customers_since_depot:
+                duration = time - visit_times[cust]
+                if duration > deadline[cust] + 1e-8:
+                    violation = duration - deadline[cust]
+                    violations[cust] = violations.get(cust, 0.0) + violation
+                    detail_rows.append({
+                        "vehicle_type": "Drone",
+                        "customer": cust,
+                        "route_return_time_sec": time,
+                        "pickup_to_return_duration_sec": duration,
+                        "deadline_sec": deadline[cust],
+                        "violation_sec": violation,
+                        "route_nodes": route_nodes,
+                    })
+            for cust in customers_since_depot:
+                visit_times[cust] = time
+            customers_since_depot.clear()
+            current_weight = 0.0
+            energy_used = 0.0
+            visit_times[v] = time
+    return time, violations, capacity_bad, energy_bad, detail_rows
+
+
 def find_solution(instance_path, model):
     if model == "td":
         candidates = sorted(instance_path.glob("*solution_best.txt"))
@@ -234,21 +342,39 @@ def validate_static_on_td(instance_path, static_solution):
     wait_violations = {}
     capacity_bad = False
     energy_bad = False
-    for vehicle_type, _, route in parse_routes(static_solution):
+    max_route_time = 0.0
+    detail_rows = []
+    truck_arrival_rows = []
+    for vehicle_type, vehicle_idx, route in parse_routes(static_solution):
         if vehicle_type == "truck":
-            merge_violation(wait_violations, compute_truck_route(route, dist, vmax, theta, serve_truck, deadline))
+            route_time, violations, route_detail, route_arrivals = compute_truck_route_detail(
+                route, dist, vmax, theta, serve_truck, deadline
+            )
+            merge_violation(wait_violations, violations)
         else:
-            violations, cap_bad, en_bad = compute_drone_route(route, dist, demand, serve_drone, deadline)
+            route_time, violations, cap_bad, en_bad, route_detail = compute_drone_route_detail(
+                route, dist, demand, serve_drone, deadline
+            )
+            route_arrivals = []
             merge_violation(wait_violations, violations)
             capacity_bad = capacity_bad or cap_bad
             energy_bad = energy_bad or en_bad
+        max_route_time = max(max_route_time, route_time)
+        for row in route_detail:
+            row["vehicle_id"] = vehicle_idx
+            detail_rows.append(row)
+        for row in route_arrivals:
+            row["vehicle_id"] = vehicle_idx
+            truck_arrival_rows.append(row)
     wait_total_sec = sum(wait_violations.values())
     feasible = not wait_violations and not capacity_bad and not energy_bad
-    return feasible, len(wait_violations), wait_total_sec, capacity_bad, energy_bad
+    return feasible, len(wait_violations), wait_total_sec, capacity_bad, energy_bad, max_route_time, detail_rows, truck_arrival_rows
 
 
 def main():
     rows = []
+    detail_rows = []
+    truck_arrival_rows = []
     set_dirs = sorted(p for p in INSTANCE_ROOT.iterdir() if p.is_dir() and p.name.startswith("n"))
     for set_dir in set_dirs:
         for instance_path in sorted(p for p in set_dir.iterdir() if p.is_dir() and p.name.startswith("instance")):
@@ -257,7 +383,9 @@ def main():
             static_solution = find_solution(instance_path, "static")
             if not td_solution or not static_solution:
                 continue
-            feasible, violated_count, wait_sec, cap_bad, energy_bad = validate_static_on_td(instance_path, static_solution)
+            feasible, violated_count, wait_sec, cap_bad, energy_bad, td_makespan, instance_detail, instance_arrivals = validate_static_on_td(
+                instance_path, static_solution
+            )
             rows.append({
                 "benchmark_set": set_dir.name,
                 "instance": instance_path.name,
@@ -266,6 +394,7 @@ def main():
                 "drones_count": drones,
                 "static_objective": f"{read_objective(static_solution):.6f}",
                 "td_objective": f"{read_objective(td_solution):.6f}",
+                "static_solution_on_td_makespan": f"{td_makespan:.6f}",
                 "static_to_td_is_feasible": "YES" if feasible else "NO",
                 "static_to_td_waiting_violated_customer_count": violated_count,
                 "static_to_td_waiting_violation_total_sec": f"{wait_sec:.6f}",
@@ -275,13 +404,62 @@ def main():
                 "td_solution_file": str(td_solution),
                 "static_solution_file": str(static_solution),
             })
+            for detail in instance_detail:
+                detail_rows.append({
+                    "benchmark_set": set_dir.name,
+                    "instance": instance_path.name,
+                    "instance_full_name": f"{set_dir.name}/{instance_path.name}",
+                    "vehicle_type": detail["vehicle_type"],
+                    "vehicle_id": detail["vehicle_id"],
+                    "customer": detail["customer"],
+                    "route_return_time_sec": f"{detail['route_return_time_sec']:.6f}",
+                    "pickup_to_return_duration_sec": f"{detail['pickup_to_return_duration_sec']:.6f}",
+                    "deadline_sec": f"{detail['deadline_sec']:.6f}",
+                    "violation_sec": f"{detail['violation_sec']:.6f}",
+                    "route_nodes": detail["route_nodes"],
+                    "static_solution_file": str(static_solution),
+                })
+            for arrival in instance_arrivals:
+                truck_arrival_rows.append({
+                    "benchmark_set": set_dir.name,
+                    "instance": instance_path.name,
+                    "instance_full_name": f"{set_dir.name}/{instance_path.name}",
+                    "vehicle_type": "Truck",
+                    "vehicle_id": arrival["vehicle_id"],
+                    "step": arrival["step"],
+                    "trip": arrival["trip"],
+                    "from": arrival["from"],
+                    "customer": arrival["customer"],
+                    "arc": arrival["arc"],
+                    "arrival_td_sec": f"{arrival['arrival_td_sec']:.6f}",
+                    "arrival_td_min": f"{arrival['arrival_td_min']:.6f}",
+                    "after_service_td_sec": f"{arrival['after_service_td_sec']:.6f}",
+                    "after_service_td_min": f"{arrival['after_service_td_min']:.6f}",
+                    "travel_td_sec": f"{arrival['travel_td_sec']:.6f}",
+                    "route_nodes": arrival["route_nodes"],
+                    "static_solution_file": str(static_solution),
+                })
 
     with OUT_CSV.open("w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
         writer.writeheader()
         writer.writerows(rows)
 
+    if detail_rows:
+        with OUT_DETAIL_CSV.open("w", encoding="utf-8", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=list(detail_rows[0].keys()))
+            writer.writeheader()
+            writer.writerows(detail_rows)
+
+    if truck_arrival_rows:
+        with OUT_TRUCK_ARRIVAL_CSV.open("w", encoding="utf-8", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=list(truck_arrival_rows[0].keys()))
+            writer.writeheader()
+            writer.writerows(truck_arrival_rows)
+
     print(f"Written {OUT_CSV}")
+    print(f"Written {OUT_DETAIL_CSV}")
+    print(f"Written {OUT_TRUCK_ARRIVAL_CSV}")
     print(f"Rows: {len(rows)}")
     infeasible = sum(1 for r in rows if r["static_to_td_is_feasible"] == "NO")
     wait_count = sum(int(r["static_to_td_waiting_violated_customer_count"]) for r in rows)

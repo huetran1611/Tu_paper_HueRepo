@@ -145,7 +145,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          $env:INSTANCE_ROOT_OVERRIDE = "${{ github.workspace }}\lw70_instances"
+          $env:WORKSPACE_ROOT = "${{ github.workspace }}"
           $env:SUMMARY_OUT = "${{ github.workspace }}\lw70_static_on_td_feasibility_n100.csv"
           $script = @'
           import csv
@@ -153,10 +153,21 @@ jobs:
           from pathlib import Path
           import scripts.summarize_static_td_all_instance_new as s
 
-          instance_root = Path(os.environ["INSTANCE_ROOT_OVERRIDE"])
+          workspace_root = Path(os.environ["WORKSPACE_ROOT"])
           out_csv = Path(os.environ["SUMMARY_OUT"])
+          candidate_set_dirs = [
+              workspace_root / "lw70_instances" / "n100_2truck_2drone",
+              workspace_root / "n100_2truck_2drone",
+          ]
+          set_dir = next((p for p in candidate_set_dirs if p.exists()), None)
+          if set_dir is None:
+              raise SystemExit(
+                  "Could not find downloaded Lw70 artifacts under: "
+                  + ", ".join(str(p) for p in candidate_set_dirs)
+              )
+
           rows = []
-          for instance_path in sorted((instance_root / "n100_2truck_2drone").glob("instance*")):
+          for instance_path in sorted(set_dir.glob("instance*")):
               trucks, drones, _, _, _, _, _, _ = s.parse_instance(instance_path)
               static_solution = instance_path / "static_solution_best.txt"
               if not static_solution.exists():

@@ -33,14 +33,14 @@ jobs:
           install: mingw-w64-x86_64-gcc
 
       - name: Build TD solver
-        shell: pwsh
+        shell: msys2 {0}
         run: |
-          C:\msys64\mingw64\bin\g++.exe -O3 -std=c++20 -static -static-libgcc -static-libstdc++ tabubu_TimeDependent_new_instance.cpp -o tabubu_TimeDependent_new_instance.exe
+          g++ -O3 -std=c++20 -static -static-libgcc -static-libstdc++ tabubu_TimeDependent_new_instance.cpp -o tabubu_TimeDependent_new_instance.exe
 
       - name: Build static solver
-        shell: pwsh
+        shell: msys2 {0}
         run: |
-          C:\msys64\mingw64\bin\g++.exe -O3 -std=c++20 -static -static-libgcc -static-libstdc++ tabubu_TimeDependent_new_instance_static.cpp -o tabubu_TimeDependent_new_instance_static.exe
+          g++ -O3 -std=c++20 -static -static-libgcc -static-libstdc++ tabubu_TimeDependent_new_instance_static.cpp -o tabubu_TimeDependent_new_instance_static.exe
 
       - name: Upload solver binaries
         uses: actions/upload-artifact@v4

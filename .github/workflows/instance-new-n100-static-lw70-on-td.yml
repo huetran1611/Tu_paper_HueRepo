@@ -14,7 +14,7 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-  CONFIG: n100_2truck_2drone
+  BENCHMARK_CONFIG: n100_2truck_2drone
   LW_SECONDS: "4200"
 
 jobs:
@@ -74,8 +74,8 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          $sourceDir = "${{ github.workspace }}\instance_new\${{ env.CONFIG }}\${{ matrix.instance }}"
-          $workDir = "${{ github.workspace }}\lw70_instances\${{ env.CONFIG }}\${{ matrix.instance }}"
+          $sourceDir = "${{ github.workspace }}\instance_new\${{ env.BENCHMARK_CONFIG }}\${{ matrix.instance }}"
+          $workDir = "${{ github.workspace }}\lw70_instances\${{ env.BENCHMARK_CONFIG }}\${{ matrix.instance }}"
           New-Item -ItemType Directory -Path $workDir -Force | Out-Null
           Copy-Item -LiteralPath (Join-Path $sourceDir "${{ matrix.instance }}_solver.txt") -Destination $workDir -Force
           Copy-Item -LiteralPath (Join-Path $sourceDir "${{ matrix.instance }}_solver.vmax_ij.txt") -Destination $workDir -Force
@@ -99,7 +99,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          $instDir = "${{ github.workspace }}\lw70_instances\${{ env.CONFIG }}\${{ matrix.instance }}"
+          $instDir = "${{ github.workspace }}\lw70_instances\${{ env.BENCHMARK_CONFIG }}\${{ matrix.instance }}"
           $logPath = Join-Path $instDir "lw70_static_solve_log.txt"
           $solutionPath = Join-Path $instDir "static_solution_best.txt"
           $iterationPath = Join-Path $instDir "lw70_static_iteration_mode_0.txt"

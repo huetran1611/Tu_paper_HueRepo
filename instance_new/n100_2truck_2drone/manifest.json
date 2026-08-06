@@ -1,0 +1,72 @@
+[
+  {
+    "instance": "instance001",
+    "seed": 2026080401,
+    "solver_input": "instance_new\\instance001\\instance001_solver.txt",
+    "vmax_file": "instance_new\\instance001\\instance001_solver.vmax_ij.txt",
+    "theta_file": "instance_new\\instance001\\instance001_solver.theta_ijl.txt"
+  },
+  {
+    "instance": "instance002",
+    "seed": 2026080402,
+    "solver_input": "instance_new\\instance002\\instance002_solver.txt",
+    "vmax_file": "instance_new\\instance002\\instance002_solver.vmax_ij.txt",
+    "theta_file": "instance_new\\instance002\\instance002_solver.theta_ijl.txt"
+  },
+  {
+    "instance": "instance003",
+    "seed": 2026080403,
+    "solver_input": "instance_new\\instance003\\instance003_solver.txt",
+    "vmax_file": "instance_new\\instance003\\instance003_solver.vmax_ij.txt",
+    "theta_file": "instance_new\\instance003\\instance003_solver.theta_ijl.txt"
+  },
+  {
+    "instance": "instance004",
+    "seed": 2026080404,
+    "solver_input": "instance_new\\instance004\\instance004_solver.txt",
+    "vmax_file": "instance_new\\instance004\\instance004_solver.vmax_ij.txt",
+    "theta_file": "instance_new\\instance004\\instance004_solver.theta_ijl.txt"
+  },
+  {
+    "instance": "instance005",
+    "seed": 2026080405,
+    "solver_input": "instance_new\\instance005\\instance005_solver.txt",
+    "vmax_file": "instance_new\\instance005\\instance005_solver.vmax_ij.txt",
+    "theta_file": "instance_new\\instance005\\instance005_solver.theta_ijl.txt"
+  },
+  {
+    "instance": "instance006",
+    "seed": 2026080406,
+    "solver_input": "instance_new\\instance006\\instance006_solver.txt",
+    "vmax_file": "instance_new\\instance006\\instance006_solver.vmax_ij.txt",
+    "theta_file": "instance_new\\instance006\\instance006_solver.theta_ijl.txt"
+  },
+  {
+    "instance": "instance007",
+    "seed": 2026080407,
+    "solver_input": "instance_new\\instance007\\instance007_solver.txt",
+    "vmax_file": "instance_new\\instance007\\instance007_solver.vmax_ij.txt",
+    "theta_file": "instance_new\\instance007\\instance007_solver.theta_ijl.txt"
+  },
+  {
+    "instance": "instance008",
+    "seed": 2026080408,
+    "solver_input": "instance_new\\instance008\\instance008_solver.txt",
+    "vmax_file": "instance_new\\instance008\\instance008_solver.vmax_ij.txt",
+    "theta_file": "instance_new\\instance008\\instance008_solver.theta_ijl.txt"
+  },
+  {
+    "instance": "instance009",
+    "seed": 2026080409,
+    "solver_input": "instance_new\\instance009\\instance009_solver.txt",
+    "vmax_file": "instance_new\\instance009\\instance009_solver.vmax_ij.txt",
+    "theta_file": "instance_new\\instance009\\instance009_solver.theta_ijl.txt"
+  },
+  {
+    "instance": "instance010",
+    "seed": 2026080410,
+    "solver_input": "instance_new\\instance010\\instance010_solver.txt",
+    "vmax_file": "instance_new\\instance010\\instance010_solver.vmax_ij.txt",
+    "theta_file": "instance_new\\instance010\\instance010_solver.theta_ijl.txt"
+  }
+]

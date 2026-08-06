@@ -1,0 +1,102 @@
+[
+  {
+    "instance": "instance001",
+    "seed": 2026081501,
+    "customers": 200,
+    "trucks_count": 3,
+    "drones_count": 3,
+    "solver_input": "instance_new\\n200_3truck_3drone\\instance001\\instance001_solver.txt",
+    "vmax_file": "instance_new\\n200_3truck_3drone\\instance001\\instance001_solver.vmax_ij.txt",
+    "theta_file": "instance_new\\n200_3truck_3drone\\instance001\\instance001_solver.theta_ijl.txt"
+  },
+  {
+    "instance": "instance002",
+    "seed": 2026081502,
+    "customers": 200,
+    "trucks_count": 3,
+    "drones_count": 3,
+    "solver_input": "instance_new\\n200_3truck_3drone\\instance002\\instance002_solver.txt",
+    "vmax_file": "instance_new\\n200_3truck_3drone\\instance002\\instance002_solver.vmax_ij.txt",
+    "theta_file": "instance_new\\n200_3truck_3drone\\instance002\\instance002_solver.theta_ijl.txt"
+  },
+  {
+    "instance": "instance003",
+    "seed": 2026081503,
+    "customers": 200,
+    "trucks_count": 3,
+    "drones_count": 3,
+    "solver_input": "instance_new\\n200_3truck_3drone\\instance003\\instance003_solver.txt",
+    "vmax_file": "instance_new\\n200_3truck_3drone\\instance003\\instance003_solver.vmax_ij.txt",
+    "theta_file": "instance_new\\n200_3truck_3drone\\instance003\\instance003_solver.theta_ijl.txt"
+  },
+  {
+    "instance": "instance004",
+    "seed": 2026081504,
+    "customers": 200,
+    "trucks_count": 3,
+    "drones_count": 3,
+    "solver_input": "instance_new\\n200_3truck_3drone\\instance004\\instance004_solver.txt",
+    "vmax_file": "instance_new\\n200_3truck_3drone\\instance004\\instance004_solver.vmax_ij.txt",
+    "theta_file": "instance_new\\n200_3truck_3drone\\instance004\\instance004_solver.theta_ijl.txt"
+  },
+  {
+    "instance": "instance005",
+    "seed": 2026081505,
+    "customers": 200,
+    "trucks_count": 3,
+    "drones_count": 3,
+    "solver_input": "instance_new\\n200_3truck_3drone\\instance005\\instance005_solver.txt",
+    "vmax_file": "instance_new\\n200_3truck_3drone\\instance005\\instance005_solver.vmax_ij.txt",
+    "theta_file": "instance_new\\n200_3truck_3drone\\instance005\\instance005_solver.theta_ijl.txt"
+  },
+  {
+    "instance": "instance006",
+    "seed": 2026081506,
+    "customers": 200,
+    "trucks_count": 3,
+    "drones_count": 3,
+    "solver_input": "instance_new\\n200_3truck_3drone\\instance006\\instance006_solver.txt",
+    "vmax_file": "instance_new\\n200_3truck_3drone\\instance006\\instance006_solver.vmax_ij.txt",
+    "theta_file": "instance_new\\n200_3truck_3drone\\instance006\\instance006_solver.theta_ijl.txt"
+  },
+  {
+    "instance": "instance007",
+    "seed": 2026081507,
+    "customers": 200,
+    "trucks_count": 3,
+    "drones_count": 3,
+    "solver_input": "instance_new\\n200_3truck_3drone\\instance007\\instance007_solver.txt",
+    "vmax_file": "instance_new\\n200_3truck_3drone\\instance007\\instance007_solver.vmax_ij.txt",
+    "theta_file": "instance_new\\n200_3truck_3drone\\instance007\\instance007_solver.theta_ijl.txt"
+  },
+  {
+    "instance": "instance008",
+    "seed": 2026081508,
+    "customers": 200,
+    "trucks_count": 3,
+    "drones_count": 3,
+    "solver_input": "instance_new\\n200_3truck_3drone\\instance008\\instance008_solver.txt",
+    "vmax_file": "instance_new\\n200_3truck_3drone\\instance008\\instance008_solver.vmax_ij.txt",
+    "theta_file": "instance_new\\n200_3truck_3drone\\instance008\\instance008_solver.theta_ijl.txt"
+  },
+  {
+    "instance": "instance009",
+    "seed": 2026081509,
+    "customers": 200,
+    "trucks_count": 3,
+    "drones_count": 3,
+    "solver_input": "instance_new\\n200_3truck_3drone\\instance009\\instance009_solver.txt",
+    "vmax_file": "instance_new\\n200_3truck_3drone\\instance009\\instance009_solver.vmax_ij.txt",
+    "theta_file": "instance_new\\n200_3truck_3drone\\instance009\\instance009_solver.theta_ijl.txt"
+  },
+  {
+    "instance": "instance010",
+    "seed": 2026081510,
+    "customers": 200,
+    "trucks_count": 3,
+    "drones_count": 3,
+    "solver_input": "instance_new\\n200_3truck_3drone\\instance010\\instance010_solver.txt",
+    "vmax_file": "instance_new\\n200_3truck_3drone\\instance010\\instance010_solver.vmax_ij.txt",
+    "theta_file": "instance_new\\n200_3truck_3drone\\instance010\\instance010_solver.theta_ijl.txt"
+  }
+]

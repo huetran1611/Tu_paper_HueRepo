@@ -1,0 +1,115 @@
+{
+  "seed": 2026080505,
+  "depot": {
+    "x_km": 0.0,
+    "y_km": 0.0,
+    "x_m": 0.0,
+    "y_m": 0.0
+  },
+  "customers": 50,
+  "trucks_count": 1,
+  "drones_count": 1,
+  "truck_capacity_kg": 150.0,
+  "drone_capacity_kg": 5.0,
+  "drone_parameters": {
+    "horizontal_speed_kmh": 60.0,
+    "takeoff_speed_kmh": 30.0,
+    "landing_speed_kmh": 15.0,
+    "battery_capacity_kwh": 1.59,
+    "energy_model": "E=(gamma+beta*m)t",
+    "gamma_kw": 0.397,
+    "beta_kw_per_kg": 0.066
+  },
+  "time_intervals": [
+    "07:00-07:30",
+    "07:30-08:00",
+    "08:00-08:30",
+    "08:30-09:00",
+    "09:00-09:30",
+    "09:30-10:00",
+    "10:00-10:30",
+    "10:30-11:00",
+    "11:00-11:30",
+    "11:30-12:00"
+  ],
+  "traffic_profile": [
+    {
+      "time": "07:00-07:30",
+      "urban": 0.65,
+      "suburban": 0.72,
+      "arterial": 0.8
+    },
+    {
+      "time": "07:30-08:00",
+      "urban": 0.5,
+      "suburban": 0.6,
+      "arterial": 0.7
+    },
+    {
+      "time": "08:00-08:30",
+      "urban": 0.4,
+      "suburban": 0.5,
+      "arterial": 0.6
+    },
+    {
+      "time": "08:30-09:00",
+      "urban": 0.45,
+      "suburban": 0.55,
+      "arterial": 0.65
+    },
+    {
+      "time": "09:00-09:30",
+      "urban": 0.6,
+      "suburban": 0.68,
+      "arterial": 0.75
+    },
+    {
+      "time": "09:30-10:00",
+      "urban": 0.7,
+      "suburban": 0.78,
+      "arterial": 0.82
+    },
+    {
+      "time": "10:00-10:30",
+      "urban": 0.8,
+      "suburban": 0.86,
+      "arterial": 0.9
+    },
+    {
+      "time": "10:30-11:00",
+      "urban": 0.85,
+      "suburban": 0.9,
+      "arterial": 0.95
+    },
+    {
+      "time": "11:00-11:30",
+      "urban": 0.8,
+      "suburban": 0.86,
+      "arterial": 0.9
+    },
+    {
+      "time": "11:30-12:00",
+      "urban": 0.7,
+      "suburban": 0.78,
+      "arterial": 0.82
+    }
+  ],
+  "demand": {
+    "drone_eligible_count": 40,
+    "truck_only_count": 10,
+    "drone_eligible_uniform_kg": [
+      0.5,
+      5.0
+    ],
+    "truck_only_uniform_kg": [
+      5.1,
+      10.0
+    ]
+  },
+  "waiting_time_groups_sec": {
+    "nearest": 1800,
+    "middle": 2700,
+    "farthest": 3600
+  },
+  "notes": "Solver .txt stores coordinates in meters to match tabubu_TimeDependent_new_instance.cpp."
+}

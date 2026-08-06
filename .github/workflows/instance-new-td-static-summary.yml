@@ -54,7 +54,7 @@ jobs:
     name: Solve ${{ matrix.config }} / ${{ matrix.instance }} / ${{ matrix.model }}
     runs-on: windows-latest
     needs: build
-    timeout-minutes: 210
+    timeout-minutes: 240
     strategy:
       fail-fast: false
       matrix:

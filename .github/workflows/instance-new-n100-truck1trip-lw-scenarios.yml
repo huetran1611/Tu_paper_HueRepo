@@ -1,0 +1,285 @@
+name: Solve n100 truck one-trip LWT scenarios
+
+on:
+  workflow_dispatch:
+    inputs:
+      time_limit_sec:
+        description: "Search time limit per instance in seconds; 0 means solver default/no explicit time limit"
+        required: true
+        default: "10800"
+      attempts:
+        description: "Number of attempts per instance"
+        required: true
+        default: "1"
+      knn_k:
+        description: "K nearest neighbors used by the search"
+        required: true
+        default: "1000"
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  build:
+    name: Build TD truck one-trip solver
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup MinGW toolchain
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: mingw-w64-x86_64-gcc
+
+      - name: Build solver
+        shell: msys2 {0}
+        run: |
+          g++ -O3 -std=c++20 -static -static-libgcc -static-libstdc++ tabubu_TimeDependent_new_instance_truck1trip.cpp -o tabubu_TimeDependent_new_instance_truck1trip.exe
+
+      - name: Upload solver binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: truck1trip-lw-scenario-solver
+          path: tabubu_TimeDependent_new_instance_truck1trip.exe
+
+  solve:
+    name: Solve LWT ${{ matrix.lwt_minutes }} min / ${{ matrix.instance }}
+    runs-on: windows-latest
+    needs: build
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        lwt_minutes: [60, 90, 120, 150]
+        instance:
+          - instance001
+          - instance002
+          - instance003
+          - instance004
+          - instance005
+          - instance006
+          - instance007
+          - instance008
+          - instance009
+          - instance010
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download solver binary
+        uses: actions/download-artifact@v4
+        with:
+          name: truck1trip-lw-scenario-solver
+          path: .
+
+      - name: Prepare scenario instance
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $benchmarkSet = "n100_2truck_2drone"
+          $instance = "${{ matrix.instance }}"
+          $lwtMinutes = [int]"${{ matrix.lwt_minutes }}"
+          $deadlineSec = $lwtMinutes * 60
+
+          $sourceDir = "${{ github.workspace }}\instance_new\$benchmarkSet\$instance"
+          $scenarioDir = "${{ github.workspace }}\scenario_instances\lw${lwtMinutes}\$benchmarkSet\$instance"
+          if (Test-Path -LiteralPath $scenarioDir) {
+            Remove-Item -LiteralPath $scenarioDir -Recurse -Force
+          }
+          New-Item -ItemType Directory -Path (Split-Path -Parent $scenarioDir) -Force | Out-Null
+          Copy-Item -LiteralPath $sourceDir -Destination $scenarioDir -Recurse
+
+          $solverFile = Join-Path $scenarioDir "${instance}_solver.txt"
+          $lines = Get-Content -LiteralPath $solverFile
+          $out = for ($i = 0; $i -lt $lines.Count; $i++) {
+            if ($i -ge 6 -and -not [string]::IsNullOrWhiteSpace($lines[$i])) {
+              $parts = $lines[$i].Trim() -split "\s+"
+              if ($parts.Count -ge 7) {
+                $parts[6] = [string]$deadlineSec
+                $parts -join "`t"
+              } else {
+                $lines[$i]
+              }
+            } else {
+              $lines[$i]
+            }
+          }
+          Set-Content -LiteralPath $solverFile -Value $out
+
+          Write-Host "Prepared $benchmarkSet/$instance with all-customer LWT=$lwtMinutes minutes ($deadlineSec sec)"
+
+      - name: Run TD truck one-trip model
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $benchmarkSet = "n100_2truck_2drone"
+          $instance = "${{ matrix.instance }}"
+          $lwtMinutes = [int]"${{ matrix.lwt_minutes }}"
+          $scenarioDir = "${{ github.workspace }}\scenario_instances\lw${lwtMinutes}\$benchmarkSet\$instance"
+          $resultDir = "${{ github.workspace }}\scenario_results\lw${lwtMinutes}\$benchmarkSet\$instance"
+          New-Item -ItemType Directory -Path $resultDir -Force | Out-Null
+
+          $logPath = Join-Path $resultDir "truck1trip_solve_log.txt"
+          $solutionPath = Join-Path $resultDir "truck1trip_solution_best.txt"
+          $iterationPath = Join-Path $resultDir "truck1trip_iteration_mode_0.txt"
+          Remove-Item -LiteralPath $logPath,$solutionPath,$iterationPath -Force -ErrorAction SilentlyContinue
+          Remove-Item -LiteralPath "${{ github.workspace }}\output_solution_best.txt","${{ github.workspace }}\output_mode_0.txt" -Force -ErrorAction SilentlyContinue
+
+          Push-Location "${{ github.workspace }}"
+          try {
+            $args = @(
+              $scenarioDir,
+              "--attempts=${{ github.event.inputs.attempts }}",
+              "--knn-k=${{ github.event.inputs.knn_k }}"
+            )
+            if ([int]"${{ github.event.inputs.time_limit_sec }}" -gt 0) {
+              $args += "--time-limit=${{ github.event.inputs.time_limit_sec }}"
+            }
+            & "${{ github.workspace }}\tabubu_TimeDependent_new_instance_truck1trip.exe" @args *> $logPath
+            if ($LASTEXITCODE -ne 0) {
+              throw "TD truck one-trip solver failed with exit code $LASTEXITCODE"
+            }
+            if (Test-Path -LiteralPath "${{ github.workspace }}\output_solution_best.txt") {
+              Move-Item -LiteralPath "${{ github.workspace }}\output_solution_best.txt" -Destination $solutionPath -Force
+            } else {
+              Write-Host "Solver did not produce output_solution_best.txt; keeping log for summary."
+            }
+            if (Test-Path -LiteralPath "${{ github.workspace }}\output_mode_0.txt") {
+              Move-Item -LiteralPath "${{ github.workspace }}\output_mode_0.txt" -Destination $iterationPath -Force
+            }
+          } finally {
+            Pop-Location
+          }
+
+      - name: Bundle result
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $benchmarkSet = "n100_2truck_2drone"
+          $instance = "${{ matrix.instance }}"
+          $lwtMinutes = [int]"${{ matrix.lwt_minutes }}"
+          $bundleDir = "artifact-result\scenario_results\lw${lwtMinutes}\$benchmarkSet\$instance"
+          New-Item -ItemType Directory -Path $bundleDir -Force | Out-Null
+
+          Copy-Item -LiteralPath "scenario_results\lw${lwtMinutes}\$benchmarkSet\$instance\truck1trip_solve_log.txt" -Destination $bundleDir -Force
+          Copy-Item -LiteralPath "scenario_instances\lw${lwtMinutes}\$benchmarkSet\$instance\${instance}_solver.txt" -Destination $bundleDir -Force
+          if (Test-Path -LiteralPath "scenario_results\lw${lwtMinutes}\$benchmarkSet\$instance\truck1trip_solution_best.txt") {
+            Copy-Item -LiteralPath "scenario_results\lw${lwtMinutes}\$benchmarkSet\$instance\truck1trip_solution_best.txt" -Destination $bundleDir -Force
+          }
+          if (Test-Path -LiteralPath "scenario_results\lw${lwtMinutes}\$benchmarkSet\$instance\truck1trip_iteration_mode_0.txt") {
+            Copy-Item -LiteralPath "scenario_results\lw${lwtMinutes}\$benchmarkSet\$instance\truck1trip_iteration_mode_0.txt" -Destination $bundleDir -Force
+          }
+
+      - name: Upload result artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: truck1trip-n100-lw-${{ matrix.lwt_minutes }}-${{ matrix.instance }}
+          path: artifact-result/
+
+  summarize:
+    name: Summarize n100 LWT scenarios
+    runs-on: windows-latest
+    needs: solve
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download all scenario results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: truck1trip-n100-lw-*
+          path: .
+          merge-multiple: true
+
+      - name: Generate scenario summary
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $rows = @()
+          Get-ChildItem -LiteralPath "scenario_results" -Directory -Filter "lw*" |
+            Sort-Object Name |
+            ForEach-Object {
+              $caseDir = $_
+              $lwtMinutes = [int]($caseDir.Name -replace "^lw", "")
+              Get-ChildItem -LiteralPath (Join-Path $caseDir.FullName "n100_2truck_2drone") -Directory -Filter "instance*" |
+                Sort-Object Name |
+                ForEach-Object {
+                  $instanceDir = $_
+                  $logPath = Join-Path $instanceDir.FullName "truck1trip_solve_log.txt"
+                  $solPath = Join-Path $instanceDir.FullName "truck1trip_solution_best.txt"
+                  $logText = if (Test-Path -LiteralPath $logPath) { Get-Content -LiteralPath $logPath -Raw } else { "" }
+                  $solText = if (Test-Path -LiteralPath $solPath) { Get-Content -LiteralPath $solPath -Raw } else { "" }
+
+                  $initViolation = ""
+                  $repairViolation = ""
+                  $objective = ""
+                  $finalFeasibility = ""
+                  if ($logText -match "Initial truck routes have deadline violation=([0-9.eE+-]+)") {
+                    $initViolation = $Matches[1].TrimEnd(".")
+                  }
+                  if ($logText -match "Initial random-neighborhood repair finished with truck deadline violation=([0-9.eE+-]+)") {
+                    $repairViolation = $Matches[1].TrimEnd(".")
+                  }
+                  if ($logText -match "Attempt 1 cost:\s*([0-9.eE+-]+)") {
+                    $objective = $Matches[1].TrimEnd(".")
+                  }
+                  if ($solText -match "Final solution feasibility:\s*(FEASIBLE|INFEASIBLE)") {
+                    $finalFeasibility = $Matches[1]
+                  }
+
+                  $hasSolution = Test-Path -LiteralPath $solPath
+                  if ($hasSolution) {
+                    $status = "HAS_SOLUTION"
+                  } elseif ($logText.Contains("No feasible initial truck routes found") -or $logText.Contains("No feasible solution found")) {
+                    $status = "NO_FEASIBLE_INIT"
+                  } else {
+                    $status = "NO_SOLUTION"
+                  }
+
+                  $rows += [PSCustomObject]@{
+                    lwt_minutes = $lwtMinutes
+                    benchmark_set = "n100_2truck_2drone"
+                    instance = $instanceDir.Name
+                    status = $status
+                    has_solution_file = if ($hasSolution) { "YES" } else { "NO" }
+                    solver_reported_final_feasibility = $finalFeasibility
+                    objective = $objective
+                    initial_truck_deadline_violation = $initViolation
+                    repair_truck_deadline_violation = $repairViolation
+                    log_file = $logPath
+                    best_solution_file = if ($hasSolution) { $solPath } else { "" }
+                  }
+                }
+            }
+
+          if (-not $rows) {
+            throw "No scenario result logs found"
+          }
+
+          $out = "scenario_results\n100_truck1trip_lwt_scenarios_summary.csv"
+          $rows | Sort-Object lwt_minutes, instance | Export-Csv -LiteralPath $out -NoTypeInformation
+          Write-Host "Written $out"
+          $rows |
+            Group-Object lwt_minutes |
+            Sort-Object { [int]$_.Name } |
+            ForEach-Object {
+              $g = $_.Group
+              [PSCustomObject]@{
+                LWTMin = $_.Name
+                Count = $g.Count
+                SolutionFiles = ($g | Where-Object { $_.has_solution_file -eq "YES" }).Count
+                FinalFeasible = ($g | Where-Object { $_.solver_reported_final_feasibility -eq "FEASIBLE" }).Count
+                NoFeasibleInit = ($g | Where-Object { $_.status -eq "NO_FEASIBLE_INIT" }).Count
+              }
+            } | Format-Table -AutoSize
+
+      - name: Upload final summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: truck1trip-n100-lwt-scenarios-summary
+          path: |
+            scenario_results/n100_truck1trip_lwt_scenarios_summary.csv
+            scenario_results/**/truck1trip_solve_log.txt
+            scenario_results/**/truck1trip_solution_best.txt
+            scenario_results/**/instance*_solver.txt

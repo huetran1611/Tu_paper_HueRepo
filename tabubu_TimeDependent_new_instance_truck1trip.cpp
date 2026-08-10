@@ -142,6 +142,8 @@ struct Solution {
     double deadline_violation = 0.0;    // sum of deadline breaches / total deadlines
 };
 
+Solution recalculate_solution(Solution sol);
+
 vector<Solution> elite_set; //store most promising solutions
 const int ELITE_SET_SIZE = 10;
 
@@ -878,6 +880,103 @@ vvi kmeans_clustering(int k, int max_iters=1000, uint64_t seed=UINT64_MAX) {
     return clusters;
 }
 
+vvi kmeans_clustering_subset(const vi& customers, int k, int max_iters=1000, uint64_t seed=UINT64_MAX) {
+    if (customers.empty()) return {};
+    if (k <= 0) k = 1;
+    int centroid_count = min(k, (int)customers.size());
+
+    vvi clusters(k);
+    vector<Point> centroids;
+    centroids.reserve(centroid_count);
+    std::mt19937 gen(seed == UINT64_MAX ? std::random_device{}() : (uint32_t)seed);
+    std::uniform_int_distribution<int> dis(0, (int)customers.size() - 1);
+
+    centroids.push_back(loc[customers[dis(gen)]]);
+    while ((int)centroids.size() < centroid_count) {
+        double max_min_dist = -1.0;
+        Point next_centroid = loc[customers[0]];
+        for (int cust : customers) {
+            const Point& p = loc[cust];
+            double min_dist = 1e18;
+            for (const auto& c : centroids) {
+                double dx = p.x - c.x;
+                double dy = p.y - c.y;
+                min_dist = min(min_dist, sqrt(dx * dx + dy * dy));
+            }
+            if (min_dist > max_min_dist) {
+                max_min_dist = min_dist;
+                next_centroid = p;
+            }
+        }
+        centroids.push_back(next_centroid);
+    }
+
+    vector<int> assignment(n + 1, -1);
+    for (int it = 0; it < max_iters; ++it) {
+        bool changed = false;
+        for (auto& cl : clusters) cl.clear();
+
+        for (int cust : customers) {
+            const Point& p = loc[cust];
+            double best_dist2 = 1e30;
+            int best_cluster = 0;
+            for (int c = 0; c < centroid_count; ++c) {
+                double dx = p.x - centroids[c].x;
+                double dy = p.y - centroids[c].y;
+                double d2 = dx * dx + dy * dy;
+                if (d2 < best_dist2) {
+                    best_dist2 = d2;
+                    best_cluster = c;
+                }
+            }
+            if (assignment[cust] != best_cluster) {
+                assignment[cust] = best_cluster;
+                changed = true;
+            }
+            clusters[best_cluster].push_back(cust);
+        }
+
+        for (int c = 0; c < k; ++c) {
+            if (clusters[c].empty()) {
+                int pick = customers[dis(gen)];
+                if (c < centroid_count) centroids[c] = loc[pick];
+                continue;
+            }
+            if (c >= centroid_count) continue;
+            double sumx = 0.0, sumy = 0.0;
+            for (int cust : clusters[c]) {
+                sumx += loc[cust].x;
+                sumy += loc[cust].y;
+            }
+            centroids[c].x = sumx / clusters[c].size();
+            centroids[c].y = sumy / clusters[c].size();
+        }
+        if (!changed) break;
+    }
+
+    return clusters;
+}
+
+static double depot_distance(int cust) {
+    if (cust < 0 || cust > n) return 0.0;
+    double dx = loc[cust].x - loc[0].x;
+    double dy = loc[cust].y - loc[0].y;
+    return sqrt(dx * dx + dy * dy);
+}
+
+static int select_max_deadline_then_farthest(const vi& customers, const vector<bool>& visited) {
+    int best = -1;
+    for (int cust : customers) {
+        if (cust < 1 || cust > n || visited[cust]) continue;
+        if (best == -1 ||
+            deadline[cust] > deadline[best] + 1e-8 ||
+            (fabs(deadline[cust] - deadline[best]) <= 1e-8 && depot_distance(cust) > depot_distance(best))) {
+            best = cust;
+        }
+    }
+    return best;
+}
+
 Solution greedy_insert_customer(Solution sol, int customer, bool minimize_delta) {
     Solution best_sol = sol;
     double best_score = 1e18;
@@ -1007,6 +1106,13 @@ Solution generate_initial_solution(uint64_t seed = UINT64_MAX){
     vector<bool> visited(n+1, false);
     int num_of_visited_customers = 0;
     vvi clusters = (h > 0) ? kmeans_clustering(h, 1000, seed) : vvi{};
+    vi drone_unable_customers;
+    for (int cust = 1; cust <= n; ++cust) {
+        if (!served_by_drone[cust]) drone_unable_customers.push_back(cust);
+    }
+    vvi drone_unable_clusters = (h > 0 && !drone_unable_customers.empty())
+        ? kmeans_clustering_subset(drone_unable_customers, h, 1000, seed)
+        : vvi{};
     // Optional: shuffle each cluster to randomize the intra-cluster selection order
     mt19937 rng(seed == UINT64_MAX ? std::random_device{}() : (uint32_t)seed);
     for (auto& vec : clusters) {
@@ -1048,7 +1154,26 @@ Solution generate_initial_solution(uint64_t seed = UINT64_MAX){
     for (int i = 0; i < h; ++i) {
         const vector<int>* cluster_ptr = (i < (int)clusters.size()) ? &clusters[i] : nullptr;
         bool assigned_truck = false;
-        if (cluster_ptr) {
+        if (i < (int)drone_unable_clusters.size()) {
+            int cust = select_max_deadline_then_farthest(drone_unable_clusters[i], visited);
+            if (cust != -1) {
+                vi r = {0, cust, 0};
+                vd t_route = check_truck_route_feasibility(r, 0.0);
+                bool feas = (t_route[1] < 1e-8) && (t_route[3] < 1e-9);
+                if (feas) {
+                    r = {0, cust};
+                    auto [t, _] = compute_truck_route_time(r, 0.0);
+                    sol.truck_routes[i] = r;
+                    visited[cust] = true;
+                    assigned_truck = true;
+                    service_times_truck[i] += t;
+                    num_of_visited_customers++;
+                    capacity_used_truck[i] += demand[cust];
+                    timebomb_truck[i] = deadline[cust];
+                }
+            }
+        }
+        if (!assigned_truck && cluster_ptr) {
             vi ordered_cluster = customer_priority_order(*cluster_ptr);
             for (int cust : ordered_cluster) {
                 if (visited[cust]) continue;
@@ -5387,6 +5512,63 @@ Solution local_search_all_vehicle(const Solution& initial_solution, int neighbor
     return enforce_truck_one_trip_solution(initial_solution);
 }
 
+static double truck_deadline_violation_only(const Solution& sol) {
+    double violation = 0.0;
+    for (int i = 0; i < h; ++i) {
+        vd metrics = check_truck_route_feasibility(sol.truck_routes[i], 0.0);
+        violation += metrics[1];
+    }
+    return violation;
+}
+
+static pair<Solution, bool> repair_initial_truck_waiting_random_neighborhood(Solution sol, uint64_t seed) {
+    sol = recalculate_solution(sol);
+    double best_truck_violation = truck_deadline_violation_only(sol);
+    if (best_truck_violation <= 1e-8) return {sol, true};
+
+    Solution best = sol;
+    double best_score = solution_score_makespan(best);
+    long long iter_budget = 1LL * max(1, n) * NUM_NEIGHBORHOODS * max(1, h) * 10;
+    std::mt19937 rng(seed == UINT64_MAX ? std::random_device{}() : (uint32_t)(seed ^ 0x9e3779b9U));
+    std::uniform_int_distribution<int> nb_dist(0, NUM_NEIGHBORHOODS - 1);
+
+    cout << "Initial truck routes have deadline violation=" << best_truck_violation
+         << "; running random-neighborhood init repair for " << iter_budget << " iterations.\n";
+
+    for (long long iter = 0; iter < iter_budget; ++iter) {
+        int selected_neighbor = nb_dist(rng);
+        Solution candidate = local_search(sol, selected_neighbor, (int)iter, best_score, solution_score_makespan);
+        candidate = recalculate_solution(candidate);
+
+        double candidate_truck_violation = truck_deadline_violation_only(candidate);
+        double candidate_score = solution_score_makespan(candidate);
+        bool improves_truck_violation = candidate_truck_violation + 1e-8 < best_truck_violation;
+        bool keeps_truck_violation_and_improves_score =
+            fabs(candidate_truck_violation - best_truck_violation) <= 1e-8 &&
+            candidate_score + 1e-8 < best_score;
+
+        if (improves_truck_violation || keeps_truck_violation_and_improves_score) {
+            best = candidate;
+            best_truck_violation = candidate_truck_violation;
+            best_score = candidate_score;
+            sol = candidate;
+            if (best_truck_violation <= 1e-8) break;
+        } else if (candidate_score + 1e-8 < solution_score_makespan(sol)) {
+            sol = candidate;
+        }
+    }
+
+    cout << "Initial random-neighborhood repair finished with truck deadline violation="
+         << best_truck_violation << ".\n";
+    best = recalculate_solution(best);
+    if (best_truck_violation > 1e-8) {
+        cout << "No feasible initial truck routes found after " << iter_budget
+             << " random-neighborhood repair iterations.\n";
+        return {best, false};
+    }
+    return {best, true};
+}
+
 void updated_edge_records(const Solution& sol){
     for (int i = 0; i < h; ++i) {
         const vi& route = sol.truck_routes[i];
@@ -6521,7 +6703,15 @@ int main(int argc, char* argv[]) {
     auto start_time = std::chrono::high_resolution_clock::now();
     int ablation_seed = 42;
     for (int attempt = 0; attempt < CFG_NUM_INITIAL; ++attempt) {
-        Solution initial_solution = generate_initial_solution(ablation_seed + attempt);
+        uint64_t attempt_seed = (uint64_t)(ablation_seed + attempt);
+        Solution initial_solution = generate_initial_solution(attempt_seed);
+        auto repaired_initial = repair_initial_truck_waiting_random_neighborhood(initial_solution, attempt_seed);
+        initial_solution = repaired_initial.first;
+        if (!repaired_initial.second) {
+            cout << "Attempt " << attempt + 1
+                 << ": khong tim ra nghiem kha thi sau buoc repair limited waiting time.\n";
+            continue;
+        }
         vd iter_current, iter_best;
         vector<bool> current_feasibility;
         Solution improved_sol = tabu_search(initial_solution, CFG_NUM_INITIAL, iter_current, iter_best, current_feasibility);
@@ -6541,6 +6731,12 @@ int main(int argc, char* argv[]) {
     auto end_time = std::chrono::high_resolution_clock::now();
     double elapsed_seconds = std::chrono::duration<double>(end_time - start_time).count();
 
+    bool have_best = !all_results.empty();
+    if (!have_best) {
+        cout << "\nNo feasible solution found: all attempts still had truck limited waiting time violations after init repair.\n";
+        return 0;
+    }
+
     // Mean and worst computed from top-10 (best runs only)
     const int TOP_K = min(10, (int)all_results.size());
     double sum_overall_cost = 0.0;
@@ -6551,9 +6747,8 @@ int main(int argc, char* argv[]) {
         if (mk > worst_overall_cost) worst_overall_cost = mk;
     }
     double mean_overall_cost = sum_overall_cost / TOP_K;
-    bool have_best = !all_results.empty();
 
-    if (have_best) {
+    {
         const auto& best = all_results[0]; // lowest makespan
         cout << "\n=== Best Across Attempts (top " << TOP_K << "/" << (int)all_results.size() << ") ===\n";
         cout << "Initial Solution Cost: " << best.initial_cost << "\n";

@@ -1,0 +1,15 @@
+--iters=5000
+--knn-k=50
+--knn-window=1
+--segment-iters=200
+--c-tabu=2.0
+--h-mode=2
+--h-div=4
+--gamma1=0.6
+--gamma2=0.3
+--gamma3=0.05
+--gamma4=0.4
+--T0=0.5
+--alpha=0.998
+--kappa=1.0
+--tau-v=0.01

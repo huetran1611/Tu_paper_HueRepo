@@ -1,0 +1,6 @@
+iters "--iters " i (100, 3000)
+segment_iters "--segment-iters " i (20, 500)
+no_improve "--no-improve " i (20, 2000)
+knn_k "--knn-k " i (0, 200)
+knn_window "--knn-window " i (0, 5)
+alpha "--alpha " r (0.9900, 0.9999)

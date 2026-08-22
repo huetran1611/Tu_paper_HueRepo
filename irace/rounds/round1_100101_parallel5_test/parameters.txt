@@ -1,0 +1,4 @@
+Lseg "--segment-iters " c (100, 200, 300, 400, 500)
+c_tabu "--c-tabu " c (1.0, 1.5, 2.0, 2.5, 3.0)
+Hmode "--h-mode " c (1, 2, 3)
+Hdiv "--h-div " c (3, 4, 5)

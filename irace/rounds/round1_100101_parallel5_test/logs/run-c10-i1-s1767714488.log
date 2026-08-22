@@ -1,0 +1,60 @@
+Search config: total_iters=100 (segments=1, segment_iters=100, no_improve=1000, time_limit_sec=30)
+=== Starting Unified Tabu Search (Minimizing Active Penalized Score) ===
+Initial active score: 5244.2, max_iters=100, segment_length=100, segments=1
+Iter 0 New Best Feasible Makespan: 3963.24
+Iter 1 New Best Feasible Makespan: 3917.94
+Iter 2 New Best Feasible Makespan: 3820.73
+Iter 3 New Best Feasible Makespan: 3814.24
+Iter 5 New Best Feasible Makespan: 3807.67
+Iter 6 New Best Feasible Makespan: 3791.32
+Iter 9 New Best Feasible Makespan: 3780.92
+Iter 10 New Best Feasible Makespan: 3772.37
+Iter 11 New Best Feasible Makespan: 3761.36
+Iter 13 New Best Feasible Makespan: 3752.59
+Iter 14 New Best Feasible Makespan: 3749.12
+Iter 15 New Best Feasible Makespan: 3743.84
+Iter 16 New Best Feasible Makespan: 3730.65
+Iter 17 New Best Feasible Makespan: 3727.69
+Iter 18 New Best Feasible Makespan: 3723.57
+Iter 19 New Best Feasible Makespan: 3673.8
+=== End of Segment 1 ===
+Best Penalized Fallback Score: 5244.2 with makespan 5244.2
+Current Solution Score: 3256.57 with makespan 3223.39
+Current mode: Makespan
+Average normalized violations: cap=0.00862906, energy=0, deadline=0.00128169
+Current Weights, Rewards and Count of neighborhoods: N0: w=1, R=7.85, U=16 | N1: w=1, R=6, U=11 | N2: w=1, R=3.75, U=9 | N3: w=1, R=4.9, U=12 | N4: w=1, R=5.3, U=13 | N5: w=1, R=2.55, U=7 | N6: w=1, R=5.4, U=10 | N7: w=1, R=5.4, U=16 | N8: w=1, R=1.4, U=6 | 
+Penalty lambdas: cap=0.99863, energy=0.99005, deadline=0.99132
+Segments per mode: Makespan 1, Workload 0
+Attempt 1 cost: 3673.797438
+Truck Routes:
+Truck 1: 0 86 83 100 48 73 44 87 0 97 59 21 0 |Truck Time: 3650.687304|3650.687304,0.000000,0.000000,0.000000
+Truck 2: 0 47 88 77 96 9 32 1 0 36 57 41 0 |Truck Time: 3673.797438|3673.797438,0.000000,0.000000,0.000000
+Truck 3: 0 50 53 75 17 98 15 30 18 31 72 0 62 24 35 51 0 |Truck Time: 3662.422020|3662.422020,0.000000,0.000000,0.000000
+Truck 4: 0 99 94 37 12 90 23 0 82 3 0 |Truck Time: 3630.220211|3630.220211,0.000000,0.000000,0.000000
+Drone Routes:
+Drone 1: 0 22 52 6 33 78 26 19 16 0 85 92 49 80 0 69 40 81 0 |Drone Time: 3669.345597|3669.345597,0.000000,0.000000,0.000000
+Drone 2: 0 65 25 42 5 89 93 60 11 0 7 63 10 29 0 14 64 0 |Drone Time: 3640.867112|3640.867112,0.000000,0.000000,0.000000
+Drone 3: 0 55 58 43 0 27 34 84 76 0 71 61 28 45 0 68 8 67 0 |Drone Time: 3605.835133|3605.835133,0.000000,0.000000,0.000000
+Drone 4: 0 2 74 91 54 39 66 13 46 38 0 56 79 20 0 4 95 70 0 |Drone Time: 3443.590033|3443.590033,0.000000,0.000000,0.000000
+Total validation: Makespan=3673.797438, Deadline violation=0.000000, Energy violation=0.000000, Capacity violation=0.000000
+
+=== Best Across Attempts (top 1/1) ===
+Initial Solution Cost: 5244.199205
+Improved Solution Cost: 3673.797438
+Worst Solution Cost (top-1): 3673.797438
+Mean Solution Cost (top-1): 3673.797438
+Mean elapsed Time: 11.522201 seconds
+Truck Routes:
+Truck 1: 0 86 83 100 48 73 44 87 0 97 59 21 0 |Truck Time: 3650.687304|3650.687304,0.000000,0.000000,0.000000
+Truck 2: 0 47 88 77 96 9 32 1 0 36 57 41 0 |Truck Time: 3673.797438|3673.797438,0.000000,0.000000,0.000000
+Truck 3: 0 50 53 75 17 98 15 30 18 31 72 0 62 24 35 51 0 |Truck Time: 3662.422020|3662.422020,0.000000,0.000000,0.000000
+Truck 4: 0 99 94 37 12 90 23 0 82 3 0 |Truck Time: 3630.220211|3630.220211,0.000000,0.000000,0.000000
+Drone Routes:
+Drone 1: 0 22 52 6 33 78 26 19 16 0 85 92 49 80 0 69 40 81 0 |Drone Time: 3669.345597|3669.345597,0.000000,0.000000,0.000000
+Drone 2: 0 65 25 42 5 89 93 60 11 0 7 63 10 29 0 14 64 0 |Drone Time: 3640.867112|3640.867112,0.000000,0.000000,0.000000
+Drone 3: 0 55 58 43 0 27 34 84 76 0 71 61 28 45 0 68 8 67 0 |Drone Time: 3605.835133|3605.835133,0.000000,0.000000,0.000000
+Drone 4: 0 2 74 91 54 39 66 13 46 38 0 56 79 20 0 4 95 70 0 |Drone Time: 3443.590033|3443.590033,0.000000,0.000000,0.000000
+Total validation: Makespan=3673.797438, Deadline violation=0.000000, Energy violation=0.000000, Capacity violation=0.000000
+Final solution feasibility: FEASIBLE
+Best solution written to output_solution_best.txt
+Iteration data written to output_mode_0.txt

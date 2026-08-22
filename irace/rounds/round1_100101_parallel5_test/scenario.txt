@@ -1,0 +1,10 @@
+targetRunner = "./target-runner.py"
+parameterFile = "./parameters.txt"
+trainInstancesFile = "./instances.txt"
+execDir = "../../.."
+logFile = "./irace/rounds/round1_100101_parallel5_test/irace.Rdata"
+maxExperiments = 180
+firstTest = 3
+parallel = 7
+loadBalancing = 1
+seed = 20260822

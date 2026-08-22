@@ -1,0 +1,56 @@
+Search config: total_iters=100 (segments=1, segment_iters=400, no_improve=1000, time_limit_sec=30)
+=== Starting Unified Tabu Search (Minimizing Active Penalized Score) ===
+Initial active score: 4463.56, max_iters=100, segment_length=400, segments=1
+Iter 0 New Best Feasible Makespan: 4082.44
+Iter 1 New Best Feasible Makespan: 3843.72
+Iter 2 New Best Feasible Makespan: 3823.98
+Iter 3 New Best Feasible Makespan: 3775.51
+Iter 4 New Best Feasible Makespan: 3742.64
+Iter 5 New Best Feasible Makespan: 3717.89
+Iter 6 New Best Feasible Makespan: 3684.85
+Iter 7 New Best Feasible Makespan: 3668.02
+Iter 13 New Best Feasible Makespan: 3563.68
+Iter 14 New Best Feasible Makespan: 3559.93
+Iter 15 New Best Feasible Makespan: 3550.83
+Iter 16 New Best Feasible Makespan: 3527.99
+=== End of Segment 1 ===
+Best Penalized Fallback Score: 4463.56 with makespan 4463.56
+Current Solution Score: 3504.66 with makespan 3051.15
+Current mode: Makespan
+Average normalized violations: cap=0.062157, energy=0, deadline=0.00345231
+Current Weights, Rewards and Count of neighborhoods: N0: w=1, R=6.9, U=15 | N1: w=1, R=5.1, U=10 | N2: w=1, R=3, U=8 | N3: w=1, R=1.2, U=4 | N4: w=1, R=2.55, U=8 | N5: w=1, R=5.75, U=14 | N6: w=1, R=4.45, U=14 | N7: w=1, R=3.15, U=11 | N8: w=1, R=1.9, U=16 | 
+Penalty lambdas: cap=1.05354, energy=0.99005, deadline=0.993474
+Segments per mode: Makespan 1, Workload 0
+Attempt 1 cost: 3527.986655
+Truck Routes:
+Truck 1: 0 85 27 94 83 99 100 48 73 51 0 62 24 0 |Truck Time: 3414.684859|3414.684859,0.000000,0.000000,0.000000
+Truck 2: 0 4 10 81 50 97 53 75 98 15 30 18 31 72 59 0 |Truck Time: 3318.972005|3318.972005,0.000000,0.000000,0.000000
+Truck 3: 0 84 90 40 69 23 37 12 3 82 34 0 |Truck Time: 3338.797770|3338.797770,0.000000,0.000000,0.000000
+Truck 4: 0 17 22 88 96 44 43 0 77 36 41 45 0 |Truck Time: 3527.986655|3527.986655,0.000000,0.000000,0.000000
+Drone Routes:
+Drone 1: 0 52 61 6 33 42 78 28 19 0 1 92 35 0 29 14 0 |Drone Time: 3484.081096|3484.081096,0.000000,0.000000,0.000000
+Drone 2: 0 2 74 91 54 39 66 13 46 38 0 65 25 11 60 93 89 5 0 95 71 64 0 |Drone Time: 3520.341663|3520.341663,0.000000,0.000000,0.000000
+Drone 3: 0 9 26 87 63 0 8 67 49 80 0 32 55 58 0 47 86 0 |Drone Time: 3397.591819|3397.591819,0.000000,0.000000,0.000000
+Drone 4: 0 56 79 76 16 0 7 20 21 70 0 68 57 0 |Drone Time: 3526.640532|3526.640532,0.000000,0.000000,0.000000
+Total validation: Makespan=3527.986655, Deadline violation=0.000000, Energy violation=0.000000, Capacity violation=0.000000
+
+=== Best Across Attempts (top 1/1) ===
+Initial Solution Cost: 4463.559639
+Improved Solution Cost: 3527.986655
+Worst Solution Cost (top-1): 3527.986655
+Mean Solution Cost (top-1): 3527.986655
+Mean elapsed Time: 6.460329 seconds
+Truck Routes:
+Truck 1: 0 85 27 94 83 99 100 48 73 51 0 62 24 0 |Truck Time: 3414.684859|3414.684859,0.000000,0.000000,0.000000
+Truck 2: 0 4 10 81 50 97 53 75 98 15 30 18 31 72 59 0 |Truck Time: 3318.972005|3318.972005,0.000000,0.000000,0.000000
+Truck 3: 0 84 90 40 69 23 37 12 3 82 34 0 |Truck Time: 3338.797770|3338.797770,0.000000,0.000000,0.000000
+Truck 4: 0 17 22 88 96 44 43 0 77 36 41 45 0 |Truck Time: 3527.986655|3527.986655,0.000000,0.000000,0.000000
+Drone Routes:
+Drone 1: 0 52 61 6 33 42 78 28 19 0 1 92 35 0 29 14 0 |Drone Time: 3484.081096|3484.081096,0.000000,0.000000,0.000000
+Drone 2: 0 2 74 91 54 39 66 13 46 38 0 65 25 11 60 93 89 5 0 95 71 64 0 |Drone Time: 3520.341663|3520.341663,0.000000,0.000000,0.000000
+Drone 3: 0 9 26 87 63 0 8 67 49 80 0 32 55 58 0 47 86 0 |Drone Time: 3397.591819|3397.591819,0.000000,0.000000,0.000000
+Drone 4: 0 56 79 76 16 0 7 20 21 70 0 68 57 0 |Drone Time: 3526.640532|3526.640532,0.000000,0.000000,0.000000
+Total validation: Makespan=3527.986655, Deadline violation=0.000000, Energy violation=0.000000, Capacity violation=0.000000
+Final solution feasibility: FEASIBLE
+Best solution written to output_solution_best.txt
+Iteration data written to output_mode_0.txt

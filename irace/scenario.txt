@@ -1,0 +1,7 @@
+targetRunner = "./target-runner.sh"
+parameterFile = "./parameters.txt"
+trainInstancesFile = "./instances.txt"
+execDir = ".."
+logFile = "./irace.Rdata"
+maxExperiments = 200
+parallel = 1

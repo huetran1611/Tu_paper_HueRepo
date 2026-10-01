@@ -1,0 +1,169 @@
+name: Hanoi case study - 33 instances - P0 P1 P2
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_parallel:
+        description: "Maximum concurrent GitHub jobs (account limit: 40)"
+        required: true
+        default: "40"
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  SPEED_PROFILE_ROOT: instance_hanoi/datasets/hanoi_traffic/experiment_speed_profiles
+
+jobs:
+  prepare:
+    name: Validate 33 instances and build solver
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Validate workflow input
+        env:
+          MAX_PARALLEL: ${{ inputs.max_parallel }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$MAX_PARALLEL" =~ ^[1-9][0-9]*$ ]]
+          test "$MAX_PARALLEL" -le 40
+
+      - name: Validate source data
+        run: |
+          python3 scripts/hanoi_case_study_33_cloud.py validate-data \
+            --profile-root "$SPEED_PROFILE_ROOT"
+
+      - name: Build V2 Hanoi solver
+        run: |
+          mkdir -p build/hanoi_case_solver
+          g++ -O3 -std=c++20 src_v2/tabubu_HanoiTraffic_v2.cpp \
+            -o build/hanoi_case_solver/tabubu_HanoiTraffic_v2
+
+      - name: Build balanced 250-job matrix
+        id: matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          matrix="$(python3 scripts/hanoi_case_study_33_cloud.py matrix)"
+          printf 'matrix=%s\n' "$matrix" >> "$GITHUB_OUTPUT"
+          python3 -c 'import collections,json,sys; m=json.loads(sys.argv[1]); c=collections.Counter(x["task_count"] for x in m["include"]); assert len(m["include"])==250; assert sum(x["task_count"] for x in m["include"])==5610; assert sum(x["replay_count"] for x in m["include"])==7920; assert c=={23:110,22:140}' "$matrix"
+
+      - name: Smoke test 12-segment profile and replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$PWD"
+          work="$(mktemp -d)"
+          python3 scripts/hanoi_case_study_33_cloud.py build-dataset-profiles \
+            --profile-root "$SPEED_PROFILE_ROOT" \
+            --work-root "$work/profiles" \
+            --dataset set_01
+          speed="$work/profiles/set_01/P0.v_ijl_kph.txt"
+          test "$(grep -vc '^#' "$speed")" -eq 122412
+          stem="$root/instance_hanoi/datasets/hanoi_traffic/Hanoi_9_2026/weekday_13segments/hanoi_10x10_100_weekday"
+          mkdir "$work/solve"
+          cd "$work/solve"
+          "$root/build/hanoi_case_solver/tabubu_HanoiTraffic_v2" "$stem.txt" \
+            --truck-distance-file="$stem.truck_distance_m.txt" \
+            --drone-distance-file="$stem.drone_distance_m.txt" \
+            --truck-vijl-file="$speed" \
+            --start-hour=7 --attempts=1 --iters=2 --segment-iters=1 \
+            --time-limit=60 --seed=1 --auto-tune
+          test -s output_solution_best.txt
+          mkdir replay
+          cd replay
+          set +e
+          "$root/build/hanoi_case_solver/tabubu_HanoiTraffic_v2" "$stem.txt" \
+            --truck-distance-file="$stem.truck_distance_m.txt" \
+            --drone-distance-file="$stem.drone_distance_m.txt" \
+            --truck-vijl-file="$work/profiles/set_01/weekday.v_ijl_kph.txt" \
+            --start-hour=8 --evaluate-solution="$work/solve/output_solution_best.txt"
+          status=$?
+          set -e
+          [[ "$status" == 0 || "$status" == 2 ]]
+          test -s output_solution_evaluated.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-case-33-solver
+          path: build/hanoi_case_solver/tabubu_HanoiTraffic_v2
+          if-no-files-found: error
+          retention-days: 2
+
+  solve:
+    name: ${{ matrix.batch_id }} | ${{ matrix.task_count }} optimize | ${{ matrix.replay_count }} replay
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJSON(inputs.max_parallel) }}
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: hanoi-case-33-solver
+          path: build/hanoi_case_solver
+
+      - name: Optimize and immediately replay P0/P1 plans
+        env:
+          TASKS_JSON: ${{ matrix.tasks_json }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          binary="build/hanoi_case_solver/tabubu_HanoiTraffic_v2"
+          chmod +x "$binary"
+          python3 scripts/hanoi_case_study_33_cloud.py run-batch \
+            --binary "$binary" \
+            --profile-root "$SPEED_PROFILE_ROOT" \
+            --work-root "$RUNNER_TEMP/hanoi_case_profiles" \
+            --tasks-json "$TASKS_JSON" \
+            --output result
+
+      - name: Upload batch results and final solutions
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-case-33-${{ matrix.batch_id }}
+          path: result/
+          if-no-files-found: warn
+          retention-days: 90
+
+  aggregate:
+    name: Aggregate 5,610 optimizations and 11,880 evaluations
+    needs: solve
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Excel dependency
+        run: python3 -m pip install --disable-pip-version-check openpyxl
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: hanoi-case-33-policy-batch*
+          path: collected_results
+
+      - name: Build consolidated workbook
+        run: |
+          python3 scripts/hanoi_case_study_33_cloud.py aggregate \
+            --input-root collected_results \
+            --output hanoi_case_33/hanoi_case_33_p0_p1_p2_results.xlsx
+
+      - name: Upload consolidated workbook
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-case-33-p0-p1-p2-results
+          path: hanoi_case_33/
+          if-no-files-found: warn
+          retention-days: 90

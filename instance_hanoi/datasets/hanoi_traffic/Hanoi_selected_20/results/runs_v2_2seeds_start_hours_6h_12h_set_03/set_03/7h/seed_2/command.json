@@ -1,0 +1,20 @@
+{
+  "dataset": "set_03",
+  "start_hour": 7,
+  "seed": 2,
+  "started_at": "2026-10-01T03:34:35.809574+00:00",
+  "command": [
+    "/Users/huetran/Tu_paper_HueRepo/build/tabubu_HanoiTraffic_v2",
+    "/Users/huetran/Tu_paper_HueRepo/instance_hanoi/datasets/hanoi_traffic/Hanoi_9_2026/weekday_13segments/set_03/hanoi_10x10_100_set_03_weekday.txt",
+    "--truck-distance-file=/Users/huetran/Tu_paper_HueRepo/instance_hanoi/datasets/hanoi_traffic/Hanoi_9_2026/weekday_13segments/set_03/hanoi_10x10_100_set_03_weekday.truck_distance_m.txt",
+    "--drone-distance-file=/Users/huetran/Tu_paper_HueRepo/instance_hanoi/datasets/hanoi_traffic/Hanoi_9_2026/weekday_13segments/set_03/hanoi_10x10_100_set_03_weekday.drone_distance_m.txt",
+    "--truck-vijl-file=/Users/huetran/Tu_paper_HueRepo/instance_hanoi/datasets/hanoi_traffic/Hanoi_9_2026/weekday_13segments/set_03/hanoi_10x10_100_set_03_weekday.v_ijl_kph.txt",
+    "--start-hour=7",
+    "--attempts=1",
+    "--iters=9000",
+    "--segment-iters=100",
+    "--time-limit=1800",
+    "--seed=2",
+    "--auto-tune"
+  ]
+}

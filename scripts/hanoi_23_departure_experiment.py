@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""GitHub Actions runner for the 33-instance Hanoi departure experiment."""
+"""GitHub Actions runner for the selected 20-instance Hanoi experiment."""
 
 from __future__ import annotations
 
@@ -14,8 +14,10 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
+from hanoi_selected_instances import DATA_ROOT, INSTANCE_INDICES
 
-INSTANCE_COUNT = 33
+
+INSTANCE_COUNT = len(INSTANCE_INDICES)
 JOB_COUNT = 250
 START_HOURS = (7, 8, 9, 10)
 SEEDS = tuple(range(1, 11))
@@ -34,18 +36,10 @@ def instance_name(index: int) -> str:
 
 
 def source_for(repo: Path, index: int) -> tuple[Path, str, str]:
-    traffic = repo / "instance_hanoi" / "datasets" / "hanoi_traffic"
-    if index == 1:
-        directory = traffic / "Hanoi_9_2026" / "weekday_13segments"
-        return directory, "hanoi_10x10_100_weekday", "original_set_01"
-    if index in (2, 3):
-        dataset = instance_name(index)
-        directory = traffic / "Hanoi_9_2026" / "weekday_13segments" / dataset
-        return directory, f"hanoi_10x10_100_{dataset}_weekday", dataset
-    source_index = index - 3
-    source_set = instance_name(source_index)
-    directory = traffic / "Hanoi_10x10_20instances_2026" / source_set
-    return directory, f"hanoi_10x10_100_{source_set}_weekday", source_set
+    if index not in INSTANCE_INDICES:
+        raise ValueError(f"Instance {index} is not in the selected dataset")
+    dataset = instance_name(index)
+    return repo / DATA_ROOT / dataset, f"hanoi_10x10_100_{dataset}_weekday", dataset
 
 
 def companion_paths(repo: Path, index: int) -> dict[str, Path | str]:
@@ -64,7 +58,7 @@ def companion_paths(repo: Path, index: int) -> dict[str, Path | str]:
 
 def all_tasks() -> list[dict[str, object]]:
     tasks = []
-    for index in range(1, INSTANCE_COUNT + 1):
+    for index in INSTANCE_INDICES:
         for hour in START_HOURS:
             for seed in SEEDS:
                 tasks.append(
@@ -116,7 +110,7 @@ def speed_hours(path: Path) -> tuple[set[int], int]:
 
 def validate_data(repo: Path) -> None:
     problems = []
-    for index in range(1, INSTANCE_COUNT + 1):
+    for index in INSTANCE_INDICES:
         paths = companion_paths(repo, index)
         for key in ("instance", "truck", "drone", "speed"):
             path = Path(paths[key])
@@ -213,19 +207,22 @@ def run_job(
     time_limit: int,
     segment_iterations: int,
     seeds: tuple[int, ...] = SEEDS,
+    speed_source: Path | None = None,
+    actual_profile: str = "weekday",
 ) -> None:
     if start_hour not in START_HOURS:
         raise ValueError(f"Unsupported start hour: {start_hour}")
     paths = companion_paths(repo, index)
     dataset = instance_name(index)
-    batch_id = f"{dataset}-{start_hour:02d}h"
+    prefix = "" if actual_profile == "weekday" else f"{actual_profile}-"
+    batch_id = f"{prefix}{dataset}-{start_hour:02d}h"
     batch_dir = output / batch_id
-    speed = batch_dir / "input" / "weekday_6h_17h.v_ijl_kph.txt"
-    write_trimmed_speed(Path(paths["speed"]), speed)
+    speed = batch_dir / "input" / f"{actual_profile}_6h_17h.v_ijl_kph.txt"
+    write_trimmed_speed(speed_source or Path(paths["speed"]), speed)
     results: list[dict[str, object]] = []
 
     for position, seed in enumerate(seeds, start=1):
-        task_id = f"{dataset}-{start_hour:02d}h-seed{seed:02d}"
+        task_id = f"{prefix}{dataset}-{start_hour:02d}h-seed{seed:02d}"
         run_dir = batch_dir / "runs" / f"seed_{seed:02d}"
         run_dir.mkdir(parents=True, exist_ok=True)
         command = [
@@ -269,6 +266,7 @@ def run_job(
         row: dict[str, object] = {
             "task_id": task_id,
             "instance": dataset,
+            "actual_profile": actual_profile,
             "instance_index": index,
             "source_set": paths["source_set"],
             "start_hour": start_hour,
@@ -315,6 +313,7 @@ def run_job(
     metadata = {
         "batch_id": batch_id,
         "instance": dataset,
+        "actual_profile": actual_profile,
         "start_hour": start_hour,
         "seeds": list(seeds),
         "traffic_hours_used": list(range(6, 18)),
@@ -508,7 +507,7 @@ def aggregate(input_root: Path, output: Path) -> None:
     add_sheet(workbook, "Final_Solutions", solution_rows)
     add_sheet(workbook, "Config", config)
     add_sheet(workbook, "Validation", validation)
-    workbook_path = output / "hanoi_33_departure_10seeds_results.xlsx"
+    workbook_path = output / "hanoi_20_departure_10seeds_results.xlsx"
     workbook.save(workbook_path)
     write_csv(output / "all_runs.csv", run_rows)
     write_csv(output / "by_instance_hour.csv", configuration_rows)

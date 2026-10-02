@@ -1,4 +1,4 @@
-name: Hanoi 33 instances - departure times - 10 seeds
+name: Hanoi 20 selected instances - departure times - 10 seeds
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ on:
         required: true
         default: "40"
       time_limit_seconds:
-        description: "Per-run solver limit; each job runs 5 or 6 tasks sequentially"
+        description: "Per-run solver limit; each job runs 3 or 4 tasks sequentially"
         required: true
         default: "1800"
       segment_iterations:
@@ -44,7 +44,7 @@ jobs:
           [[ "$SEGMENT_ITERS" =~ ^[1-9][0-9]*$ ]]
           test "$MAX_PARALLEL" -le 40
 
-      - name: Validate all 33 source instances
+      - name: Validate all 20 selected source instances
         run: python3 scripts/hanoi_23_departure_experiment.py validate-data
 
       - name: Build V2 Hanoi solver
@@ -53,14 +53,14 @@ jobs:
           g++ -O3 -std=c++20 src_v2/tabubu_HanoiTraffic_v2.cpp \
             -o build/hanoi_23_departure/tabubu_HanoiTraffic_v2
 
-      - name: Build 250-job matrix for 1320 runs
+      - name: Build 250-job matrix for 800 runs
         id: matrix
         shell: bash
         run: |
           set -euo pipefail
           matrix="$(python3 scripts/hanoi_23_departure_experiment.py matrix)"
           printf 'matrix=%s\n' "$matrix" >> "$GITHUB_OUTPUT"
-          python3 -c 'import collections,json,sys; m=json.loads(sys.argv[1]); c=collections.Counter(x["task_count"] for x in m["include"]); assert len(m["include"])==250; assert sum(x["task_count"] for x in m["include"])==1320; assert c=={6:70,5:180}' "$matrix"
+          python3 -c 'import collections,json,sys; m=json.loads(sys.argv[1]); c=collections.Counter(x["task_count"] for x in m["include"]); assert len(m["include"])==250; assert sum(x["task_count"] for x in m["include"])==800; assert c=={4:50,3:200}' "$matrix"
 
       - name: Smoke test 12-segment speed profile
         shell: bash
@@ -70,11 +70,11 @@ jobs:
           work="$(mktemp -d)"
           mkdir -p "$work/input"
           awk '!/^#/ && $3 >= 6 && $3 <= 17 {print}' \
-            instance_hanoi/datasets/hanoi_traffic/Hanoi_9_2026/weekday_13segments/hanoi_10x10_100_weekday.v_ijl_kph.txt \
+            instance_hanoi/datasets/hanoi_traffic/Hanoi_selected_20/set_03/hanoi_10x10_100_set_03_weekday.v_ijl_kph.txt \
             > "$work/input/speed.txt"
           test "$(wc -l < "$work/input/speed.txt")" -eq 122412
           cd "$work"
-          stem="$root/instance_hanoi/datasets/hanoi_traffic/Hanoi_9_2026/weekday_13segments/hanoi_10x10_100_weekday"
+          stem="$root/instance_hanoi/datasets/hanoi_traffic/Hanoi_selected_20/set_03/hanoi_10x10_100_set_03_weekday"
           "$root/build/hanoi_23_departure/tabubu_HanoiTraffic_v2" "$stem.txt" \
             --truck-distance-file="$stem.truck_distance_m.txt" \
             --drone-distance-file="$stem.drone_distance_m.txt" \
@@ -86,7 +86,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: hanoi-33-departure-solver
+          name: hanoi-20-departure-solver
           path: build/hanoi_23_departure/tabubu_HanoiTraffic_v2
           if-no-files-found: error
           retention-days: 2
@@ -105,7 +105,7 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: hanoi-33-departure-solver
+          name: hanoi-20-departure-solver
           path: build/hanoi_23_departure
 
       - name: Run task batch sequentially
@@ -127,13 +127,13 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: hanoi-33-departure-${{ matrix.batch_id }}
+          name: hanoi-20-departure-${{ matrix.batch_id }}
           path: result/
           if-no-files-found: warn
           retention-days: 90
 
   aggregate:
-    name: Aggregate 1320 runs
+    name: Aggregate 800 runs
     needs: solve
     if: always()
     runs-on: ubuntu-latest
@@ -146,20 +146,20 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          pattern: hanoi-33-departure-batch-*
+          pattern: hanoi-20-departure-batch-*
           path: collected_results
 
       - name: Build consolidated workbook
         run: |
           python3 scripts/hanoi_23_departure_experiment.py aggregate \
             --input-root collected_results \
-            --output hanoi_33_departure_results
+            --output hanoi_20_departure_results
 
       - name: Upload consolidated results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: hanoi-33-departure-10seeds-results
-          path: hanoi_33_departure_results/
+          name: hanoi-20-departure-10seeds-results
+          path: hanoi_20_departure_results/
           if-no-files-found: warn
           retention-days: 90

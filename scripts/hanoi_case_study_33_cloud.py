@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the 33-instance Hanoi P0/P1/P2 experiment on GitHub Actions."""
+"""Run the selected 20-instance Hanoi P0/P1/P2 experiment on GitHub Actions."""
 
 from __future__ import annotations
 
@@ -15,9 +15,10 @@ import unicodedata
 from collections import defaultdict
 from pathlib import Path
 
+from hanoi_selected_instances import DATA_ROOT, DATASETS
 
-INSTANCE_COUNT = 33
-DATASETS = tuple(f"set_{index:02d}" for index in range(1, INSTANCE_COUNT + 1))
+
+INSTANCE_COUNT = len(DATASETS)
 PROFILES = ("weekday", "thu7", "chunhat")
 START_HOURS = (7, 8, 9, 10)
 TRAFFIC_HOURS = tuple(range(6, 18))
@@ -40,18 +41,10 @@ def dataset_index(dataset: str) -> int:
 
 
 def source_paths(repo: Path, dataset: str) -> dict[str, Path]:
-    index = dataset_index(dataset)
-    traffic = repo / "instance_hanoi" / "datasets" / "hanoi_traffic"
-    if index == 1:
-        directory = traffic / "Hanoi_9_2026" / "weekday_13segments"
-        stem = "hanoi_10x10_100_weekday"
-    elif index in (2, 3):
-        directory = traffic / "Hanoi_9_2026" / "weekday_13segments" / dataset
-        stem = f"hanoi_10x10_100_{dataset}_weekday"
-    else:
-        source_set = f"set_{index - 3:02d}"
-        directory = traffic / "Hanoi_10x10_20instances_2026" / source_set
-        stem = f"hanoi_10x10_100_{source_set}_weekday"
+    if dataset not in DATASETS:
+        raise ValueError(f"Dataset {dataset} is not in the selected dataset")
+    directory = repo / DATA_ROOT / dataset
+    stem = f"hanoi_10x10_100_{dataset}_weekday"
     return {
         "instance": directory / f"{stem}.txt",
         "truck": directory / f"{stem}.truck_distance_m.txt",
@@ -272,8 +265,8 @@ def expand_task(values: list[object]) -> dict[str, object]:
 def build_matrix() -> dict[str, list[dict[str, object]]]:
     queues = policy_tasks()
     cursors = defaultdict(int)
-    # (number of jobs, P0, P1, P2) gives 250 jobs and exactly 5,610 runs.
-    specifications = ((40, 2, 5, 16), (70, 1, 6, 16), (40, 2, 5, 15), (100, 1, 5, 16))
+    # (number of jobs, P0, P1, P2) gives 250 jobs and 3,400 runs.
+    specifications = ((100, 1, 3, 10), (50, 1, 4, 9), (50, 1, 3, 9), (50, 0, 3, 10))
     include = []
     for count, p0_count, p1_count, p2_count in specifications:
         for _ in range(count):
@@ -309,8 +302,9 @@ def build_single_trip_matrix() -> dict[str, list[dict[str, object]]]:
     ]
     include = []
     cursor = 0
+    base_size, larger_jobs = divmod(len(tasks), JOB_COUNT)
     for job_index in range(JOB_COUNT):
-        task_count = 16 if job_index < 210 else 15
+        task_count = base_size + (1 if job_index < larger_jobs else 0)
         batch = tasks[cursor : cursor + task_count]
         cursor += task_count
         include.append(
@@ -800,9 +794,9 @@ def aggregate(input_root: Path, output: Path) -> None:
             }
         )
     validation = [
-        {"item": "optimization_runs", "found": len(optimization), "expected": 5610},
-        {"item": "realized_evaluations", "found": len(evaluations), "expected": 11880},
-        {"item": "saved_final_solutions", "found": len(solution_rows), "expected": 5610},
+        {"item": "optimization_runs", "found": len(optimization), "expected": INSTANCE_COUNT * 170},
+        {"item": "realized_evaluations", "found": len(evaluations), "expected": INSTANCE_COUNT * 360},
+        {"item": "saved_final_solutions", "found": len(solution_rows), "expected": INSTANCE_COUNT * 170},
     ]
     output.parent.mkdir(parents=True, exist_ok=True)
     workbook = Workbook()
@@ -858,8 +852,8 @@ def aggregate_single_trip(input_root: Path, output: Path) -> None:
             }
         )
     validation = [
-        {"item": "single_trip_runs", "found": len(rows), "expected": 3960},
-        {"item": "saved_final_solutions", "found": len(solution_rows), "expected": 3960},
+        {"item": "single_trip_runs", "found": len(rows), "expected": INSTANCE_COUNT * len(PROFILES) * len(START_HOURS) * len(SEEDS)},
+        {"item": "saved_final_solutions", "found": len(solution_rows), "expected": INSTANCE_COUNT * len(PROFILES) * len(START_HOURS) * len(SEEDS)},
     ]
     workbook = Workbook()
     workbook.remove(workbook.active)

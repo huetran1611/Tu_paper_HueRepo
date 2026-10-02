@@ -1,4 +1,4 @@
-name: Hanoi case study - 33 instances - P0 P1 P2
+name: Hanoi case study - 20 selected instances - P0 P1 P2
 
 on:
   workflow_dispatch:
@@ -17,7 +17,7 @@ env:
 
 jobs:
   prepare:
-    name: Validate 33 instances and build solver
+    name: Validate 20 selected instances and build solver
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
@@ -51,7 +51,7 @@ jobs:
           set -euo pipefail
           matrix="$(python3 scripts/hanoi_case_study_33_cloud.py matrix)"
           printf 'matrix=%s\n' "$matrix" >> "$GITHUB_OUTPUT"
-          python3 -c 'import collections,json,sys; m=json.loads(sys.argv[1]); c=collections.Counter(x["task_count"] for x in m["include"]); assert len(m["include"])==250; assert sum(x["task_count"] for x in m["include"])==5610; assert sum(x["replay_count"] for x in m["include"])==7920; assert c=={23:110,22:140}' "$matrix"
+          python3 -c 'import collections,json,sys; m=json.loads(sys.argv[1]); c=collections.Counter(x["task_count"] for x in m["include"]); assert len(m["include"])==250; assert sum(x["task_count"] for x in m["include"])==3400; assert sum(x["replay_count"] for x in m["include"])==4800; assert c=={14:150,13:100}' "$matrix"
 
       - name: Smoke test 12-segment profile and replay
         shell: bash
@@ -62,10 +62,10 @@ jobs:
           python3 scripts/hanoi_case_study_33_cloud.py build-dataset-profiles \
             --profile-root "$SPEED_PROFILE_ROOT" \
             --work-root "$work/profiles" \
-            --dataset set_01
-          speed="$work/profiles/set_01/P0.v_ijl_kph.txt"
+            --dataset set_03
+          speed="$work/profiles/set_03/P0.v_ijl_kph.txt"
           test "$(grep -vc '^#' "$speed")" -eq 122412
-          stem="$root/instance_hanoi/datasets/hanoi_traffic/Hanoi_9_2026/weekday_13segments/hanoi_10x10_100_weekday"
+          stem="$root/instance_hanoi/datasets/hanoi_traffic/Hanoi_selected_20/set_03/hanoi_10x10_100_set_03_weekday"
           mkdir "$work/solve"
           cd "$work/solve"
           "$root/build/hanoi_case_solver/tabubu_HanoiTraffic_v2" "$stem.txt" \
@@ -81,7 +81,7 @@ jobs:
           "$root/build/hanoi_case_solver/tabubu_HanoiTraffic_v2" "$stem.txt" \
             --truck-distance-file="$stem.truck_distance_m.txt" \
             --drone-distance-file="$stem.drone_distance_m.txt" \
-            --truck-vijl-file="$work/profiles/set_01/weekday.v_ijl_kph.txt" \
+            --truck-vijl-file="$work/profiles/set_03/weekday.v_ijl_kph.txt" \
             --start-hour=8 --evaluate-solution="$work/solve/output_solution_best.txt"
           status=$?
           set -e
@@ -90,7 +90,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: hanoi-case-33-solver
+          name: hanoi-case-20-solver
           path: build/hanoi_case_solver/tabubu_HanoiTraffic_v2
           if-no-files-found: error
           retention-days: 2
@@ -109,7 +109,7 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: hanoi-case-33-solver
+          name: hanoi-case-20-solver
           path: build/hanoi_case_solver
 
       - name: Optimize and immediately replay P0/P1 plans
@@ -131,13 +131,13 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: hanoi-case-33-${{ matrix.batch_id }}
+          name: hanoi-case-20-${{ matrix.batch_id }}
           path: result/
           if-no-files-found: warn
           retention-days: 90
 
   aggregate:
-    name: Aggregate 5,610 optimizations and 11,880 evaluations
+    name: Aggregate 3,400 optimizations and 7,200 evaluations
     needs: solve
     if: always()
     runs-on: ubuntu-latest
@@ -150,20 +150,20 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          pattern: hanoi-case-33-policy-batch*
+          pattern: hanoi-case-20-policy-batch*
           path: collected_results
 
       - name: Build consolidated workbook
         run: |
           python3 scripts/hanoi_case_study_33_cloud.py aggregate \
             --input-root collected_results \
-            --output hanoi_case_33/hanoi_case_33_p0_p1_p2_results.xlsx
+            --output hanoi_case_20/hanoi_case_20_p0_p1_p2_results.xlsx
 
       - name: Upload consolidated workbook
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: hanoi-case-33-p0-p1-p2-results
-          path: hanoi_case_33/
+          name: hanoi-case-20-p0-p1-p2-results
+          path: hanoi_case_20/
           if-no-files-found: warn
           retention-days: 90

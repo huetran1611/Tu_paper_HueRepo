@@ -1,0 +1,341 @@
+{
+  "instances": 20,
+  "datasets": [
+    {
+      "dataset": "set_03",
+      "files": [
+        "depot_truck_distances_osrm.json",
+        "drone_distance_euclid_m.txt",
+        "hanoi_10x10_100_set_03_weekday.drone_distance_m.txt",
+        "hanoi_10x10_100_set_03_weekday.theta_ijl.txt",
+        "hanoi_10x10_100_set_03_weekday.truck_distance_m.txt",
+        "hanoi_10x10_100_set_03_weekday.txt",
+        "hanoi_10x10_100_set_03_weekday.v_ijl_kph.txt",
+        "hanoi_10x10_100_set_03_weekday.vmax_ij.txt",
+        "metadata.json",
+        "nga_tu_so_10x10km_100_points_min500m.csv",
+        "truck_distance_osm_m.txt"
+      ]
+    },
+    {
+      "dataset": "set_05",
+      "files": [
+        "depot_truck_distances_osrm.json",
+        "drone_distance_euclid_m.txt",
+        "hanoi_10x10_100_set_05_weekday.drone_distance_m.txt",
+        "hanoi_10x10_100_set_05_weekday.theta_ijl.txt",
+        "hanoi_10x10_100_set_05_weekday.truck_distance_m.txt",
+        "hanoi_10x10_100_set_05_weekday.txt",
+        "hanoi_10x10_100_set_05_weekday.v_ijl_kph.txt",
+        "hanoi_10x10_100_set_05_weekday.vmax_ij.txt",
+        "metadata.json",
+        "nga_tu_so_10x10km_100_points_min500m.csv",
+        "truck_distance_osm_m.txt"
+      ]
+    },
+    {
+      "dataset": "set_07",
+      "files": [
+        "depot_truck_distances_osrm.json",
+        "drone_distance_euclid_m.txt",
+        "hanoi_10x10_100_set_07_weekday.drone_distance_m.txt",
+        "hanoi_10x10_100_set_07_weekday.theta_ijl.txt",
+        "hanoi_10x10_100_set_07_weekday.truck_distance_m.txt",
+        "hanoi_10x10_100_set_07_weekday.txt",
+        "hanoi_10x10_100_set_07_weekday.v_ijl_kph.txt",
+        "hanoi_10x10_100_set_07_weekday.vmax_ij.txt",
+        "metadata.json",
+        "nga_tu_so_10x10km_100_points_min500m.csv",
+        "truck_distance_osm_m.txt"
+      ]
+    },
+    {
+      "dataset": "set_08",
+      "files": [
+        "depot_truck_distances_osrm.json",
+        "drone_distance_euclid_m.txt",
+        "hanoi_10x10_100_set_08_weekday.drone_distance_m.txt",
+        "hanoi_10x10_100_set_08_weekday.theta_ijl.txt",
+        "hanoi_10x10_100_set_08_weekday.truck_distance_m.txt",
+        "hanoi_10x10_100_set_08_weekday.txt",
+        "hanoi_10x10_100_set_08_weekday.v_ijl_kph.txt",
+        "hanoi_10x10_100_set_08_weekday.vmax_ij.txt",
+        "metadata.json",
+        "nga_tu_so_10x10km_100_points_min500m.csv",
+        "truck_distance_osm_m.txt"
+      ]
+    },
+    {
+      "dataset": "set_09",
+      "files": [
+        "depot_truck_distances_osrm.json",
+        "drone_distance_euclid_m.txt",
+        "hanoi_10x10_100_set_09_weekday.drone_distance_m.txt",
+        "hanoi_10x10_100_set_09_weekday.theta_ijl.txt",
+        "hanoi_10x10_100_set_09_weekday.truck_distance_m.txt",
+        "hanoi_10x10_100_set_09_weekday.txt",
+        "hanoi_10x10_100_set_09_weekday.v_ijl_kph.txt",
+        "hanoi_10x10_100_set_09_weekday.vmax_ij.txt",
+        "metadata.json",
+        "nga_tu_so_10x10km_100_points_min500m.csv",
+        "truck_distance_osm_m.txt"
+      ]
+    },
+    {
+      "dataset": "set_11",
+      "files": [
+        "depot_truck_distances_osrm.json",
+        "drone_distance_euclid_m.txt",
+        "hanoi_10x10_100_set_11_weekday.drone_distance_m.txt",
+        "hanoi_10x10_100_set_11_weekday.theta_ijl.txt",
+        "hanoi_10x10_100_set_11_weekday.truck_distance_m.txt",
+        "hanoi_10x10_100_set_11_weekday.txt",
+        "hanoi_10x10_100_set_11_weekday.v_ijl_kph.txt",
+        "hanoi_10x10_100_set_11_weekday.vmax_ij.txt",
+        "metadata.json",
+        "nga_tu_so_10x10km_100_points_min500m.csv",
+        "truck_distance_osm_m.txt"
+      ]
+    },
+    {
+      "dataset": "set_12",
+      "files": [
+        "depot_truck_distances_osrm.json",
+        "drone_distance_euclid_m.txt",
+        "hanoi_10x10_100_set_12_weekday.drone_distance_m.txt",
+        "hanoi_10x10_100_set_12_weekday.theta_ijl.txt",
+        "hanoi_10x10_100_set_12_weekday.truck_distance_m.txt",
+        "hanoi_10x10_100_set_12_weekday.txt",
+        "hanoi_10x10_100_set_12_weekday.v_ijl_kph.txt",
+        "hanoi_10x10_100_set_12_weekday.vmax_ij.txt",
+        "metadata.json",
+        "nga_tu_so_10x10km_100_points_min500m.csv",
+        "truck_distance_osm_m.txt"
+      ]
+    },
+    {
+      "dataset": "set_14",
+      "files": [
+        "depot_truck_distances_osrm.json",
+        "drone_distance_euclid_m.txt",
+        "hanoi_10x10_100_set_14_weekday.drone_distance_m.txt",
+        "hanoi_10x10_100_set_14_weekday.theta_ijl.txt",
+        "hanoi_10x10_100_set_14_weekday.truck_distance_m.txt",
+        "hanoi_10x10_100_set_14_weekday.txt",
+        "hanoi_10x10_100_set_14_weekday.v_ijl_kph.txt",
+        "hanoi_10x10_100_set_14_weekday.vmax_ij.txt",
+        "metadata.json",
+        "nga_tu_so_10x10km_100_points_min500m.csv",
+        "truck_distance_osm_m.txt"
+      ]
+    },
+    {
+      "dataset": "set_15",
+      "files": [
+        "depot_truck_distances_osrm.json",
+        "drone_distance_euclid_m.txt",
+        "hanoi_10x10_100_set_15_weekday.drone_distance_m.txt",
+        "hanoi_10x10_100_set_15_weekday.theta_ijl.txt",
+        "hanoi_10x10_100_set_15_weekday.truck_distance_m.txt",
+        "hanoi_10x10_100_set_15_weekday.txt",
+        "hanoi_10x10_100_set_15_weekday.v_ijl_kph.txt",
+        "hanoi_10x10_100_set_15_weekday.vmax_ij.txt",
+        "metadata.json",
+        "nga_tu_so_10x10km_100_points_min500m.csv",
+        "truck_distance_osm_m.txt"
+      ]
+    },
+    {
+      "dataset": "set_16",
+      "files": [
+        "depot_truck_distances_osrm.json",
+        "drone_distance_euclid_m.txt",
+        "hanoi_10x10_100_set_16_weekday.drone_distance_m.txt",
+        "hanoi_10x10_100_set_16_weekday.theta_ijl.txt",
+        "hanoi_10x10_100_set_16_weekday.truck_distance_m.txt",
+        "hanoi_10x10_100_set_16_weekday.txt",
+        "hanoi_10x10_100_set_16_weekday.v_ijl_kph.txt",
+        "hanoi_10x10_100_set_16_weekday.vmax_ij.txt",
+        "metadata.json",
+        "nga_tu_so_10x10km_100_points_min500m.csv",
+        "truck_distance_osm_m.txt"
+      ]
+    },
+    {
+      "dataset": "set_17",
+      "files": [
+        "depot_truck_distances_osrm.json",
+        "drone_distance_euclid_m.txt",
+        "hanoi_10x10_100_set_17_weekday.drone_distance_m.txt",
+        "hanoi_10x10_100_set_17_weekday.theta_ijl.txt",
+        "hanoi_10x10_100_set_17_weekday.truck_distance_m.txt",
+        "hanoi_10x10_100_set_17_weekday.txt",
+        "hanoi_10x10_100_set_17_weekday.v_ijl_kph.txt",
+        "hanoi_10x10_100_set_17_weekday.vmax_ij.txt",
+        "metadata.json",
+        "nga_tu_so_10x10km_100_points_min500m.csv",
+        "truck_distance_osm_m.txt"
+      ]
+    },
+    {
+      "dataset": "set_19",
+      "files": [
+        "depot_truck_distances_osrm.json",
+        "drone_distance_euclid_m.txt",
+        "hanoi_10x10_100_set_19_weekday.drone_distance_m.txt",
+        "hanoi_10x10_100_set_19_weekday.theta_ijl.txt",
+        "hanoi_10x10_100_set_19_weekday.truck_distance_m.txt",
+        "hanoi_10x10_100_set_19_weekday.txt",
+        "hanoi_10x10_100_set_19_weekday.v_ijl_kph.txt",
+        "hanoi_10x10_100_set_19_weekday.vmax_ij.txt",
+        "metadata.json",
+        "nga_tu_so_10x10km_100_points_min500m.csv",
+        "truck_distance_osm_m.txt"
+      ]
+    },
+    {
+      "dataset": "set_20",
+      "files": [
+        "depot_truck_distances_osrm.json",
+        "drone_distance_euclid_m.txt",
+        "hanoi_10x10_100_set_20_weekday.drone_distance_m.txt",
+        "hanoi_10x10_100_set_20_weekday.theta_ijl.txt",
+        "hanoi_10x10_100_set_20_weekday.truck_distance_m.txt",
+        "hanoi_10x10_100_set_20_weekday.txt",
+        "hanoi_10x10_100_set_20_weekday.v_ijl_kph.txt",
+        "hanoi_10x10_100_set_20_weekday.vmax_ij.txt",
+        "metadata.json",
+        "nga_tu_so_10x10km_100_points_min500m.csv",
+        "truck_distance_osm_m.txt"
+      ]
+    },
+    {
+      "dataset": "set_21",
+      "files": [
+        "depot_truck_distances_osrm.json",
+        "drone_distance_euclid_m.txt",
+        "hanoi_10x10_100_set_21_weekday.drone_distance_m.txt",
+        "hanoi_10x10_100_set_21_weekday.theta_ijl.txt",
+        "hanoi_10x10_100_set_21_weekday.truck_distance_m.txt",
+        "hanoi_10x10_100_set_21_weekday.txt",
+        "hanoi_10x10_100_set_21_weekday.v_ijl_kph.txt",
+        "hanoi_10x10_100_set_21_weekday.vmax_ij.txt",
+        "metadata.json",
+        "nga_tu_so_10x10km_100_points_min500m.csv",
+        "truck_distance_osm_m.txt"
+      ]
+    },
+    {
+      "dataset": "set_23",
+      "files": [
+        "depot_truck_distances_osrm.json",
+        "drone_distance_euclid_m.txt",
+        "hanoi_10x10_100_set_23_weekday.drone_distance_m.txt",
+        "hanoi_10x10_100_set_23_weekday.theta_ijl.txt",
+        "hanoi_10x10_100_set_23_weekday.truck_distance_m.txt",
+        "hanoi_10x10_100_set_23_weekday.txt",
+        "hanoi_10x10_100_set_23_weekday.v_ijl_kph.txt",
+        "hanoi_10x10_100_set_23_weekday.vmax_ij.txt",
+        "metadata.json",
+        "nga_tu_so_10x10km_100_points_min500m.csv",
+        "truck_distance_osm_m.txt"
+      ]
+    },
+    {
+      "dataset": "set_25",
+      "files": [
+        "depot_truck_distances_osrm.json",
+        "drone_distance_euclid_m.txt",
+        "hanoi_10x10_100_set_25_weekday.drone_distance_m.txt",
+        "hanoi_10x10_100_set_25_weekday.theta_ijl.txt",
+        "hanoi_10x10_100_set_25_weekday.truck_distance_m.txt",
+        "hanoi_10x10_100_set_25_weekday.txt",
+        "hanoi_10x10_100_set_25_weekday.v_ijl_kph.txt",
+        "hanoi_10x10_100_set_25_weekday.vmax_ij.txt",
+        "metadata.json",
+        "nga_tu_so_10x10km_100_points_min500m.csv",
+        "truck_distance_osm_m.txt"
+      ]
+    },
+    {
+      "dataset": "set_27",
+      "files": [
+        "depot_truck_distances_osrm.json",
+        "drone_distance_euclid_m.txt",
+        "hanoi_10x10_100_set_27_weekday.drone_distance_m.txt",
+        "hanoi_10x10_100_set_27_weekday.theta_ijl.txt",
+        "hanoi_10x10_100_set_27_weekday.truck_distance_m.txt",
+        "hanoi_10x10_100_set_27_weekday.txt",
+        "hanoi_10x10_100_set_27_weekday.v_ijl_kph.txt",
+        "hanoi_10x10_100_set_27_weekday.vmax_ij.txt",
+        "metadata.json",
+        "nga_tu_so_10x10km_100_points_min500m.csv",
+        "truck_distance_osm_m.txt"
+      ]
+    },
+    {
+      "dataset": "set_30",
+      "files": [
+        "depot_truck_distances_osrm.json",
+        "drone_distance_euclid_m.txt",
+        "hanoi_10x10_100_set_30_weekday.drone_distance_m.txt",
+        "hanoi_10x10_100_set_30_weekday.theta_ijl.txt",
+        "hanoi_10x10_100_set_30_weekday.truck_distance_m.txt",
+        "hanoi_10x10_100_set_30_weekday.txt",
+        "hanoi_10x10_100_set_30_weekday.v_ijl_kph.txt",
+        "hanoi_10x10_100_set_30_weekday.vmax_ij.txt",
+        "metadata.json",
+        "nga_tu_so_10x10km_100_points_min500m.csv",
+        "truck_distance_osm_m.txt"
+      ]
+    },
+    {
+      "dataset": "set_32",
+      "files": [
+        "depot_truck_distances_osrm.json",
+        "drone_distance_euclid_m.txt",
+        "hanoi_10x10_100_set_32_weekday.drone_distance_m.txt",
+        "hanoi_10x10_100_set_32_weekday.theta_ijl.txt",
+        "hanoi_10x10_100_set_32_weekday.truck_distance_m.txt",
+        "hanoi_10x10_100_set_32_weekday.txt",
+        "hanoi_10x10_100_set_32_weekday.v_ijl_kph.txt",
+        "hanoi_10x10_100_set_32_weekday.vmax_ij.txt",
+        "metadata.json",
+        "nga_tu_so_10x10km_100_points_min500m.csv",
+        "truck_distance_osm_m.txt"
+      ]
+    },
+    {
+      "dataset": "set_33",
+      "files": [
+        "depot_truck_distances_osrm.json",
+        "drone_distance_euclid_m.txt",
+        "hanoi_10x10_100_set_33_weekday.drone_distance_m.txt",
+        "hanoi_10x10_100_set_33_weekday.theta_ijl.txt",
+        "hanoi_10x10_100_set_33_weekday.truck_distance_m.txt",
+        "hanoi_10x10_100_set_33_weekday.txt",
+        "hanoi_10x10_100_set_33_weekday.v_ijl_kph.txt",
+        "hanoi_10x10_100_set_33_weekday.vmax_ij.txt",
+        "metadata.json",
+        "nga_tu_so_10x10km_100_points_min500m.csv",
+        "truck_distance_osm_m.txt"
+      ]
+    }
+  ],
+  "speed_profile": "weekday",
+  "hours": [
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18
+  ]
+}

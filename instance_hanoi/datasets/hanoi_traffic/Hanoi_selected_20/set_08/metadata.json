@@ -1,0 +1,48 @@
+{
+  "dataset": "set_08",
+  "customers": 100,
+  "trucks": 1,
+  "drones": 1,
+  "center": {
+    "name": "Nga Tu So",
+    "lat": 21.0017,
+    "lon": 105.8206
+  },
+  "square_side_km": 10,
+  "minimum_required_spacing_m": 500.0,
+  "observed_minimum_spacing_m": 506.992,
+  "random_seed": 20261105,
+  "point_source": "/Users/huetran/Tu_paper_HueRepo/instance_hanoi/datasets/hanoi_traffic/nga_tu_so_20x20km_1000_real_points.json",
+  "truck_distance_source": "/Users/huetran/Tu_paper_HueRepo/instance_hanoi/datasets/hanoi_traffic/truck_distance.txt",
+  "speed_profile": "/Users/huetran/Tu_paper_HueRepo/instance_hanoi/datasets/hanoi_traffic/experiment_speed_profiles/hanoi_traffic_speed_thu2_weekday_representative_10pct.csv",
+  "hours": [
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18
+  ],
+  "segments": 13,
+  "district_counts": {
+    "Bắc Từ Liêm": 1,
+    "Cầu Giấy": 18,
+    "Hoàng Mai": 25,
+    "Hà Đông": 11,
+    "Nam Từ Liêm": 9,
+    "Thanh Xuân": 16,
+    "Đống Đa": 20
+  },
+  "edge_speed_rule": {
+    "same_road_and_district": "road speed at the corresponding hour",
+    "different_road_or_district": "arithmetic mean of endpoint road speeds",
+    "depot": "mean speed profile of the 100 customer points"
+  }
+}

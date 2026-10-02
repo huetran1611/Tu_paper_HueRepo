@@ -1,0 +1,726 @@
+Loaded 10201 truck distance entries from /Users/huetran/Tu_paper_HueRepo/instance_hanoi/datasets/hanoi_traffic/Hanoi_9_2026/weekday_13segments/set_03/hanoi_10x10_100_set_03_weekday.truck_distance_m.txt
+Loaded 10201 drone distance entries from /Users/huetran/Tu_paper_HueRepo/instance_hanoi/datasets/hanoi_traffic/Hanoi_9_2026/weekday_13segments/set_03/hanoi_10x10_100_set_03_weekday.drone_distance_m.txt
+Loaded 13 traffic segments from 6h to 18h
+Traffic start hour: 10h
+Search config: total_iters=9000 (segments=90, segment_iters=100, no_improve=400, time_limit_sec=1800)
+=== Starting Unified Tabu Search (Minimizing Active Penalized Score) ===
+Initial active score: 15180, max_iters=9000, segment_length=100, segments=90
+=== End of Segment 1 ===
+Best Penalized Fallback Score: 15180 with makespan 15180
+Current Solution Score: 13177.7 with makespan 11442.8
+Current mode: Makespan
+Average normalized violations: cap=0.0908462, energy=0, deadline=0.0219941
+Current Weights, Rewards and Count of neighborhoods: N0: w=1, R=3.9, U=11 | N1: w=1, R=4.5, U=13 | N2: w=1, R=3.2, U=8 | N3: w=1, R=3.8, U=12 | N4: w=1, R=2.8, U=12 | N5: w=1, R=2.3, U=9 | N6: w=1, R=3.6, U=14 | N7: w=1, R=0.8, U=8 | N8: w=1, R=1.7, U=13 | 
+Penalty lambdas: cap=1.0842, energy=0.99005, deadline=1.01207
+=== End of Segment 2 ===
+Best Penalized Fallback Score: 12883.1 with makespan 12660.8
+Current Solution Score: 12890.6 with makespan 10356.4
+Current mode: Makespan
+Average normalized violations: cap=0.16974, energy=0, deadline=0.02747
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.806364, R=3.5, U=9 | N1: w=0.803846, R=3.9, U=11 | N2: w=0.82, R=5.4, U=16 | N3: w=0.795, R=3.9, U=13 | N4: w=0.77, R=1.7, U=9 | N5: w=0.776667, R=0.8, U=4 | N6: w=0.777143, R=3.5, U=15 | N7: w=0.73, R=1.1, U=11 | N8: w=0.739231, R=1.2, U=12 | 
+Switching scoring mode to Workload for the next segment.
+Penalty lambdas: cap=1.272, energy=0.980199, deadline=1.0299
+=== End of Segment 3 ===
+Best Penalized Fallback Score: 16582.7 with makespan 10614.5
+Current Solution Score: 15682.9 with makespan 10827.2
+Current mode: Workload
+Average normalized violations: cap=0.0653602, energy=0, deadline=0.0199715
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.681121, R=7, U=16 | N1: w=0.669056, R=3.9, U=11 | N2: w=0.67525, R=3.7, U=9 | N3: w=0.6465, R=4.5, U=13 | N4: w=0.595667, R=1.7, U=11 | N5: w=0.603667, R=2.8, U=12 | N6: w=0.614, R=4.4, U=12 | N7: w=0.541, R=0.9, U=9 | N8: w=0.547462, R=0.7, U=7 | 
+Switching scoring mode to Makespan for the next segment.
+Penalty lambdas: cap=1.3444, energy=0.970446, deadline=1.04022
+=== End of Segment 4 ===
+Best Penalized Fallback Score: 11625.1 with makespan 11203.8
+Current Solution Score: 12073.2 with makespan 10483.2
+Current mode: Makespan
+Average normalized violations: cap=0.102879, energy=0, deadline=0.0208694
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.608035, R=4.2, U=14 | N1: w=0.574703, R=5.5, U=17 | N2: w=0.596008, R=2.5, U=9 | N3: w=0.556396, R=2.3, U=9 | N4: w=0.46333, R=1.9, U=11 | N5: w=0.492567, R=1.1, U=7 | N6: w=0.5398, R=2.6, U=14 | N7: w=0.4087, R=0.5, U=5 | N8: w=0.413223, R=1.4, U=14 | 
+No improvement in feasible makespan for 4 segments, applying perturbation. New makespan: 10476.1
+Penalty lambdas: cap=1.47525, energy=0.960789, deadline=1.05159
+=== End of Segment 5 ===
+Best Penalized Fallback Score: 11352.1 with makespan 10679
+Current Solution Score: 11652.5 with makespan 10603.3
+Current mode: Makespan
+Average normalized violations: cap=0.0614912, energy=0, deadline=0.022863
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.515624, R=3.3, U=11 | N1: w=0.499351, R=3.5, U=11 | N2: w=0.500539, R=5.6, U=20 | N3: w=0.466144, R=3.2, U=10 | N4: w=0.376149, R=3, U=16 | N5: w=0.39194, R=0.7, U=5 | N6: w=0.433574, R=3, U=14 | N7: w=0.31609, R=0.5, U=5 | N8: w=0.319256, R=0.8, U=8 | 
+Penalty lambdas: cap=1.5532, energy=0.951229, deadline=1.06521
+=== End of Segment 6 ===
+Best Penalized Fallback Score: 11156.9 with makespan 10398.6
+Current Solution Score: 12030.9 with makespan 10707.2
+Current mode: Makespan
+Average normalized violations: cap=0.0819952, energy=0, deadline=0.0242418
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.450937, R=6.2, U=18 | N1: w=0.445, R=4.5, U=13 | N2: w=0.434377, R=4.5, U=17 | N3: w=0.422301, R=3, U=12 | N4: w=0.319555, R=1.1, U=9 | N5: w=0.316358, R=1.7, U=7 | N6: w=0.367788, R=1.1, U=7 | N7: w=0.251263, R=1.1, U=11 | N8: w=0.253479, R=0.6, U=6 | 
+Switching scoring mode to Workload for the next segment.
+Penalty lambdas: cap=1.66915, energy=0.941765, deadline=1.08048
+=== End of Segment 7 ===
+Best Penalized Fallback Score: 15825.6 with makespan 10398.6
+Current Solution Score: 15686.2 with makespan 10819.2
+Current mode: Workload
+Average normalized violations: cap=0.0274491, energy=0, deadline=0.012656
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.418989, R=7.8, U=18 | N1: w=0.415346, R=8.5, U=21 | N2: w=0.383476, R=2.2, U=8 | N3: w=0.370611, R=1.7, U=5 | N4: w=0.260355, R=2, U=12 | N5: w=0.294308, R=0.9, U=5 | N6: w=0.304594, R=3.1, U=13 | N7: w=0.205884, R=1.2, U=12 | N8: w=0.207436, R=0.6, U=6 | 
+Switching scoring mode to Makespan for the next segment.
+Penalty lambdas: cap=1.69853, energy=0.932394, deadline=1.08336
+=== End of Segment 8 ===
+Best Penalized Fallback Score: 11253.9 with makespan 11021
+Current Solution Score: 10728.8 with makespan 10138.5
+Current mode: Makespan
+Average normalized violations: cap=0.0251824, energy=0, deadline=0.0155906
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.423293, R=7, U=22 | N1: w=0.412171, R=6.9, U=21 | N2: w=0.350933, R=3.3, U=13 | N3: w=0.361427, R=1.7, U=11 | N4: w=0.232248, R=1.2, U=6 | N5: w=0.260015, R=1.4, U=8 | N6: w=0.284754, R=1, U=6 | N7: w=0.174119, R=0.5, U=5 | N8: w=0.175205, R=0.8, U=8 | 
+No improvement in feasible makespan for 4 segments, applying perturbation. New makespan: 10903.4
+Penalty lambdas: cap=1.72451, energy=0.923116, deadline=1.08943
+=== End of Segment 9 ===
+Best Penalized Fallback Score: 10513 with makespan 10175
+Current Solution Score: 10667.2 with makespan 10300.1
+Current mode: Makespan
+Average normalized violations: cap=0.0196501, energy=0, deadline=0.0186581
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.391759, R=9.4, U=22 | N1: w=0.387091, R=4.4, U=14 | N2: w=0.321807, R=2.7, U=11 | N3: w=0.299363, R=3.4, U=14 | N4: w=0.222574, R=1.7, U=9 | N5: w=0.234511, R=2.5, U=11 | N6: w=0.249328, R=1.7, U=11 | N7: w=0.151883, R=0.7, U=7 | N8: w=0.152643, R=0.1, U=1 | 
+Penalty lambdas: cap=1.74123, energy=0.913931, deadline=1.09891
+=== End of Segment 10 ===
+Best Penalized Fallback Score: 10516.1 with makespan 10168
+Current Solution Score: 13157.9 with makespan 10454.6
+Current mode: Makespan
+Average normalized violations: cap=0.0248544, energy=0, deadline=0.019761
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.402413, R=5.1, U=19 | N1: w=0.365249, R=4, U=12 | N2: w=0.298901, R=1.6, U=8 | N3: w=0.282411, R=3.2, U=14 | N4: w=0.212468, R=1.6, U=10 | N5: w=0.232339, R=2.6, U=14 | N6: w=0.220893, R=0.8, U=8 | N7: w=0.136318, R=0.5, U=5 | N8: w=0.13685, R=1.2, U=10 | 
+Switching scoring mode to Workload for the next segment.
+Penalty lambdas: cap=1.76729, energy=0.904837, deadline=1.10968
+=== End of Segment 11 ===
+Best Penalized Fallback Score: 14818.7 with makespan 10135.6
+Current Solution Score: 15299 with makespan 10872.5
+Current mode: Workload
+Average normalized violations: cap=0.0182604, energy=0, deadline=0.015061
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.362216, R=5.6, U=14 | N1: w=0.355675, R=6.5, U=17 | N2: w=0.269231, R=4, U=12 | N3: w=0.266259, R=2.8, U=10 | N4: w=0.196728, R=2, U=10 | N5: w=0.218352, R=3.3, U=15 | N6: w=0.184625, R=1.6, U=8 | N7: w=0.125423, R=0.9, U=9 | N8: w=0.131795, R=0.5, U=5 | 
+Switching scoring mode to Makespan for the next segment.
+Penalty lambdas: cap=1.78195, energy=0.895834, deadline=1.11531
+=== End of Segment 12 ===
+Best Penalized Fallback Score: 10976.8 with makespan 10789.1
+Current Solution Score: 10804.4 with makespan 10503
+Current mode: Makespan
+Average normalized violations: cap=0.00837169, energy=0, deadline=0.0145794
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.373551, R=5.9, U=15 | N1: w=0.363678, R=4.9, U=13 | N2: w=0.288462, R=3.3, U=19 | N3: w=0.270381, R=2.6, U=16 | N4: w=0.19771, R=0.5, U=5 | N5: w=0.218846, R=1.2, U=6 | N6: w=0.189238, R=2.6, U=14 | N7: w=0.117796, R=0.8, U=8 | N8: w=0.122257, R=0.4, U=4 | 
+No improvement in feasible makespan for 4 segments, applying perturbation. New makespan: 10335.1
+Penalty lambdas: cap=1.77905, energy=0.88692, deadline=1.12043
+=== End of Segment 13 ===
+Best Penalized Fallback Score: 10624.4 with makespan 10410.5
+Current Solution Score: 13444.3 with makespan 10535.5
+Current mode: Makespan
+Average normalized violations: cap=0.0555785, energy=0, deadline=0.02001
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.379486, R=6.2, U=16 | N1: w=0.367652, R=6.8, U=20 | N2: w=0.254028, R=4, U=14 | N3: w=0.238017, R=3.5, U=11 | N4: w=0.168397, R=0.7, U=7 | N5: w=0.213192, R=1.3, U=7 | N6: w=0.188181, R=2.4, U=10 | N7: w=0.112457, R=0.8, U=8 | N8: w=0.11558, R=0.7, U=7 | 
+Penalty lambdas: cap=1.86201, energy=0.878095, deadline=1.13171
+=== End of Segment 14 ===
+Best Penalized Fallback Score: 10629 with makespan 10410.5
+Current Solution Score: 10890.6 with makespan 10461.2
+Current mode: Makespan
+Average normalized violations: cap=0.0537804, energy=0, deadline=0.0165593
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.38189, R=8.2, U=24 | N1: w=0.359356, R=7.2, U=18 | N2: w=0.263534, R=2.5, U=11 | N3: w=0.262066, R=2.9, U=11 | N4: w=0.147878, R=0.6, U=6 | N5: w=0.204949, R=2, U=10 | N6: w=0.203726, R=3.1, U=9 | N7: w=0.10872, R=0.3, U=3 | N8: w=0.110906, R=0.8, U=8 | 
+Switching scoring mode to Workload for the next segment.
+Penalty lambdas: cap=1.94534, energy=0.869358, deadline=1.13915
+=== End of Segment 15 ===
+Best Penalized Fallback Score: 14995.6 with makespan 10410.5
+Current Solution Score: 14517.7 with makespan 10761.5
+Current mode: Workload
+Average normalized violations: cap=0.00348904, energy=0, deadline=0.00719838
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.369823, R=6.4, U=14 | N1: w=0.371549, R=6.8, U=18 | N2: w=0.252656, R=3.8, U=16 | N3: w=0.262537, R=2.6, U=10 | N4: w=0.133514, R=1.2, U=8 | N5: w=0.203464, R=1, U=8 | N6: w=0.245942, R=3, U=16 | N7: w=0.106104, R=0.7, U=7 | N8: w=0.107634, R=0.5, U=3 | 
+Switching scoring mode to Makespan for the next segment.
+Penalty lambdas: cap=1.93272, energy=0.860708, deadline=1.13597
+=== End of Segment 16 ===
+Best Penalized Fallback Score: 10999.8 with makespan 10904.4
+Current Solution Score: 10847.2 with makespan 10473.8
+Current mode: Makespan
+Average normalized violations: cap=0.00380314, energy=0, deadline=0.0190207
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.396019, R=6.3, U=21 | N1: w=0.373418, R=4.3, U=15 | N2: w=0.248109, R=2.9, U=13 | N3: w=0.261776, R=2.7, U=15 | N4: w=0.13846, R=1, U=6 | N5: w=0.179925, R=1.2, U=10 | N6: w=0.228409, R=2.4, U=16 | N7: w=0.104273, R=0.2, U=2 | N8: w=0.125344, R=0.2, U=2 | 
+No improvement in feasible makespan for 4 segments, applying perturbation. New makespan: 10373.9
+Penalty lambdas: cap=1.92078, energy=0.852144, deadline=1.14626
+=== End of Segment 17 ===
+Best Penalized Fallback Score: 10442.9 with makespan 10213.7
+Current Solution Score: 10832.5 with makespan 10593.1
+Current mode: Makespan
+Average normalized violations: cap=0.0140522, energy=0, deadline=0.0197866
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.367213, R=6.4, U=16 | N1: w=0.347392, R=5.9, U=21 | N2: w=0.240599, R=3.1, U=11 | N3: w=0.237243, R=1.8, U=12 | N4: w=0.146922, R=1.4, U=8 | N5: w=0.161947, R=3.2, U=14 | N6: w=0.204887, R=2.6, U=14 | N7: w=0.102991, R=0.1, U=1 | N8: w=0.117741, R=0.3, U=3 | 
+Penalty lambdas: cap=1.92858, energy=0.843665, deadline=1.15753
+=== End of Segment 18 ===
+Best Penalized Fallback Score: 10445.1 with makespan 10213.7
+Current Solution Score: 10899.5 with makespan 10316.7
+Current mode: Makespan
+Average normalized violations: cap=0.00791152, energy=0, deadline=0.0178927
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.377049, R=7, U=26 | N1: w=0.32746, R=5.8, U=20 | N2: w=0.252965, R=2.3, U=11 | N3: w=0.21107, R=2.5, U=9 | N4: w=0.155345, R=1.1, U=7 | N5: w=0.181935, R=1.1, U=5 | N6: w=0.199135, R=1.1, U=9 | N7: w=0.102094, R=0.5, U=5 | N8: w=0.112418, R=0.8, U=8 | 
+Switching scoring mode to Workload for the next segment.
+Penalty lambdas: cap=1.92456, energy=0.83527, deadline=1.1667
+=== End of Segment 19 ===
+Best Penalized Fallback Score: 14770.8 with makespan 10213.7
+Current Solution Score: 14990.9 with makespan 10466.1
+Current mode: Workload
+Average normalized violations: cap=0.00835104, energy=0, deadline=0.0116925
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.344704, R=8.4, U=22 | N1: w=0.316222, R=9.1, U=23 | N2: w=0.239803, R=2.6, U=8 | N3: w=0.231083, R=2, U=6 | N4: w=0.155885, R=0.5, U=5 | N5: w=0.193354, R=1.7, U=11 | N6: w=0.176061, R=3.4, U=14 | N7: w=0.101466, R=0.4, U=4 | N8: w=0.108693, R=0.9, U=7 | 
+Switching scoring mode to Makespan for the next segment.
+Penalty lambdas: cap=1.92138, energy=0.826959, deadline=1.16868
+=== End of Segment 20 ===
+Best Penalized Fallback Score: 10498 with makespan 10319.5
+Current Solution Score: 10926.4 with makespan 10231.8
+Current mode: Makespan
+Average normalized violations: cap=0.0077613, energy=0, deadline=0.0156447
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.355838, R=5, U=16 | N1: w=0.340051, R=5.5, U=17 | N2: w=0.265362, R=3, U=14 | N3: w=0.261758, R=1.8, U=8 | N4: w=0.139119, R=0.6, U=4 | N5: w=0.181712, R=1.6, U=14 | N6: w=0.1961, R=1.6, U=14 | N7: w=0.101026, R=0.7, U=7 | N8: w=0.114656, R=0.6, U=6 | 
+No improvement in feasible makespan for 4 segments, applying perturbation. New makespan: 10344.9
+Penalty lambdas: cap=1.91709, energy=0.818731, deadline=1.1753
+=== End of Segment 21 ===
+Best Penalized Fallback Score: 10466.5 with makespan 10172.3
+Current Solution Score: 10794.9 with makespan 10406.7
+Current mode: Makespan
+Average normalized violations: cap=0.0415871, energy=0, deadline=0.0236752
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.342837, R=7.3, U=19 | N1: w=0.335095, R=4.1, U=13 | N2: w=0.250039, R=3.1, U=13 | N3: w=0.25073, R=3.7, U=15 | N4: w=0.142383, R=2.1, U=13 | N5: w=0.161484, R=2.7, U=11 | N6: w=0.171556, R=1.3, U=5 | N7: w=0.100718, R=0.3, U=3 | N8: w=0.11026, R=0.8, U=8 | 
+Penalty lambdas: cap=1.97861, energy=0.810584, deadline=1.19148
+=== End of Segment 22 ===
+Best Penalized Fallback Score: 10472.6 with makespan 10172.3
+Current Solution Score: 10494.6 with makespan 10204.2
+Current mode: Makespan
+Average normalized violations: cap=0.0183503, energy=0, deadline=0.0220621
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.355249, R=5.4, U=16 | N1: w=0.329182, R=6.8, U=22 | N2: w=0.246566, R=2.2, U=14 | N3: w=0.249511, R=1.9, U=9 | N4: w=0.14813, R=1.2, U=8 | N5: w=0.186675, R=2.1, U=11 | N6: w=0.198089, R=2.3, U=11 | N7: w=0.100503, R=0.5, U=5 | N8: w=0.107182, R=0.4, U=4 | 
+Switching scoring mode to Workload for the next segment.
+Penalty lambdas: cap=1.9952, energy=0.802519, deadline=1.20594
+=== End of Segment 23 ===
+Best Penalized Fallback Score: 14741.9 with makespan 10194.7
+Current Solution Score: 15114.2 with makespan 10772.7
+Current mode: Workload
+Average normalized violations: cap=0.00430941, energy=0, deadline=0.0141542
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.349924, R=7.6, U=22 | N1: w=0.323154, R=6.3, U=17 | N2: w=0.219739, R=2.7, U=17 | N3: w=0.237991, R=1, U=6 | N4: w=0.148691, R=1.2, U=8 | N5: w=0.187945, R=1.7, U=11 | N6: w=0.20139, R=2.1, U=9 | N7: w=0.100352, R=0.3, U=3 | N8: w=0.105027, R=0.7, U=7 | 
+Switching scoring mode to Makespan for the next segment.
+Penalty lambdas: cap=1.98388, energy=0.794534, deadline=1.21096
+=== End of Segment 24 ===
+Best Penalized Fallback Score: 10837.4 with makespan 10619.4
+Current Solution Score: 11021.3 with makespan 10679.4
+Current mode: Makespan
+Average normalized violations: cap=0.0101939, energy=0, deadline=0.0217403
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.348583, R=4.7, U=13 | N1: w=0.337385, R=7.2, U=22 | N2: w=0.201464, R=2.1, U=9 | N3: w=0.216594, R=2.2, U=14 | N4: w=0.149084, R=1.3, U=11 | N5: w=0.177925, R=2, U=10 | N6: w=0.210973, R=2.8, U=12 | N7: w=0.100246, R=0.6, U=6 | N8: w=0.103519, R=0.3, U=3 | 
+No improvement in feasible makespan for 4 segments, applying perturbation. New makespan: 10659.9
+Penalty lambdas: cap=1.98426, energy=0.786628, deadline=1.22526
+=== End of Segment 25 ===
+Best Penalized Fallback Score: 10489.4 with makespan 10206.6
+Current Solution Score: 10911.8 with makespan 10220.3
+Current mode: Makespan
+Average normalized violations: cap=0.0133878, energy=0, deadline=0.0224181
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.35247, R=8.7, U=23 | N1: w=0.334351, R=7.5, U=19 | N2: w=0.211025, R=2.7, U=11 | N3: w=0.198759, R=1.7, U=7 | N4: w=0.139813, R=1, U=8 | N5: w=0.184548, R=2.8, U=14 | N6: w=0.217681, R=2.5, U=11 | N7: w=0.100172, R=0.4, U=4 | N8: w=0.102463, R=0.3, U=3 | 
+Penalty lambdas: cap=1.991, energy=0.778801, deadline=1.24057
+=== End of Segment 26 ===
+Best Penalized Fallback Score: 10492.8 with makespan 10206.6
+Current Solution Score: 10635.1 with makespan 10341.6
+Current mode: Makespan
+Average normalized violations: cap=0.00952763, energy=0, deadline=0.0166088
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.360207, R=5.1, U=17 | N1: w=0.352467, R=6.9, U=21 | N2: w=0.221354, R=3, U=12 | N3: w=0.211988, R=2.2, U=14 | N4: w=0.135369, R=1, U=6 | N5: w=0.189183, R=1.5, U=11 | N6: w=0.220558, R=1.4, U=10 | N7: w=0.100121, R=0.6, U=6 | N8: w=0.101724, R=0.3, U=3 | 
+Switching scoring mode to Workload for the next segment.
+Penalty lambdas: cap=1.99006, energy=0.771052, deadline=1.2488
+=== End of Segment 27 ===
+Best Penalized Fallback Score: 14778.5 with makespan 10163.5
+Current Solution Score: 15366.1 with makespan 10529.2
+Current mode: Workload
+Average normalized violations: cap=0.0167973, energy=0, deadline=0.0143675
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.342145, R=5.9, U=21 | N1: w=0.345298, R=5.9, U=19 | N2: w=0.229948, R=2.7, U=11 | N3: w=0.195535, R=2.2, U=10 | N4: w=0.144758, R=0.7, U=7 | N5: w=0.173337, R=1.6, U=10 | N6: w=0.196391, R=2.3, U=11 | N7: w=0.100084, R=0.3, U=3 | N8: w=0.101207, R=0.8, U=8 | 
+Switching scoring mode to Makespan for the next segment.
+Penalty lambdas: cap=2.00363, energy=0.763379, deadline=1.25426
+=== End of Segment 28 ===
+Best Penalized Fallback Score: 10626.3 with makespan 10470.4
+Current Solution Score: 10381.1 with makespan 10213.6
+Current mode: Makespan
+Average normalized violations: cap=0.00438423, energy=0, deadline=0.0194513
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.323787, R=6, U=18 | N1: w=0.334867, R=7.1, U=19 | N2: w=0.2346, R=2.6, U=12 | N3: w=0.202874, R=3.2, U=16 | N4: w=0.131331, R=0.8, U=8 | N5: w=0.169336, R=0.5, U=3 | N6: w=0.200201, R=2.7, U=15 | N7: w=0.100059, R=0.8, U=8 | N8: w=0.100845, R=0.1, U=1 | 
+No improvement in feasible makespan for 4 segments, applying perturbation. New makespan: 10664.7
+Penalty lambdas: cap=1.99241, energy=0.755784, deadline=1.26617
+=== End of Segment 29 ===
+Best Penalized Fallback Score: 10305.7 with makespan 10106.6
+Current Solution Score: 11181.5 with makespan 10622.8
+Current mode: Makespan
+Average normalized violations: cap=0.0258005, energy=0, deadline=0.0197913
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.326651, R=7.8, U=20 | N1: w=0.346512, R=8.1, U=21 | N2: w=0.22922, R=2.8, U=10 | N3: w=0.202012, R=2.8, U=8 | N4: w=0.121932, R=1.8, U=10 | N5: w=0.168535, R=2.1, U=9 | N6: w=0.194141, R=1.5, U=9 | N7: w=0.100041, R=0.6, U=6 | N8: w=0.100591, R=0.7, U=7 | 
+Penalty lambdas: cap=2.02414, energy=0.748264, deadline=1.27863
+=== End of Segment 30 ===
+Best Penalized Fallback Score: 10307.6 with makespan 10106.6
+Current Solution Score: 12012.6 with makespan 10882.5
+Current mode: Makespan
+Average normalized violations: cap=0.0334981, energy=0, deadline=0.0193193
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.345656, R=5, U=16 | N1: w=0.358273, R=5.3, U=17 | N2: w=0.244454, R=1.9, U=11 | N3: w=0.246408, R=2.8, U=12 | N4: w=0.139352, R=0.6, U=6 | N5: w=0.187975, R=1.6, U=12 | N6: w=0.185898, R=3, U=14 | N7: w=0.100029, R=0.5, U=5 | N8: w=0.100414, R=0.7, U=7 | 
+Switching scoring mode to Workload for the next segment.
+Penalty lambdas: cap=2.07227, energy=0.740818, deadline=1.2906
+=== End of Segment 31 ===
+Best Penalized Fallback Score: 14575.8 with makespan 10106.6
+Current Solution Score: 14852.1 with makespan 10894.2
+Current mode: Workload
+Average normalized violations: cap=0.00507622, energy=0, deadline=0.014514
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.335709, R=8, U=20 | N1: w=0.34432, R=7.1, U=19 | N2: w=0.222936, R=3.2, U=14 | N3: w=0.242486, R=4, U=12 | N4: w=0.127546, R=1.1, U=7 | N5: w=0.171582, R=1.2, U=6 | N6: w=0.194415, R=4.2, U=12 | N7: w=0.10002, R=0.6, U=6 | N8: w=0.10029, R=0.4, U=4 | 
+Switching scoring mode to Makespan for the next segment.
+Penalty lambdas: cap=2.06209, energy=0.733447, deadline=1.29644
+=== End of Segment 32 ===
+Best Penalized Fallback Score: 10310.4 with makespan 10106.6
+Current Solution Score: 13078 with makespan 10145.6
+Current mode: Makespan
+Average normalized violations: cap=0.0197441, energy=0, deadline=0.0203514
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.354996, R=5.9, U=17 | N1: w=0.353129, R=6.3, U=19 | N2: w=0.224627, R=1.4, U=8 | N3: w=0.26974, R=2.4, U=16 | N4: w=0.136425, R=1.1, U=5 | N5: w=0.180108, R=1.8, U=10 | N6: w=0.24109, R=1.6, U=12 | N7: w=0.100014, R=0.5, U=5 | N8: w=0.100203, R=1.2, U=8 | 
+No improvement in feasible makespan for 4 segments, applying perturbation. New makespan: 10971.4
+Penalty lambdas: cap=2.08228, energy=0.726149, deadline=1.30993
+=== End of Segment 33 ===
+Best Penalized Fallback Score: 10312.5 with makespan 10106.6
+Current Solution Score: 10792.8 with makespan 10505.6
+Current mode: Makespan
+Average normalized violations: cap=0.0265201, energy=0, deadline=0.0197672
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.352615, R=6.5, U=17 | N1: w=0.346664, R=7.1, U=21 | N2: w=0.209739, R=2.1, U=7 | N3: w=0.233818, R=5, U=16 | N4: w=0.161498, R=1, U=8 | N5: w=0.180075, R=1.6, U=8 | N6: w=0.208763, R=3.1, U=9 | N7: w=0.10001, R=1, U=10 | N8: w=0.115142, R=0.4, U=4 | 
+Penalty lambdas: cap=2.11697, energy=0.718924, deadline=1.32279
+=== End of Segment 34 ===
+Best Penalized Fallback Score: 10314.6 with makespan 10106.6
+Current Solution Score: 10721.4 with makespan 10390.9
+Current mode: Makespan
+Average normalized violations: cap=0.0170731, energy=0, deadline=0.0179792
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.361536, R=4.6, U=16 | N1: w=0.344094, R=6.6, U=20 | N2: w=0.236817, R=3.4, U=16 | N3: w=0.257423, R=2.6, U=16 | N4: w=0.150548, R=1, U=8 | N5: w=0.186053, R=1.3, U=9 | N6: w=0.249468, R=0.3, U=3 | N7: w=0.100007, R=0.6, U=6 | N8: w=0.110599, R=0.6, U=6 | 
+Switching scoring mode to Workload for the next segment.
+Penalty lambdas: cap=2.13199, energy=0.71177, deadline=1.33339
+=== End of Segment 35 ===
+Best Penalized Fallback Score: 14585.3 with makespan 10106.6
+Current Solution Score: 15245 with makespan 11335.9
+Current mode: Workload
+Average normalized violations: cap=0.0184312, energy=0, deadline=0.0122675
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.339325, R=3.3, U=11 | N1: w=0.339865, R=3.6, U=12 | N2: w=0.229522, R=4.3, U=15 | N3: w=0.228946, R=2.9, U=15 | N4: w=0.142884, R=1.4, U=10 | N5: w=0.17357, R=1.9, U=13 | N6: w=0.204627, R=1.3, U=7 | N7: w=0.100005, R=0.5, U=5 | N8: w=0.10742, R=1.2, U=12 | 
+Switching scoring mode to Makespan for the next segment.
+Penalty lambdas: cap=2.15004, energy=0.704688, deadline=1.33641
+=== End of Segment 36 ===
+Best Penalized Fallback Score: 10316.7 with makespan 10106.6
+Current Solution Score: 11999 with makespan 10883.8
+Current mode: Makespan
+Average normalized violations: cap=0.0271205, energy=0, deadline=0.0173406
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.327528, R=5, U=16 | N1: w=0.327906, R=5.3, U=17 | N2: w=0.246665, R=2, U=10 | N3: w=0.218262, R=2.3, U=13 | N4: w=0.142019, R=1.2, U=8 | N5: w=0.165345, R=1.7, U=9 | N6: w=0.198953, R=3, U=12 | N7: w=0.100003, R=0.4, U=4 | N8: w=0.105194, R=1.5, U=11 | 
+No improvement in feasible makespan for 4 segments, applying perturbation. New makespan: 10857.7
+Penalty lambdas: cap=2.18717, energy=0.697676, deadline=1.34626
+=== End of Segment 37 ===
+Best Penalized Fallback Score: 10318.3 with makespan 10106.6
+Current Solution Score: 11618.1 with makespan 10664.6
+Current mode: Makespan
+Average normalized violations: cap=0.0235987, energy=0, deadline=0.0273623
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.323019, R=7.9, U=25 | N1: w=0.323064, R=5.8, U=18 | N2: w=0.232666, R=3.5, U=15 | N3: w=0.20586, R=1.4, U=6 | N4: w=0.144413, R=0.8, U=6 | N5: w=0.172408, R=0.8, U=4 | N6: w=0.214267, R=2.7, U=11 | N7: w=0.100002, R=0.8, U=8 | N8: w=0.114545, R=1.1, U=7 | 
+Penalty lambdas: cap=2.21712, energy=0.690734, deadline=1.36984
+=== End of Segment 38 ===
+Best Penalized Fallback Score: 10322 with makespan 10106.6
+Current Solution Score: 10893 with makespan 10420.6
+Current mode: Makespan
+Average normalized violations: cap=0.0159067, energy=0, deadline=0.0274944
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.320914, R=6.3, U=19 | N1: w=0.322811, R=5.8, U=20 | N2: w=0.232866, R=2.7, U=9 | N3: w=0.214102, R=2.9, U=15 | N4: w=0.141089, R=1.2, U=8 | N5: w=0.180686, R=1.2, U=6 | N6: w=0.223624, R=2.4, U=12 | N7: w=0.100002, R=0.7, U=7 | N8: w=0.127324, R=0.4, U=4 | 
+Switching scoring mode to Workload for the next segment.
+Penalty lambdas: cap=2.23025, energy=0.683861, deadline=1.39401
+=== End of Segment 39 ===
+Best Penalized Fallback Score: 14598.8 with makespan 10106.6
+Current Solution Score: 15008.7 with makespan 11102.7
+Current mode: Workload
+Average normalized violations: cap=0.00316462, energy=0, deadline=0.0125839
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.324113, R=7.7, U=19 | N1: w=0.312968, R=7.2, U=20 | N2: w=0.253006, R=2.9, U=15 | N3: w=0.207872, R=2.6, U=10 | N4: w=0.143762, R=0.8, U=6 | N5: w=0.18648, R=1.4, U=12 | N6: w=0.216536, R=2.2, U=10 | N7: w=0.100001, R=0.5, U=5 | N8: w=0.119127, R=0.3, U=3 | 
+Switching scoring mode to Makespan for the next segment.
+Penalty lambdas: cap=2.21506, energy=0.677057, deadline=1.39762
+=== End of Segment 40 ===
+Best Penalized Fallback Score: 10326.3 with makespan 10106.6
+Current Solution Score: 10750.7 with makespan 10407.9
+Current mode: Makespan
+Average normalized violations: cap=0.00971739, energy=0, deadline=0.0142211
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.348458, R=6.6, U=22 | N1: w=0.327077, R=7.5, U=19 | N2: w=0.235104, R=1.4, U=4 | N3: w=0.22351, R=3, U=20 | N4: w=0.140634, R=0.5, U=3 | N5: w=0.165536, R=1.1, U=5 | N6: w=0.217576, R=2.3, U=11 | N7: w=0.100001, R=0.8, U=8 | N8: w=0.113389, R=1.2, U=8 | 
+No improvement in feasible makespan for 4 segments, applying perturbation. New makespan: 11180.1
+Penalty lambdas: cap=2.21443, energy=0.67032, deadline=1.40353
+=== End of Segment 41 ===
+Best Penalized Fallback Score: 10327.3 with makespan 10106.6
+Current Solution Score: 12160.8 with makespan 10881.5
+Current mode: Makespan
+Average normalized violations: cap=0.0480724, energy=0, deadline=0.0205075
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.333921, R=5.5, U=17 | N1: w=0.347375, R=6.1, U=19 | N2: w=0.269573, R=2.6, U=10 | N3: w=0.201457, R=4.9, U=19 | N4: w=0.148444, R=0.7, U=7 | N5: w=0.181875, R=1.6, U=10 | N6: w=0.21503, R=1.2, U=4 | N7: w=0.100001, R=0.5, U=5 | N8: w=0.124372, R=0.9, U=9 | 
+Penalty lambdas: cap=2.30037, energy=0.66365, deadline=1.41836
+=== End of Segment 42 ===
+Best Penalized Fallback Score: 10329.6 with makespan 10106.6
+Current Solution Score: 11467.3 with makespan 10780.8
+Current mode: Makespan
+Average normalized violations: cap=0.0326562, energy=0, deadline=0.0193714
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.330803, R=5.4, U=14 | N1: w=0.339478, R=7.6, U=22 | N2: w=0.266701, R=2.9, U=13 | N3: w=0.218388, R=4, U=12 | N4: w=0.133911, R=0.5, U=5 | N5: w=0.175313, R=2, U=10 | N6: w=0.240521, R=2.8, U=12 | N7: w=0.1, R=0.4, U=4 | N8: w=0.117061, R=1, U=8 | 
+Switching scoring mode to Workload for the next segment.
+Penalty lambdas: cap=2.35308, energy=0.657047, deadline=1.43171
+=== End of Segment 43 ===
+Best Penalized Fallback Score: 14607.2 with makespan 10106.6
+Current Solution Score: 15179 with makespan 11260.8
+Current mode: Workload
+Average normalized violations: cap=0.00699811, energy=0, deadline=0.0108873
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.347277, R=7.4, U=22 | N1: w=0.341271, R=5.1, U=15 | N2: w=0.253614, R=3, U=12 | N3: w=0.252872, R=2.9, U=11 | N4: w=0.123737, R=1.1, U=9 | N5: w=0.182719, R=1.3, U=9 | N6: w=0.238365, R=1.9, U=11 | N7: w=0.1, R=0.4, U=4 | N8: w=0.119442, R=0.7, U=7 | 
+Switching scoring mode to Makespan for the next segment.
+Penalty lambdas: cap=2.34603, energy=0.650509, deadline=1.43298
+=== End of Segment 44 ===
+Best Penalized Fallback Score: 10331.9 with makespan 10106.6
+Current Solution Score: 10949.7 with makespan 10540.1
+Current mode: Makespan
+Average normalized violations: cap=0.0040185, energy=0, deadline=0.0239826
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.344003, R=5.8, U=18 | N1: w=0.34089, R=5.3, U=15 | N2: w=0.25253, R=3, U=12 | N3: w=0.256101, R=2.5, U=19 | N4: w=0.123283, R=1.6, U=10 | N5: w=0.171237, R=0.9, U=7 | N6: w=0.218674, R=2.5, U=11 | N7: w=0.1, R=0.5, U=5 | N8: w=0.11361, R=0.5, U=3 | 
+No improvement in feasible makespan for 4 segments, applying perturbation. New makespan: 10618.3
+Penalty lambdas: cap=2.33204, energy=0.644036, deadline=1.45316
+=== End of Segment 45 ===
+Best Penalized Fallback Score: 10335.1 with makespan 10106.6
+Current Solution Score: 11153.7 with makespan 10716.7
+Current mode: Makespan
+Average normalized violations: cap=0.0120847, energy=0, deadline=0.0207655
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.337469, R=5.7, U=15 | N1: w=0.344623, R=4.6, U=14 | N2: w=0.251771, R=3, U=12 | N3: w=0.218745, R=2.5, U=11 | N4: w=0.134298, R=0.7, U=5 | N5: w=0.158437, R=3, U=14 | N6: w=0.221253, R=2.2, U=14 | N7: w=0.1, R=0.7, U=7 | N8: w=0.129527, R=0.8, U=8 | 
+Penalty lambdas: cap=2.3369, energy=0.637628, deadline=1.46889
+=== End of Segment 46 ===
+Best Penalized Fallback Score: 10337.5 with makespan 10106.6
+Current Solution Score: 11377.9 with makespan 10373.5
+Current mode: Makespan
+Average normalized violations: cap=0.0141238, energy=0, deadline=0.0194934
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.350228, R=5, U=14 | N1: w=0.339807, R=6.9, U=19 | N2: w=0.25124, R=2.8, U=12 | N3: w=0.221303, R=2.8, U=12 | N4: w=0.136009, R=1.8, U=12 | N5: w=0.175192, R=1.4, U=10 | N6: w=0.20202, R=2.5, U=9 | N7: w=0.1, R=0.5, U=5 | N8: w=0.120669, R=0.7, U=7 | 
+Switching scoring mode to Workload for the next segment.
+Penalty lambdas: cap=2.34656, energy=0.631284, deadline=1.4829
+=== End of Segment 47 ===
+Best Penalized Fallback Score: 14618.6 with makespan 10106.6
+Current Solution Score: 15300.6 with makespan 10676.4
+Current mode: Workload
+Average normalized violations: cap=0.00411058, energy=0, deadline=0.0113344
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.352302, R=11.1, U=27 | N1: w=0.346813, R=7.1, U=19 | N2: w=0.245868, R=1.1, U=7 | N3: w=0.224912, R=2.1, U=9 | N4: w=0.140206, R=1.1, U=9 | N5: w=0.164634, R=1.6, U=10 | N6: w=0.224747, R=1.8, U=10 | N7: w=0.1, R=0.7, U=7 | N8: w=0.114468, R=0.2, U=2 | 
+Switching scoring mode to Makespan for the next segment.
+Penalty lambdas: cap=2.33278, energy=0.625002, deadline=1.48488
+=== End of Segment 48 ===
+Best Penalized Fallback Score: 10340 with makespan 10106.6
+Current Solution Score: 10433.2 with makespan 10125.6
+Current mode: Makespan
+Average normalized violations: cap=0.00206909, energy=0, deadline=0.0163805
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.369945, R=6, U=18 | N1: w=0.354874, R=6.9, U=23 | N2: w=0.21925, R=2.7, U=15 | N3: w=0.227438, R=2.4, U=14 | N4: w=0.134811, R=0.3, U=3 | N5: w=0.163244, R=1.2, U=8 | N6: w=0.211323, R=2.4, U=12 | N7: w=0.1, R=0.4, U=4 | N8: w=0.110128, R=0.3, U=3 | 
+No improvement in feasible makespan for 4 segments, applying perturbation. New makespan: 11579.9
+Penalty lambdas: cap=2.31435, energy=0.618783, deadline=1.49438
+=== End of Segment 49 ===
+Best Penalized Fallback Score: 10341.5 with makespan 10106.6
+Current Solution Score: 10989.6 with makespan 10653
+Current mode: Makespan
+Average normalized violations: cap=0.0100772, energy=0, deadline=0.0138939
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.358962, R=7.2, U=24 | N1: w=0.338412, R=8.3, U=27 | N2: w=0.207475, R=3.2, U=12 | N3: w=0.210635, R=2.7, U=11 | N4: w=0.124368, R=0.3, U=3 | N5: w=0.159271, R=1.3, U=9 | N6: w=0.207926, R=1.9, U=9 | N7: w=0.1, R=0.2, U=2 | N8: w=0.107089, R=0.3, U=3 | 
+Penalty lambdas: cap=2.31453, energy=0.612626, deadline=1.50021
+=== End of Segment 50 ===
+Best Penalized Fallback Score: 10342.5 with makespan 10106.6
+Current Solution Score: 11587.9 with makespan 11023.4
+Current mode: Makespan
+Average normalized violations: cap=0.00672085, energy=0, deadline=0.0157009
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.341273, R=6.5, U=21 | N1: w=0.329111, R=6.8, U=22 | N2: w=0.225233, R=2.1, U=13 | N3: w=0.221081, R=2, U=12 | N4: w=0.117057, R=1.4, U=10 | N5: w=0.154823, R=0.8, U=4 | N6: w=0.208882, R=1.9, U=11 | N7: w=0.1, R=0.3, U=3 | N8: w=0.104963, R=0.4, U=4 | 
+Switching scoring mode to Workload for the next segment.
+Penalty lambdas: cap=2.30695, energy=0.606531, deadline=1.50879
+=== End of Segment 51 ===
+Best Penalized Fallback Score: 14624.3 with makespan 10106.6
+Current Solution Score: 14883.5 with makespan 11530.8
+Current mode: Workload
+Average normalized violations: cap=0.0033691, energy=0, deadline=0.0104535
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.331748, R=9.4, U=22 | N1: w=0.323105, R=9.7, U=25 | N2: w=0.206124, R=1.3, U=7 | N3: w=0.204757, R=1.5, U=7 | N4: w=0.12394, R=1.3, U=7 | N5: w=0.168376, R=1.6, U=8 | N6: w=0.198035, R=2.2, U=10 | N7: w=0.1, R=0.9, U=9 | N8: w=0.103474, R=0.5, U=5 | 
+Switching scoring mode to Makespan for the next segment.
+Penalty lambdas: cap=2.29171, energy=0.600496, deadline=1.50947
+=== End of Segment 52 ===
+Best Penalized Fallback Score: 10343.9 with makespan 10106.6
+Current Solution Score: 11283.6 with makespan 10574.1
+Current mode: Makespan
+Average normalized violations: cap=0.00740939, energy=0, deadline=0.0144472
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.360406, R=4, U=14 | N1: w=0.342573, R=5.8, U=20 | N2: w=0.200001, R=2.1, U=7 | N3: w=0.207616, R=2.6, U=14 | N4: w=0.142472, R=1.9, U=11 | N5: w=0.177863, R=2.3, U=11 | N6: w=0.204625, R=2.3, U=11 | N7: w=0.1, R=0.6, U=6 | N8: w=0.102432, R=0.6, U=6 | 
+No improvement in feasible makespan for 4 segments, applying perturbation. New makespan: 11143.4
+Penalty lambdas: cap=2.28578, energy=0.594521, deadline=1.5162
+=== End of Segment 53 ===
+Best Penalized Fallback Score: 10345 with makespan 10106.6
+Current Solution Score: 11259.9 with makespan 10799.6
+Current mode: Makespan
+Average normalized violations: cap=0.0107053, energy=0, deadline=0.0211997
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.337998, R=7.2, U=20 | N1: w=0.326801, R=5.3, U=15 | N2: w=0.230001, R=2.8, U=12 | N3: w=0.201045, R=0.5, U=3 | N4: w=0.151549, R=2.6, U=16 | N5: w=0.187232, R=2.7, U=13 | N6: w=0.205965, R=2.6, U=10 | N7: w=0.1, R=0.4, U=4 | N8: w=0.101702, R=0.7, U=7 | 
+Penalty lambdas: cap=2.28739, energy=0.588605, deadline=1.53328
+=== End of Segment 54 ===
+Best Penalized Fallback Score: 10347.7 with makespan 10106.6
+Current Solution Score: 10801.5 with makespan 10379.6
+Current mode: Makespan
+Average normalized violations: cap=0.00375919, energy=0, deadline=0.0189424
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.344599, R=7.3, U=23 | N1: w=0.334761, R=7.5, U=23 | N2: w=0.231001, R=1.9, U=7 | N3: w=0.190732, R=1.6, U=8 | N4: w=0.154834, R=1.6, U=12 | N5: w=0.19337, R=1.6, U=8 | N6: w=0.222175, R=3.4, U=16 | N7: w=0.1, R=0.1, U=1 | N8: w=0.101192, R=0.4, U=2 | 
+Switching scoring mode to Workload for the next segment.
+Penalty lambdas: cap=2.27316, energy=0.582748, deadline=1.54705
+=== End of Segment 55 ===
+Best Penalized Fallback Score: 14632.8 with makespan 10106.6
+Current Solution Score: 15303.4 with makespan 11294.4
+Current mode: Workload
+Average normalized violations: cap=0.0141635, energy=0, deadline=0.0118298
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.336437, R=6.3, U=19 | N1: w=0.332159, R=3.8, U=12 | N2: w=0.243129, R=2.6, U=12 | N3: w=0.193512, R=2.2, U=12 | N4: w=0.148384, R=0.8, U=6 | N5: w=0.195359, R=2.3, U=13 | N6: w=0.219273, R=1.9, U=13 | N7: w=0.1, R=0.5, U=5 | N8: w=0.130834, R=0.8, U=8 | 
+Switching scoring mode to Makespan for the next segment.
+Penalty lambdas: cap=2.28264, energy=0.57695, deadline=1.54988
+=== End of Segment 56 ===
+Best Penalized Fallback Score: 10350.3 with makespan 10106.6
+Current Solution Score: 11121.9 with makespan 10511.9
+Current mode: Makespan
+Average normalized violations: cap=0.0114888, energy=0, deadline=0.014819
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.334979, R=6.6, U=18 | N1: w=0.327511, R=6.5, U=19 | N2: w=0.23519, R=2.3, U=9 | N3: w=0.190458, R=2.7, U=13 | N4: w=0.143869, R=1.5, U=9 | N5: w=0.189828, R=0.7, U=5 | N6: w=0.197337, R=2.9, U=15 | N7: w=0.1, R=0.4, U=4 | N8: w=0.121584, R=0.8, U=8 | 
+No improvement in feasible makespan for 4 segments, applying perturbation. New makespan: 11122.2
+Penalty lambdas: cap=2.28604, energy=0.571209, deadline=1.55737
+=== End of Segment 57 ===
+Best Penalized Fallback Score: 10351.4 with makespan 10106.6
+Current Solution Score: 11081.6 with makespan 10742
+Current mode: Makespan
+Average normalized violations: cap=0.0201205, energy=0, deadline=0.0165898
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.344485, R=5.9, U=19 | N1: w=0.331889, R=4.5, U=15 | N2: w=0.2413, R=4.1, U=17 | N3: w=0.195629, R=2.5, U=11 | N4: w=0.150708, R=1.4, U=10 | N5: w=0.17488, R=0.8, U=4 | N6: w=0.196136, R=1.2, U=8 | N7: w=0.1, R=0.8, U=8 | N8: w=0.115109, R=1.2, U=8 | 
+Penalty lambdas: cap=2.3093, energy=0.565525, deadline=1.56767
+=== End of Segment 58 ===
+Best Penalized Fallback Score: 10353.1 with makespan 10106.6
+Current Solution Score: 10812.4 with makespan 10544.1
+Current mode: Makespan
+Average normalized violations: cap=0.0122411, energy=0, deadline=0.0137636
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.334298, R=4.8, U=16 | N1: w=0.322323, R=7.7, U=23 | N2: w=0.241263, R=2.8, U=18 | N3: w=0.205122, R=1.8, U=6 | N4: w=0.147496, R=0.2, U=2 | N5: w=0.182416, R=1, U=8 | N6: w=0.182295, R=2.6, U=14 | N7: w=0.1, R=0.6, U=6 | N8: w=0.125576, R=0.7, U=7 | 
+Switching scoring mode to Workload for the next segment.
+Penalty lambdas: cap=2.31448, energy=0.559898, deadline=1.57358
+=== End of Segment 59 ===
+Best Penalized Fallback Score: 14638.7 with makespan 10106.6
+Current Solution Score: 15574.7 with makespan 10903.4
+Current mode: Workload
+Average normalized violations: cap=0.00572846, energy=0, deadline=0.0100678
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.324008, R=6.8, U=20 | N1: w=0.326061, R=4.8, U=14 | N2: w=0.215551, R=2.3, U=9 | N3: w=0.233585, R=2.2, U=12 | N4: w=0.133247, R=1.8, U=12 | N5: w=0.165191, R=1.8, U=10 | N6: w=0.183321, R=1.6, U=10 | N7: w=0.1, R=0.6, U=6 | N8: w=0.117903, R=0.9, U=7 | 
+Switching scoring mode to Makespan for the next segment.
+Penalty lambdas: cap=2.30461, energy=0.554327, deadline=1.57369
+=== End of Segment 60 ===
+Best Penalized Fallback Score: 10354 with makespan 10106.6
+Current Solution Score: 11140 with makespan 10411.9
+Current mode: Makespan
+Average normalized violations: cap=0.0128837, energy=0, deadline=0.0180712
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.328806, R=6.4, U=20 | N1: w=0.3311, R=3.4, U=12 | N2: w=0.227552, R=1.5, U=7 | N3: w=0.21851, R=3.5, U=21 | N4: w=0.138273, R=1.2, U=10 | N5: w=0.169634, R=2.4, U=8 | N6: w=0.176325, R=1.9, U=11 | N7: w=0.1, R=0.5, U=5 | N8: w=0.121104, R=0.6, U=6 | 
+No improvement in feasible makespan for 4 segments, applying perturbation. New makespan: 11076.9
+Penalty lambdas: cap=2.31127, energy=0.548812, deadline=1.58644
+=== End of Segment 61 ===
+Best Penalized Fallback Score: 10356 with makespan 10106.6
+Current Solution Score: 11880.9 with makespan 10828.9
+Current mode: Makespan
+Average normalized violations: cap=0.0650242, energy=0, deadline=0.0204037
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.326164, R=6, U=16 | N1: w=0.31677, R=7, U=20 | N2: w=0.223572, R=2.9, U=9 | N3: w=0.202957, R=2.1, U=11 | N4: w=0.132791, R=0.4, U=4 | N5: w=0.208744, R=2.1, U=9 | N6: w=0.175245, R=3.3, U=17 | N7: w=0.1, R=0.5, U=5 | N8: w=0.114773, R=0.9, U=9 | 
+Penalty lambdas: cap=2.44201, energy=0.543351, deadline=1.60303
+=== End of Segment 62 ===
+Best Penalized Fallback Score: 10358.6 with makespan 10106.6
+Current Solution Score: 11189.1 with makespan 10657.5
+Current mode: Makespan
+Average normalized violations: cap=0.0131878, energy=0, deadline=0.0196667
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.340815, R=5.9, U=17 | N1: w=0.326739, R=7.2, U=20 | N2: w=0.253167, R=3.8, U=16 | N3: w=0.199342, R=1.4, U=6 | N4: w=0.122954, R=1.3, U=7 | N5: w=0.216121, R=2, U=10 | N6: w=0.180907, R=2.1, U=13 | N7: w=0.1, R=0.5, U=5 | N8: w=0.110341, R=0.6, U=6 | 
+Switching scoring mode to Workload for the next segment.
+Penalty lambdas: cap=2.44981, energy=0.537944, deadline=1.6186
+=== End of Segment 63 ===
+Best Penalized Fallback Score: 14648.7 with makespan 10106.6
+Current Solution Score: 14674.5 with makespan 11009.5
+Current mode: Workload
+Average normalized violations: cap=0.00282518, energy=0, deadline=0.00898773
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.342688, R=5.1, U=15 | N1: w=0.336717, R=7.8, U=22 | N2: w=0.248467, R=3.2, U=12 | N3: w=0.20954, R=3.9, U=19 | N4: w=0.141782, R=0.7, U=7 | N5: w=0.211284, R=2.1, U=13 | N6: w=0.175096, R=1.6, U=6 | N7: w=0.1, R=0.2, U=2 | N8: w=0.107239, R=0.4, U=4 | 
+Switching scoring mode to Makespan for the next segment.
+Penalty lambdas: cap=2.43229, energy=0.532592, deadline=1.61696
+=== End of Segment 64 ===
+Best Penalized Fallback Score: 11104.2 with makespan 10991.7
+Current Solution Score: 10631.1 with makespan 10303.1
+Current mode: Makespan
+Average normalized violations: cap=0.0208872, energy=0, deadline=0.0194296
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.341882, R=8.2, U=24 | N1: w=0.342066, R=6, U=20 | N2: w=0.253927, R=3.9, U=13 | N3: w=0.208257, R=0.9, U=7 | N4: w=0.129247, R=0.9, U=7 | N5: w=0.196361, R=1.5, U=9 | N6: w=0.202568, R=2.1, U=11 | N7: w=0.1, R=0.1, U=1 | N8: w=0.105067, R=0.8, U=8 | 
+No improvement in feasible makespan for 4 segments, applying perturbation. New makespan: 11018
+Penalty lambdas: cap=2.45892, energy=0.527292, deadline=1.63228
+=== End of Segment 65 ===
+Best Penalized Fallback Score: 10634.3 with makespan 10303.1
+Current Solution Score: 10863.7 with makespan 10493.3
+Current mode: Makespan
+Average normalized violations: cap=0.0270432, energy=0, deadline=0.0170154
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.341817, R=4.3, U=15 | N1: w=0.329446, R=7, U=22 | N2: w=0.267749, R=3.4, U=12 | N3: w=0.184351, R=4.7, U=13 | N4: w=0.129045, R=0.6, U=6 | N5: w=0.187452, R=2, U=12 | N6: w=0.19907, R=1.6, U=8 | N7: w=0.1, R=0.6, U=6 | N8: w=0.103547, R=0.6, U=6 | 
+Penalty lambdas: cap=2.50118, energy=0.522046, deadline=1.64377
+=== End of Segment 66 ===
+Best Penalized Fallback Score: 10637.1 with makespan 10303.1
+Current Solution Score: 10627.3 with makespan 10353.5
+Current mode: Makespan
+Average normalized violations: cap=0.00414237, energy=0, deadline=0.0152084
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.325272, R=6.3, U=19 | N1: w=0.326067, R=6, U=18 | N2: w=0.272424, R=2.8, U=12 | N3: w=0.237507, R=3.1, U=13 | N4: w=0.120331, R=0.7, U=7 | N5: w=0.181217, R=2.4, U=14 | N6: w=0.199349, R=2.1, U=9 | N7: w=0.1, R=0.6, U=6 | N8: w=0.102483, R=0.2, U=2 | 
+Switching scoring mode to Workload for the next segment.
+Penalty lambdas: cap=2.48658, energy=0.516851, deadline=1.65236
+=== End of Segment 67 ===
+Best Penalized Fallback Score: 14897.4 with makespan 10211.9
+Current Solution Score: 14580.4 with makespan 10846.2
+Current mode: Workload
+Average normalized violations: cap=0.00254881, energy=0, deadline=0.0102409
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.327164, R=5.1, U=19 | N1: w=0.328247, R=6.4, U=20 | N2: w=0.260697, R=2.8, U=16 | N3: w=0.237794, R=1.9, U=11 | N4: w=0.114232, R=0.6, U=4 | N5: w=0.17828, R=1.1, U=9 | N6: w=0.209544, R=1.8, U=12 | N7: w=0.1, R=0.7, U=7 | N8: w=0.101738, R=0.2, U=2 | 
+Switching scoring mode to Makespan for the next segment.
+Penalty lambdas: cap=2.46812, energy=0.511709, deadline=1.65276
+=== End of Segment 68 ===
+Best Penalized Fallback Score: 10636.5 with makespan 10425.8
+Current Solution Score: 11021.8 with makespan 10233.3
+Current mode: Makespan
+Average normalized violations: cap=0.00383465, energy=0, deadline=0.0144475
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.309541, R=7, U=24 | N1: w=0.325773, R=3.7, U=13 | N2: w=0.234988, R=2.1, U=13 | N3: w=0.218274, R=3.2, U=18 | N4: w=0.124962, R=1.3, U=9 | N5: w=0.161463, R=0.5, U=3 | N6: w=0.191681, R=1.5, U=9 | N7: w=0.1, R=0.9, U=9 | N8: w=0.101217, R=0.2, U=2 | 
+No improvement in feasible makespan for 4 segments, applying perturbation. New makespan: 10447.6
+Penalty lambdas: cap=2.45295, energy=0.506617, deadline=1.66012
+=== End of Segment 69 ===
+Best Penalized Fallback Score: 10460.3 with makespan 10100.8
+Current Solution Score: 10786.7 with makespan 10295.8
+Current mode: Makespan
+Average normalized violations: cap=0.0139251, energy=0, deadline=0.0209641
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.304179, R=8.7, U=23 | N1: w=0.313425, R=6.3, U=19 | N2: w=0.212953, R=2.6, U=10 | N3: w=0.206125, R=1.6, U=8 | N4: w=0.130807, R=1.2, U=8 | N5: w=0.163024, R=2, U=8 | N6: w=0.184177, R=1.4, U=12 | N7: w=0.1, R=0.8, U=8 | N8: w=0.100852, R=0.4, U=4 | 
+Penalty lambdas: cap=2.46259, energy=0.501576, deadline=1.67843
+=== End of Segment 70 ===
+Best Penalized Fallback Score: 10463.9 with makespan 10100.8
+Current Solution Score: 11615.7 with makespan 10417.8
+Current mode: Makespan
+Average normalized violations: cap=0.0179897, energy=0, deadline=0.0175865
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.326403, R=6.2, U=22 | N1: w=0.318872, R=3.9, U=13 | N2: w=0.227067, R=2.9, U=15 | N3: w=0.204287, R=2.3, U=9 | N4: w=0.136565, R=0.7, U=5 | N5: w=0.189117, R=1.6, U=10 | N6: w=0.163924, R=1.9, U=9 | N7: w=0.1, R=0.6, U=6 | N8: w=0.100596, R=1.1, U=11 | 
+Switching scoring mode to Workload for the next segment.
+Penalty lambdas: cap=2.48235, energy=0.496585, deadline=1.69121
+=== End of Segment 71 ===
+Best Penalized Fallback Score: 14793 with makespan 10100.8
+Current Solution Score: 14812.7 with makespan 10632.4
+Current mode: Workload
+Average normalized violations: cap=0.00639396, energy=0, deadline=0.0124894
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.313028, R=6.6, U=18 | N1: w=0.31321, R=6.1, U=17 | N2: w=0.216947, R=3.1, U=13 | N3: w=0.219668, R=1.8, U=12 | N4: w=0.137595, R=1.4, U=10 | N5: w=0.180382, R=2.3, U=9 | N6: w=0.17808, R=1.9, U=11 | N7: w=0.1, R=0.6, U=6 | N8: w=0.100417, R=0.6, U=4 | 
+Switching scoring mode to Makespan for the next segment.
+Penalty lambdas: cap=2.47341, energy=0.491644, deadline=1.69542
+=== End of Segment 72 ===
+Best Penalized Fallback Score: 10824.1 with makespan 10627.6
+Current Solution Score: 10603.4 with makespan 10247.4
+Current mode: Makespan
+Average normalized violations: cap=0.0036695, energy=0, deadline=0.0169903
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.32912, R=5.4, U=16 | N1: w=0.326894, R=6.4, U=20 | N2: w=0.223401, R=3.1, U=13 | N3: w=0.198768, R=2.4, U=14 | N4: w=0.138317, R=0.6, U=6 | N5: w=0.202934, R=2.8, U=16 | N6: w=0.176474, R=1.1, U=7 | N7: w=0.1, R=0.4, U=4 | N8: w=0.115292, R=0.6, U=4 | 
+No improvement in feasible makespan for 4 segments, applying perturbation. New makespan: 10974.2
+Penalty lambdas: cap=2.4578, energy=0.486752, deadline=1.70732
+=== End of Segment 73 ===
+Best Penalized Fallback Score: 10548.7 with makespan 10201.1
+Current Solution Score: 11041.7 with makespan 10606.9
+Current mode: Makespan
+Average normalized violations: cap=0.00752019, energy=0, deadline=0.0247225
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.331634, R=8, U=24 | N1: w=0.324826, R=6.4, U=22 | N2: w=0.227919, R=2.1, U=11 | N3: w=0.190566, R=2.6, U=10 | N4: w=0.126822, R=0.5, U=5 | N5: w=0.194554, R=1.9, U=9 | N6: w=0.170675, R=1.4, U=10 | N7: w=0.1, R=0.5, U=5 | N8: w=0.125704, R=0.4, U=4 | 
+Penalty lambdas: cap=2.45172, energy=0.481909, deadline=1.73264
+=== End of Segment 74 ===
+Best Penalized Fallback Score: 10553.3 with makespan 10201.1
+Current Solution Score: 11610.4 with makespan 11079.5
+Current mode: Makespan
+Average normalized violations: cap=0.0207573, energy=0, deadline=0.0220374
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.332144, R=5.6, U=18 | N1: w=0.314651, R=5.1, U=17 | N2: w=0.216816, R=1.9, U=9 | N3: w=0.211396, R=2.5, U=9 | N4: w=0.118775, R=1.4, U=8 | N5: w=0.199521, R=3.4, U=18 | N6: w=0.161472, R=0.7, U=7 | N7: w=0.1, R=0.6, U=6 | N8: w=0.117993, R=0.8, U=8 | 
+Switching scoring mode to Workload for the next segment.
+Penalty lambdas: cap=2.47823, energy=0.477114, deadline=1.75362
+=== End of Segment 75 ===
+Best Penalized Fallback Score: 14930.3 with makespan 10201.1
+Current Solution Score: 14793.3 with makespan 10713.4
+Current mode: Workload
+Average normalized violations: cap=0.00630433, energy=0, deadline=0.0124902
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.325834, R=5.8, U=16 | N1: w=0.310256, R=7.7, U=21 | N2: w=0.215105, R=3.2, U=12 | N3: w=0.231311, R=2.5, U=11 | N4: w=0.135643, R=1.2, U=8 | N5: w=0.196331, R=2, U=10 | N6: w=0.143031, R=2.5, U=9 | N7: w=0.1, R=0.5, U=5 | N8: w=0.112595, R=1.2, U=8 | 
+Switching scoring mode to Makespan for the next segment.
+Penalty lambdas: cap=2.46909, energy=0.472367, deadline=1.75799
+=== End of Segment 76 ===
+Best Penalized Fallback Score: 10986.2 with makespan 10713.4
+Current Solution Score: 10964.1 with makespan 10472.9
+Current mode: Makespan
+Average normalized violations: cap=0.00509031, energy=0, deadline=0.0215577
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.336834, R=5.3, U=17 | N1: w=0.327179, R=6.5, U=21 | N2: w=0.230573, R=1.6, U=10 | N3: w=0.230099, R=2.8, U=14 | N4: w=0.13995, R=0.7, U=7 | N5: w=0.197432, R=2.6, U=14 | N6: w=0.183455, R=1.4, U=8 | N7: w=0.1, R=0.5, U=5 | N8: w=0.123817, R=0.4, U=4 | 
+No improvement in feasible makespan for 4 segments, applying perturbation. New makespan: 10566.6
+Penalty lambdas: cap=2.457, energy=0.467666, deadline=1.77843
+=== End of Segment 77 ===
+Best Penalized Fallback Score: 10719.4 with makespan 10313
+Current Solution Score: 10997.2 with makespan 10419.9
+Current mode: Makespan
+Average normalized violations: cap=0.0248004, energy=0, deadline=0.0224182
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.329313, R=5.9, U=19 | N1: w=0.321882, R=4.5, U=13 | N2: w=0.209401, R=3, U=12 | N3: w=0.221069, R=2.8, U=12 | N4: w=0.127965, R=1.2, U=10 | N5: w=0.193917, R=3.1, U=11 | N6: w=0.180918, R=2.3, U=11 | N7: w=0.1, R=0.4, U=4 | N8: w=0.116672, R=0.8, U=8 | 
+Penalty lambdas: cap=2.49363, energy=0.463013, deadline=1.80065
+=== End of Segment 78 ===
+Best Penalized Fallback Score: 10678 with makespan 10210.9
+Current Solution Score: 11009.4 with makespan 10382
+Current mode: Makespan
+Average normalized violations: cap=0.0129569, energy=0, deadline=0.0189153
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.323677, R=7.1, U=21 | N1: w=0.329164, R=5.3, U=19 | N2: w=0.221581, R=2.2, U=12 | N3: w=0.224749, R=1.6, U=8 | N4: w=0.125575, R=0.9, U=5 | N5: w=0.220287, R=2, U=14 | N6: w=0.18937, R=0.9, U=5 | N7: w=0.1, R=1, U=10 | N8: w=0.11167, R=0.6, U=6 | 
+Switching scoring mode to Workload for the next segment.
+Penalty lambdas: cap=2.50102, energy=0.458406, deadline=1.81678
+=== End of Segment 79 ===
+Best Penalized Fallback Score: 15105.9 with makespan 10210.9
+Current Solution Score: 14776.8 with makespan 11140.2
+Current mode: Workload
+Average normalized violations: cap=0.00458674, energy=0, deadline=0.0119646
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.328002, R=6.5, U=17 | N1: w=0.314099, R=5.3, U=15 | N2: w=0.210107, R=3.8, U=12 | N3: w=0.217324, R=2.7, U=11 | N4: w=0.141903, R=1.6, U=12 | N5: w=0.197058, R=1.7, U=13 | N6: w=0.186559, R=2.9, U=9 | N7: w=0.1, R=0.7, U=7 | N8: w=0.108169, R=0.6, U=4 | 
+Switching scoring mode to Makespan for the next segment.
+Penalty lambdas: cap=2.48752, energy=0.453845, deadline=1.82035
+=== End of Segment 80 ===
+Best Penalized Fallback Score: 11300.6 with makespan 11140.2
+Current Solution Score: 11803.6 with makespan 10407.1
+Current mode: Makespan
+Average normalized violations: cap=0.0037244, energy=0, deadline=0.0155763
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.344308, R=5.8, U=20 | N1: w=0.325869, R=3.7, U=13 | N2: w=0.242075, R=2.4, U=12 | N3: w=0.225763, R=1.5, U=9 | N4: w=0.139332, R=1.9, U=13 | N5: w=0.177171, R=1.6, U=10 | N6: w=0.227258, R=1.7, U=11 | N7: w=0.1, R=0.7, U=7 | N8: w=0.120718, R=0.9, U=5 | 
+No improvement in feasible makespan for 4 segments, applying perturbation. New makespan: 10915.3
+Penalty lambdas: cap=2.47195, energy=0.449329, deadline=1.83053
+=== End of Segment 81 ===
+Best Penalized Fallback Score: 10513.1 with makespan 10245.7
+Current Solution Score: 12222.6 with makespan 10888.6
+Current mode: Makespan
+Average normalized violations: cap=0.0430501, energy=0, deadline=0.0253481
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.328015, R=4.7, U=11 | N1: w=0.313493, R=7.1, U=17 | N2: w=0.229452, R=4, U=14 | N3: w=0.208034, R=3.4, U=12 | N4: w=0.141379, R=1.5, U=9 | N5: w=0.17202, R=2.7, U=11 | N6: w=0.205444, R=3.7, U=13 | N7: w=0.1, R=0.6, U=6 | N8: w=0.138503, R=0.7, U=7 | 
+Penalty lambdas: cap=2.55502, energy=0.444858, deadline=1.85884
+=== End of Segment 82 ===
+Best Penalized Fallback Score: 10517.6 with makespan 10245.7
+Current Solution Score: 11512.5 with makespan 10354.8
+Current mode: Makespan
+Average normalized violations: cap=0.0192094, energy=0, deadline=0.021761
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.357793, R=4.9, U=15 | N1: w=0.344739, R=8.6, U=26 | N2: w=0.246331, R=3.7, U=11 | N3: w=0.230624, R=4.5, U=13 | N4: w=0.148965, R=0.8, U=4 | N5: w=0.19405, R=1.2, U=8 | N6: w=0.229196, R=2.2, U=12 | N7: w=0.1, R=0.5, U=5 | N8: w=0.126952, R=0.6, U=6 | 
+Switching scoring mode to Workload for the next segment.
+Penalty lambdas: cap=2.57866, energy=0.440432, deadline=1.88083
+=== End of Segment 83 ===
+Best Penalized Fallback Score: 14827.4 with makespan 10245.7
+Current Solution Score: 15222.3 with makespan 11333.4
+Current mode: Workload
+Average normalized violations: cap=0.00594854, energy=0, deadline=0.0102829
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.348455, R=4.9, U=13 | N1: w=0.340548, R=4.7, U=13 | N2: w=0.273341, R=4.7, U=15 | N3: w=0.265283, R=2.2, U=16 | N4: w=0.164275, R=0.9, U=7 | N5: w=0.180835, R=1.4, U=10 | N6: w=0.215437, R=2.3, U=13 | N7: w=0.1, R=0.8, U=8 | N8: w=0.118866, R=0.5, U=5 | 
+Switching scoring mode to Makespan for the next segment.
+Penalty lambdas: cap=2.56823, energy=0.436049, deadline=1.88136
+=== End of Segment 84 ===
+Best Penalized Fallback Score: 10520.8 with makespan 10245.7
+Current Solution Score: 11102.6 with makespan 10755.2
+Current mode: Makespan
+Average normalized violations: cap=0.00847895, energy=0, deadline=0.0162442
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.356995, R=5.7, U=17 | N1: w=0.346845, R=5.1, U=17 | N2: w=0.285338, R=3.2, U=12 | N3: w=0.226948, R=3, U=14 | N4: w=0.153564, R=1, U=8 | N5: w=0.168585, R=2.6, U=12 | N6: w=0.203883, R=1.2, U=6 | N7: w=0.1, R=0.5, U=5 | N8: w=0.113206, R=1.1, U=9 | 
+No improvement in feasible makespan for 4 segments, applying perturbation. New makespan: 10757
+Penalty lambdas: cap=2.56433, energy=0.431711, deadline=1.89315
+=== End of Segment 85 ===
+Best Penalized Fallback Score: 10522.3 with makespan 10245.7
+Current Solution Score: 10843.7 with makespan 10424.8
+Current mode: Makespan
+Average normalized violations: cap=0.012271, energy=0, deadline=0.017433
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.350485, R=7.1, U=21 | N1: w=0.332792, R=6.9, U=23 | N2: w=0.279737, R=3.9, U=13 | N3: w=0.223149, R=2.2, U=10 | N4: w=0.144995, R=0.8, U=6 | N5: w=0.183009, R=0.7, U=5 | N6: w=0.202718, R=2.1, U=9 | N7: w=0.1, R=0.6, U=6 | N8: w=0.115911, R=0.7, U=7 | 
+Penalty lambdas: cap=2.57016, energy=0.427415, deadline=1.90727
+=== End of Segment 86 ===
+Best Penalized Fallback Score: 10524.3 with makespan 10245.7
+Current Solution Score: 11523.7 with makespan 10695.5
+Current mode: Makespan
+Average normalized violations: cap=0.0231598, energy=0, deadline=0.0172144
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.346768, R=3.5, U=11 | N1: w=0.322954, R=4.7, U=15 | N2: w=0.285816, R=3.5, U=17 | N3: w=0.222205, R=2.4, U=10 | N4: w=0.141496, R=1.3, U=11 | N5: w=0.170106, R=2.2, U=10 | N6: w=0.211903, R=2.9, U=11 | N7: w=0.1, R=0.7, U=7 | N8: w=0.111138, R=0.8, U=8 | 
+Switching scoring mode to Workload for the next segment.
+Penalty lambdas: cap=2.6042, energy=0.423162, deadline=1.92108
+=== End of Segment 87 ===
+Best Penalized Fallback Score: 14835.4 with makespan 10245.7
+Current Solution Score: 15082.2 with makespan 10939
+Current mode: Workload
+Average normalized violations: cap=0.0042521, energy=0, deadline=0.0112353
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.338192, R=7.1, U=19 | N1: w=0.320068, R=5, U=12 | N2: w=0.261836, R=2.6, U=10 | N3: w=0.227543, R=2.3, U=9 | N4: w=0.134502, R=0.9, U=7 | N5: w=0.185075, R=2, U=10 | N6: w=0.227423, R=3, U=18 | N7: w=0.1, R=0.9, U=9 | N8: w=0.107796, R=0.6, U=6 | 
+Switching scoring mode to Makespan for the next segment.
+Penalty lambdas: cap=2.58928, energy=0.418952, deadline=1.92346
+=== End of Segment 88 ===
+Best Penalized Fallback Score: 11141.3 with makespan 10930.9
+Current Solution Score: 11107 with makespan 10646.4
+Current mode: Makespan
+Average normalized violations: cap=0.00758248, energy=0, deadline=0.0160022
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.34884, R=5.9, U=17 | N1: w=0.349048, R=6.6, U=22 | N2: w=0.261285, R=2.4, U=10 | N3: w=0.235947, R=2.4, U=16 | N4: w=0.132723, R=1.2, U=8 | N5: w=0.189552, R=1.9, U=9 | N6: w=0.209196, R=1.7, U=9 | N7: w=0.1, R=0.2, U=2 | N8: w=0.105458, R=0.9, U=7 | 
+No improvement in feasible makespan for 4 segments, applying perturbation. New makespan: 10983.1
+Penalty lambdas: cap=2.58303, energy=0.414783, deadline=1.93504
+=== End of Segment 89 ===
+Best Penalized Fallback Score: 10690.4 with makespan 10357.9
+Current Solution Score: 11687.2 with makespan 10834.1
+Current mode: Makespan
+Average normalized violations: cap=0.0264131, energy=0, deadline=0.0177581
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.348305, R=6.4, U=20 | N1: w=0.334333, R=4.9, U=15 | N2: w=0.2549, R=3.5, U=11 | N3: w=0.210163, R=2.8, U=12 | N4: w=0.137906, R=0.4, U=4 | N5: w=0.19602, R=1.9, U=9 | N6: w=0.203104, R=2, U=10 | N7: w=0.1, R=0.8, U=8 | N8: w=0.112392, R=1.1, U=11 | 
+Penalty lambdas: cap=2.62577, energy=0.410656, deadline=1.95011
+=== End of Segment 90 ===
+Best Penalized Fallback Score: 10693.6 with makespan 10357.9
+Current Solution Score: 11787.4 with makespan 10856.3
+Current mode: Makespan
+Average normalized violations: cap=0.0075296, energy=0, deadline=0.0162673
+Current Weights, Rewards and Count of neighborhoods: N0: w=0.339814, R=6.8, U=18 | N1: w=0.332033, R=7.9, U=25 | N2: w=0.273884, R=3, U=12 | N3: w=0.217114, R=2, U=12 | N4: w=0.126534, R=0.4, U=4 | N5: w=0.200547, R=1.4, U=8 | N6: w=0.202173, R=2.6, U=14 | N7: w=0.1, R=0.3, U=3 | N8: w=0.108674, R=0.4, U=4 | 
+Switching scoring mode to Workload for the next segment.
+Penalty lambdas: cap=2.61929, energy=0.40657, deadline=1.96237
+Segments per mode: Makespan 68, Workload 22
+Attempt 1 cost: 15179.979017
+Truck Routes:
+Truck 1: 0 7 59 29 89 99 62 10 44 25 80 32 90 5 96 0 94 69 76 52 39 93 78 36 86 67 91 0 27 65 98 45 33 95 26 56 12 0 70 8 72 0 |Truck Time: 15179.979017|15179.979017,0.000000,0.000000,0.000000
+Drone Routes:
+Drone 1: 0 43 13 74 61 0 30 20 51 75 0 88 63 0 97 19 23 81 0 47 42 46 17 14 100 0 54 58 38 31 9 0 18 34 0 11 16 4 82 0 84 60 0 73 79 0 24 15 0 66 6 77 0 28 92 0 1 21 0 22 71 35 48 0 37 41 0 64 50 0 57 0 85 0 87 0 2 0 40 0 55 0 53 0 49 0 68 0 83 0 3 0 |Drone Time: 14041.431406|14041.431406,0.000000,0.000000,0.000000
+Total validation: Makespan=15179.979017, Deadline violation=0.000000, Energy violation=0.000000, Capacity violation=0.000000
+
+=== Best Across Attempts (top 1/1) ===
+Initial Solution Cost: 15179.979017
+Improved Solution Cost: 15179.979017
+Worst Solution Cost (top-1): 15179.979017
+Mean Solution Cost (top-1): 15179.979017
+Mean elapsed Time: 198.904621 seconds
+Truck Routes:
+Truck 1: 0 7 59 29 89 99 62 10 44 25 80 32 90 5 96 0 94 69 76 52 39 93 78 36 86 67 91 0 27 65 98 45 33 95 26 56 12 0 70 8 72 0 |Truck Time: 15179.979017|15179.979017,0.000000,0.000000,0.000000
+Drone Routes:
+Drone 1: 0 43 13 74 61 0 30 20 51 75 0 88 63 0 97 19 23 81 0 47 42 46 17 14 100 0 54 58 38 31 9 0 18 34 0 11 16 4 82 0 84 60 0 73 79 0 24 15 0 66 6 77 0 28 92 0 1 21 0 22 71 35 48 0 37 41 0 64 50 0 57 0 85 0 87 0 2 0 40 0 55 0 53 0 49 0 68 0 83 0 3 0 |Drone Time: 14041.431406|14041.431406,0.000000,0.000000,0.000000
+Total validation: Makespan=15179.979017, Deadline violation=0.000000, Energy violation=0.000000, Capacity violation=0.000000
+Final solution feasibility: FEASIBLE
+Best solution written to output_solution_best.txt
+Iteration data written to output_mode_0.txt

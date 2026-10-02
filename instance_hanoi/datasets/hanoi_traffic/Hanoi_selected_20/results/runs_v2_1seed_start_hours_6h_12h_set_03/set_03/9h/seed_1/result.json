@@ -1,0 +1,20 @@
+{
+  "dataset": "set_03",
+  "start_hour": 9,
+  "seed": 1,
+  "status": "complete",
+  "return_code": 0,
+  "started_at": "2026-10-01T03:16:30.311273+00:00",
+  "finished_at": "2026-10-01T03:19:50.661584+00:00",
+  "wall_time_s": 200.34669,
+  "max_iterations": 9000,
+  "segment_iterations": 100,
+  "time_limit_s": 1800,
+  "solution_path": "/Users/huetran/Tu_paper_HueRepo/instance_hanoi/datasets/hanoi_traffic/Hanoi_9_2026/weekday_13segments/runs_v2_1seed_start_hours_6h_12h_three_instances/set_03/9h/seed_1/output_solution_best.txt",
+  "initial_makespan_s": 16072.547899,
+  "improved_makespan_s": 14544.565162,
+  "worst_makespan_s": 14544.565162,
+  "mean_makespan_s": 14544.565162,
+  "solver_elapsed_s": 200.221047,
+  "feasibility": "FEASIBLE"
+}

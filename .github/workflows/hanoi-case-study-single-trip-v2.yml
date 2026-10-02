@@ -1,4 +1,4 @@
-name: Hanoi case study - 33 instances - single trip
+name: Hanoi case study - 20 selected instances - single trip
 
 on:
   workflow_dispatch:
@@ -17,7 +17,7 @@ env:
 
 jobs:
   prepare:
-    name: Validate 33 instances and build single-trip solver
+    name: Validate 20 selected instances and build single-trip solver
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
@@ -44,14 +44,14 @@ jobs:
           g++ -O3 -std=c++20 src_v2/tabubu_HanoiTraffic_v2.cpp \
             -o build/hanoi_case_single_trip/tabubu_HanoiTraffic_v2
 
-      - name: Build balanced 250-job matrix for 3960 ST runs
+      - name: Build balanced 250-job matrix for 2400 ST runs
         id: matrix
         shell: bash
         run: |
           set -euo pipefail
           matrix="$(python3 scripts/hanoi_case_study_33_cloud.py single-trip-matrix)"
           printf 'matrix=%s\n' "$matrix" >> "$GITHUB_OUTPUT"
-          python3 -c 'import collections,json,sys; m=json.loads(sys.argv[1]); c=collections.Counter(x["task_count"] for x in m["include"]); assert len(m["include"])==250; assert sum(x["task_count"] for x in m["include"])==3960; assert c=={16:210,15:40}' "$matrix"
+          python3 -c 'import collections,json,sys; m=json.loads(sys.argv[1]); c=collections.Counter(x["task_count"] for x in m["include"]); assert len(m["include"])==250; assert sum(x["task_count"] for x in m["include"])==2400; assert c=={10:150,9:100}' "$matrix"
 
       - name: Smoke test single-trip constraint with 12 traffic segments
         shell: bash
@@ -62,10 +62,10 @@ jobs:
           python3 scripts/hanoi_case_study_33_cloud.py build-dataset-profiles \
             --profile-root "$SPEED_PROFILE_ROOT" \
             --work-root "$work/profiles" \
-            --dataset set_01
-          speed="$work/profiles/set_01/weekday.v_ijl_kph.txt"
+            --dataset set_03
+          speed="$work/profiles/set_03/weekday.v_ijl_kph.txt"
           test "$(grep -vc '^#' "$speed")" -eq 122412
-          stem="$root/instance_hanoi/datasets/hanoi_traffic/Hanoi_9_2026/weekday_13segments/hanoi_10x10_100_weekday"
+          stem="$root/instance_hanoi/datasets/hanoi_traffic/Hanoi_selected_20/set_03/hanoi_10x10_100_set_03_weekday"
           mkdir "$work/solve"
           cd "$work/solve"
           "$root/build/hanoi_case_single_trip/tabubu_HanoiTraffic_v2" "$stem.txt" \
@@ -80,7 +80,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: hanoi-case-33-single-trip-solver
+          name: hanoi-case-20-single-trip-solver
           path: build/hanoi_case_single_trip/tabubu_HanoiTraffic_v2
           if-no-files-found: error
           retention-days: 2
@@ -99,7 +99,7 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: hanoi-case-33-single-trip-solver
+          name: hanoi-case-20-single-trip-solver
           path: build/hanoi_case_single_trip
 
       - name: Run single-trip AMSTS tasks
@@ -121,13 +121,13 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: hanoi-case-33-${{ matrix.batch_id }}
+          name: hanoi-case-20-${{ matrix.batch_id }}
           path: result/
           if-no-files-found: warn
           retention-days: 90
 
   aggregate:
-    name: Aggregate all 3960 single-trip runs
+    name: Aggregate all 2400 single-trip runs
     needs: solve
     if: always()
     runs-on: ubuntu-latest
@@ -140,20 +140,20 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          pattern: hanoi-case-33-single-trip-batch*
+          pattern: hanoi-case-20-single-trip-batch*
           path: collected_results
 
       - name: Build consolidated ST workbook
         run: |
           python3 scripts/hanoi_case_study_33_cloud.py aggregate-single-trip \
             --input-root collected_results \
-            --output hanoi_case_33_single_trip/hanoi_case_33_single_trip_results.xlsx
+            --output hanoi_case_20_single_trip/hanoi_case_20_single_trip_results.xlsx
 
       - name: Upload consolidated ST results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: hanoi-case-33-single-trip-results
-          path: hanoi_case_33_single_trip/
+          name: hanoi-case-20-single-trip-results
+          path: hanoi_case_20_single_trip/
           if-no-files-found: warn
           retention-days: 90

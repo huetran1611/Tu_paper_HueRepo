@@ -1,6 +1,11 @@
 name: Hanoi 20 selected - Saturday Sunday - departure 7h to 10h
 
 on:
+  push:
+    branches:
+      - test_hanoi
+    paths:
+      - .github/workflows/hanoi-20-weekend-departure-10seeds.yml
   workflow_dispatch:
     inputs:
       max_parallel:
@@ -33,9 +38,9 @@ jobs:
       - uses: actions/checkout@v5
       - name: Validate inputs and data
         env:
-          MAX_PARALLEL: ${{ inputs.max_parallel }}
-          TIME_LIMIT: ${{ inputs.time_limit_seconds }}
-          SEGMENT_ITERS: ${{ inputs.segment_iterations }}
+          MAX_PARALLEL: ${{ inputs.max_parallel || '40' }}
+          TIME_LIMIT: ${{ inputs.time_limit_seconds || '1800' }}
+          SEGMENT_ITERS: ${{ inputs.segment_iterations || '100' }}
         run: |
           set -euo pipefail
           [[ "$MAX_PARALLEL" =~ ^[1-9][0-9]*$ ]]
@@ -87,7 +92,7 @@ jobs:
     timeout-minutes: 300
     strategy:
       fail-fast: false
-      max-parallel: ${{ fromJSON(inputs.max_parallel) }}
+      max-parallel: ${{ fromJSON(inputs.max_parallel || '40') }}
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v5
@@ -99,8 +104,8 @@ jobs:
         env:
           TASKS_JSON: ${{ matrix.tasks_json }}
           BATCH_ID: ${{ matrix.batch_id }}
-          TIME_LIMIT: ${{ inputs.time_limit_seconds }}
-          SEGMENT_ITERS: ${{ inputs.segment_iterations }}
+          TIME_LIMIT: ${{ inputs.time_limit_seconds || '1800' }}
+          SEGMENT_ITERS: ${{ inputs.segment_iterations || '100' }}
         run: |
           set -euo pipefail
           chmod +x build/hanoi_weekend/tabubu_HanoiTraffic_v2

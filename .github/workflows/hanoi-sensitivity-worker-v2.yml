@@ -1,0 +1,103 @@
+name: Hanoi sensitivity worker
+
+on:
+  workflow_call:
+    inputs:
+      freshness_scale:
+        type: string
+        required: true
+      max_parallel:
+        type: number
+        default: 12
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  SPEED_PROFILE_ROOT: instance_hanoi/datasets/hanoi_traffic/experiment_speed_profiles
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Validate data
+        run: python3 scripts/hanoi_case_study_33_cloud.py validate-data --profile-root "$SPEED_PROFILE_ROOT"
+      - name: Build solver
+        run: |
+          mkdir -p build/hanoi_sensitivity
+          g++ -O3 -std=c++20 src_v2/tabubu_HanoiTraffic_v2.cpp -o build/hanoi_sensitivity/solver
+      - name: Build matrix
+        id: matrix
+        run: |
+          matrix="$(python3 scripts/hanoi_sensitivity.py matrix)"
+          printf 'matrix=%s\n' "$matrix" >> "$GITHUB_OUTPUT"
+          python3 -c 'import json,sys; m=json.loads(sys.argv[1])["include"]; assert len(m)==250; assert sum(x["task_count"] for x in m)==3600; assert max(x["task_count"] for x in m)<=15' "$matrix"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-sensitivity-solver-${{ inputs.freshness_scale }}
+          path: build/hanoi_sensitivity/solver
+          retention-days: 2
+          if-no-files-found: error
+
+  solve:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ inputs.max_parallel }}
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: hanoi-sensitivity-solver-${{ inputs.freshness_scale }}
+          path: build/hanoi_sensitivity
+      - name: Optimize and replay
+        env:
+          TASKS_JSON: ${{ matrix.tasks_json }}
+          FRESHNESS_SCALE: ${{ inputs.freshness_scale }}
+        run: |
+          chmod +x build/hanoi_sensitivity/solver
+          python3 scripts/hanoi_sensitivity.py run-batch \
+            --binary build/hanoi_sensitivity/solver \
+            --profile-root "$SPEED_PROFILE_ROOT" \
+            --work-root "$RUNNER_TEMP/sensitivity_profiles" \
+            --scale "$FRESHNESS_SCALE" --tasks-json "$TASKS_JSON" --output result
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hanoi-sensitivity-${{ inputs.freshness_scale }}-${{ matrix.batch_id }}
+          path: result/
+          retention-days: 90
+          if-no-files-found: warn
+
+  aggregate:
+    needs: solve
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - run: python3 -m pip install --disable-pip-version-check openpyxl
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: hanoi-sensitivity-${{ inputs.freshness_scale }}-sensitivity-batch*
+          path: collected_results
+      - name: Aggregate and check completeness
+        env:
+          FRESHNESS_SCALE: ${{ inputs.freshness_scale }}
+        run: |
+          python3 scripts/hanoi_sensitivity.py aggregate --input-root collected_results \
+            --scale "$FRESHNESS_SCALE" --output sensitivity_results/scale_${FRESHNESS_SCALE}.xlsx
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hanoi-sensitivity-summary-${{ inputs.freshness_scale }}
+          path: sensitivity_results/
+          retention-days: 90
+          if-no-files-found: warn

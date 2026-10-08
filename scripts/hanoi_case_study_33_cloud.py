@@ -111,11 +111,14 @@ def speed_path(work_root: Path, dataset: str, label: str) -> Path:
 
 
 def build_dataset_profiles(
-    repo: Path, profile_root: Path, work_root: Path, dataset: str
+    repo: Path, profile_root: Path, work_root: Path, dataset: str,
+    aggregation: str = "arithmetic",
 ) -> None:
     marker = work_root / dataset / "complete.json"
     if marker.is_file():
-        return
+        metadata = json.loads(marker.read_text(encoding="utf-8"))
+        if metadata.get("aggregation", "arithmetic") == aggregation:
+            return
     paths = source_paths(repo, dataset)
     for path in paths.values():
         if not path.is_file():
@@ -134,13 +137,20 @@ def build_dataset_profiles(
         for profile in PROFILES
     }
     p1_handle = speed_path(work_root, dataset, "P1").open("w", encoding="utf-8")
+    p0_handle = (
+        speed_path(work_root, dataset, "P0").open("w", encoding="utf-8")
+        if aggregation == "harmonic" else None
+    )
     total_speed = 0.0
     total_count = 0
     try:
         for handle in [*handles.values(), p1_handle]:
             handle.write("# i j hour v_ijl_kph; hours 6..17, 18h exclusive\n")
+        if p0_handle is not None:
+            p0_handle.write("# arc-wise harmonic speed across days/hours; 18h exclusive\n")
         for i in range(101):
             for j in range(101):
+                edge_values = []
                 for segment, hour in enumerate(TRAFFIC_HOURS):
                     values = {
                         profile: edge_speed(
@@ -148,19 +158,52 @@ def build_dataset_profiles(
                         )
                         for profile in PROFILES
                     }
+                    if any(value <= 0 for value in values.values()):
+                        raise ValueError(f"Nonpositive speed for {dataset}, {i}, {j}, {hour}")
+                    edge_values.extend(values.values())
                     for profile, value in values.items():
                         handles[profile].write(f"{i} {j} {hour} {value:.6f}\n")
-                    p1_handle.write(
-                        f"{i} {j} {hour} {statistics.fmean(values.values()):.6f}\n"
+                    p1_speed = (
+                        statistics.harmonic_mean(values.values())
+                        if aggregation == "harmonic" else statistics.fmean(values.values())
                     )
+                    p1_handle.write(f"{i} {j} {hour} {p1_speed:.6f}\n")
                     total_speed += sum(values.values())
                     total_count += len(values)
+                if p0_handle is not None:
+                    # Pool days/hours for this arc, preserving spatial variation.
+                    p0_speed = statistics.harmonic_mean(edge_values)
+                    for hour in TRAFFIC_HOURS:
+                        p0_handle.write(f"{i} {j} {hour} {p0_speed:.6f}\n")
     finally:
         for handle in handles.values():
             handle.close()
         p1_handle.close()
+        if p0_handle is not None:
+            p0_handle.close()
 
     p0_speed = total_speed / total_count
+    if aggregation == "arithmetic":
+        write_static_profile(work_root, dataset, p0_speed)
+    marker.write_text(
+        json.dumps(
+            {
+                "dataset": dataset,
+                "traffic_hours": list(TRAFFIC_HOURS),
+                "aggregation": aggregation,
+                "speed_representation": "arc speeds derived from endpoint road profiles",
+                "p0_static_speed_kph": p0_speed if aggregation == "arithmetic" else None,
+                "p0": "arc-wise harmonic across days/hours" if aggregation == "harmonic" else "global arithmetic mean",
+                "p1": f"edge/hour {aggregation} mean across weekday, Saturday, Sunday",
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def write_static_profile(work_root: Path, dataset: str, p0_speed: float) -> None:
     with speed_path(work_root, dataset, "P0").open("w", encoding="utf-8") as stream:
         stream.write(
             f"# i j hour v_ijl_kph; static mean={p0_speed:.6f}; "
@@ -170,19 +213,6 @@ def build_dataset_profiles(
             for j in range(101):
                 for hour in TRAFFIC_HOURS:
                     stream.write(f"{i} {j} {hour} {p0_speed:.6f}\n")
-    marker.write_text(
-        json.dumps(
-            {
-                "dataset": dataset,
-                "traffic_hours": list(TRAFFIC_HOURS),
-                "p0_static_speed_kph": p0_speed,
-                "p1": "edge/hour mean across weekday, Saturday, Sunday",
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
 
 
 def validate_data(repo: Path, profile_root: Path) -> None:
@@ -262,8 +292,21 @@ def expand_task(values: list[object]) -> dict[str, object]:
     }
 
 
-def build_matrix() -> dict[str, list[dict[str, object]]]:
+def build_matrix(policy: str | None = None) -> dict[str, list[dict[str, object]]]:
     queues = policy_tasks()
+    if policy is not None:
+        tasks = queues[policy]
+        # The separate P0/P1 workflows share 250 batches of four optimizations.
+        batch_size = 4
+        return {"include": [
+            {
+                "batch_id": f"{policy.lower()}-batch{index // batch_size + 1:03d}",
+                "task_count": len(tasks[index:index + batch_size]),
+                "replay_count": len(tasks[index:index + batch_size]) * (12 if policy == "P0" else 3),
+                "tasks_json": json.dumps([compact_task(task) for task in tasks[index:index + batch_size]], separators=(",", ":")),
+            }
+            for index in range(0, len(tasks), batch_size)
+        ]}
     cursors = defaultdict(int)
     # (number of jobs, P0, P1, P2) gives 250 jobs and 3,400 runs.
     specifications = ((100, 1, 3, 10), (50, 1, 4, 9), (50, 1, 3, 9), (50, 0, 3, 10))
@@ -439,6 +482,11 @@ def solver_command(
     speed: Path,
     start_hour: int,
     seed: int | None = None,
+    *,
+    iterations: int | None = None,
+    segment_iterations: int | None = None,
+    time_limit: int | None = None,
+    auto_tune: bool = True,
 ) -> list[str]:
     command = [
         str(binary),
@@ -452,13 +500,14 @@ def solver_command(
         command.extend(
             [
                 "--attempts=1",
-                f"--iters={MAX_ITERATIONS}",
-                f"--segment-iters={SEGMENT_ITERATIONS}",
-                f"--time-limit={TIME_LIMIT_SECONDS}",
+                f"--iters={iterations if iterations is not None else MAX_ITERATIONS}",
+                f"--segment-iters={segment_iterations if segment_iterations is not None else SEGMENT_ITERATIONS}",
+                f"--time-limit={time_limit if time_limit is not None else TIME_LIMIT_SECONDS}",
                 f"--seed={seed}",
-                "--auto-tune",
             ]
         )
+        if auto_tune:
+            command.append("--auto-tune")
     return command
 
 
@@ -529,13 +578,28 @@ def run_batch(
     work_root: Path,
     tasks: list[dict[str, object]],
     output: Path,
+    aggregation: str = "arithmetic",
+    iterations: int | None = None,
+    segment_iterations: int | None = None,
+    time_limit: int | None = None,
 ) -> None:
+    iterations = MAX_ITERATIONS if iterations is None else iterations
+    segment_iterations = SEGMENT_ITERATIONS if segment_iterations is None else segment_iterations
+    time_limit = TIME_LIMIT_SECONDS if time_limit is None else time_limit
+    if min(iterations, segment_iterations, time_limit) <= 0:
+        raise ValueError("Search budgets must be positive")
     output.mkdir(parents=True, exist_ok=True)
     optimization_rows: list[dict[str, object]] = []
     evaluation_rows: list[dict[str, object]] = []
     failures = []
     for dataset in sorted({str(task["dataset"]) for task in tasks}):
-        build_dataset_profiles(repo, profile_root, work_root, dataset)
+        build_dataset_profiles(repo, profile_root, work_root, dataset, aggregation)
+    (output / "experiment_config.json").write_text(
+        json.dumps({"aggregation": aggregation, "iterations": iterations,
+                    "segment_iterations": segment_iterations, "time_limit_seconds": time_limit,
+                    "auto_tune": aggregation != "harmonic", "tasks": tasks}, indent=2) + "\n",
+        encoding="utf-8",
+    )
 
     for position, task in enumerate(tasks, start=1):
         policy = str(task["policy"])
@@ -550,11 +614,16 @@ def run_batch(
         speed = speed_path(work_root, dataset, speed_label)
         print(f"[{position}/{len(tasks)}] optimizing {task_id}", flush=True)
         try:
+            command = solver_command(
+                binary, source, speed, hour, seed,
+                iterations=iterations, segment_iterations=segment_iterations,
+                time_limit=time_limit, auto_tune=aggregation != "harmonic",
+            )
             _, elapsed, _ = run_command(
-                solver_command(binary, source, speed, hour, seed),
+                command,
                 task_dir,
                 task_dir / "solver.log",
-                TIME_LIMIT_SECONDS + 120,
+                time_limit + 120,
                 (0,),
             )
             solution = task_dir / "output_solution_best.txt"
@@ -602,20 +671,21 @@ def run_batch(
                 )
                 cases = ()
             for profile, replay_hour in cases:
-                evaluation_rows.append(
-                    evaluate_solution(
-                        binary,
-                        source,
-                        speed_path(work_root, dataset, profile),
-                        saved_solution,
-                        policy,
-                        dataset,
-                        profile,
-                        replay_hour,
-                        seed,
-                        task_dir / "replays" / profile / f"{replay_hour:02d}h",
-                    )
+                evaluated = evaluate_solution(
+                    binary,
+                    source,
+                    speed_path(work_root, dataset, profile),
+                    saved_solution,
+                    policy,
+                    dataset,
+                    profile,
+                    replay_hour,
+                    seed,
+                    task_dir / "replays" / profile / f"{replay_hour:02d}h",
                 )
+                if aggregation == "harmonic" and evaluated["feasibility"] != "FEASIBLE":
+                    evaluated["realized_makespan_s"] = None
+                evaluation_rows.append(evaluated)
                 write_csv(output / "evaluation_results.csv", evaluation_rows)
             write_csv(output / "evaluation_results.csv", evaluation_rows)
         except Exception as error:
@@ -735,13 +805,15 @@ def read_unique_rows(input_root: Path, filename: str, key: str) -> list[dict[str
     return list(unique.values())
 
 
-def aggregate(input_root: Path, output: Path) -> None:
+def aggregate(input_root: Path, output: Path, policy: str | None = None) -> None:
     from openpyxl import Workbook
 
     optimization = read_unique_rows(input_root, "optimization_results.csv", "task_id")
     evaluations = read_unique_rows(input_root, "evaluation_results.csv", "evaluation_id")
     optimization.sort(key=lambda row: row["task_id"])
     evaluations.sort(key=lambda row: row["evaluation_id"])
+    if policy and any(row["policy"] != policy for row in [*optimization, *evaluations]):
+        raise SystemExit(f"Unexpected policy in {policy} results")
 
     p2_by_case = {
         (row["dataset"], row["actual_profile"], row["start_hour"], row["seed"]): row
@@ -793,10 +865,19 @@ def aggregate(input_root: Path, output: Path) -> None:
                 "final_solution_text": path.read_text(encoding="utf-8", errors="replace")[:32767],
             }
         )
+    expected_tasks = policy_tasks()[policy] if policy else [task for tasks in policy_tasks().values() for task in tasks]
+    expected_evaluations = INSTANCE_COUNT * 120 if policy else INSTANCE_COUNT * 360
+    expected_evaluation_ids = {
+        f"{p}-{dataset}-{profile}-{hour:02d}h-seed{seed:02d}"
+        for p in ((policy,) if policy else ("P0", "P1", "P2"))
+        for dataset in DATASETS for profile in PROFILES for hour in START_HOURS for seed in SEEDS
+    }
     validation = [
-        {"item": "optimization_runs", "found": len(optimization), "expected": INSTANCE_COUNT * 170},
-        {"item": "realized_evaluations", "found": len(evaluations), "expected": INSTANCE_COUNT * 360},
-        {"item": "saved_final_solutions", "found": len(solution_rows), "expected": INSTANCE_COUNT * 170},
+        {"item": "optimization_runs", "found": len(optimization), "expected": len(expected_tasks)},
+        {"item": "realized_evaluations", "found": len(evaluations), "expected": expected_evaluations},
+        {"item": "saved_final_solutions", "found": len(solution_rows), "expected": len(expected_tasks)},
+        {"item": "expected_task_ids", "found": len({row['task_id'] for row in optimization} & {str(task['task_id']) for task in expected_tasks}), "expected": len(expected_tasks)},
+        {"item": "expected_evaluation_ids", "found": len({row['evaluation_id'] for row in evaluations} & expected_evaluation_ids), "expected": expected_evaluations},
     ]
     output.parent.mkdir(parents=True, exist_ok=True)
     workbook = Workbook()
@@ -872,7 +953,8 @@ def aggregate_single_trip(input_root: Path, output: Path) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command", required=True)
-    subparsers.add_parser("matrix")
+    matrix_parser = subparsers.add_parser("matrix")
+    matrix_parser.add_argument("--policy", choices=("P0", "P1"))
     subparsers.add_parser("single-trip-matrix")
     validate = subparsers.add_parser("validate-data")
     validate.add_argument("--repo", type=Path, default=Path.cwd())
@@ -882,6 +964,7 @@ def main() -> None:
     build.add_argument("--profile-root", type=Path, required=True)
     build.add_argument("--work-root", type=Path, required=True)
     build.add_argument("--dataset", required=True, choices=DATASETS)
+    build.add_argument("--aggregation", choices=("arithmetic", "harmonic"), default="arithmetic")
     run = subparsers.add_parser("run-batch")
     run.add_argument("--repo", type=Path, default=Path.cwd())
     run.add_argument("--binary", type=Path, required=True)
@@ -889,6 +972,10 @@ def main() -> None:
     run.add_argument("--work-root", type=Path, required=True)
     run.add_argument("--tasks-json", required=True)
     run.add_argument("--output", type=Path, required=True)
+    run.add_argument("--aggregation", choices=("arithmetic", "harmonic"), default="arithmetic")
+    run.add_argument("--iterations", type=int, default=MAX_ITERATIONS)
+    run.add_argument("--segment-iters", type=int, default=SEGMENT_ITERATIONS)
+    run.add_argument("--time-limit", type=int, default=TIME_LIMIT_SECONDS)
     run_st = subparsers.add_parser("run-single-trip-batch")
     run_st.add_argument("--repo", type=Path, default=Path.cwd())
     run_st.add_argument("--binary", type=Path, required=True)
@@ -899,20 +986,21 @@ def main() -> None:
     aggregate_parser = subparsers.add_parser("aggregate")
     aggregate_parser.add_argument("--input-root", type=Path, required=True)
     aggregate_parser.add_argument("--output", type=Path, required=True)
+    aggregate_parser.add_argument("--policy", choices=("P0", "P1"))
     aggregate_st = subparsers.add_parser("aggregate-single-trip")
     aggregate_st.add_argument("--input-root", type=Path, required=True)
     aggregate_st.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
 
     if args.command == "matrix":
-        print(json.dumps(build_matrix(), separators=(",", ":")))
+        print(json.dumps(build_matrix(args.policy), separators=(",", ":")))
     elif args.command == "single-trip-matrix":
         print(json.dumps(build_single_trip_matrix(), separators=(",", ":")))
     elif args.command == "validate-data":
         validate_data(args.repo.resolve(), args.profile_root.resolve())
     elif args.command == "build-dataset-profiles":
         build_dataset_profiles(
-            args.repo.resolve(), args.profile_root.resolve(), args.work_root.resolve(), args.dataset
+            args.repo.resolve(), args.profile_root.resolve(), args.work_root.resolve(), args.dataset, args.aggregation
         )
     elif args.command == "run-batch":
         run_batch(
@@ -922,6 +1010,10 @@ def main() -> None:
             args.work_root.resolve(),
             [expand_task(task) for task in json.loads(args.tasks_json)],
             args.output.resolve(),
+            args.aggregation,
+            args.iterations,
+            args.segment_iters,
+            args.time_limit,
         )
     elif args.command == "run-single-trip-batch":
         run_single_trip_batch(
@@ -935,7 +1027,7 @@ def main() -> None:
     elif args.command == "aggregate-single-trip":
         aggregate_single_trip(args.input_root.resolve(), args.output.resolve())
     else:
-        aggregate(args.input_root.resolve(), args.output.resolve())
+        aggregate(args.input_root.resolve(), args.output.resolve(), args.policy)
 
 
 if __name__ == "__main__":

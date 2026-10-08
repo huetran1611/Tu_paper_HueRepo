@@ -1,0 +1,123 @@
+name: Hanoi 20 selected - P2 matched harmonic budget
+
+on:
+  push:
+    branches:
+      - test_hanoi
+    paths:
+      - .github/workflows/hanoi-p2-matched-v2.yml
+  workflow_dispatch:
+    inputs:
+      max_parallel:
+        description: "Maximum concurrent jobs (1 to 40)"
+        required: true
+        default: "20"
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  SPEED_PROFILE_ROOT: instance_hanoi/datasets/hanoi_traffic/experiment_speed_profiles
+  MAX_ITERATIONS: "9000"
+  SEGMENT_ITERATIONS: "100"
+  TIME_LIMIT_SECONDS: "1200"
+
+jobs:
+  prepare:
+    name: Validate data and build P2 solver
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Validate input data and concurrency
+        env:
+          MAX_PARALLEL: ${{ inputs.max_parallel || '20' }}
+        run: |
+          set -euo pipefail
+          [[ "$MAX_PARALLEL" =~ ^[1-9][0-9]*$ ]]
+          test "$MAX_PARALLEL" -le 40
+          python3 scripts/hanoi_case_study_33_cloud.py validate-data --profile-root "$SPEED_PROFILE_ROOT"
+      - name: Build V2 Hanoi solver
+        run: |
+          mkdir -p build/hanoi_p2
+          g++ -O3 -std=c++20 src_v2/tabubu_HanoiTraffic_v2.cpp -o build/hanoi_p2/tabubu_HanoiTraffic_v2
+      - name: Build 240-job P2 matrix
+        id: matrix
+        run: |
+          set -euo pipefail
+          matrix="$(python3 scripts/hanoi_case_study_33_cloud.py matrix --policy P2)"
+          python3 -c 'import json,sys; m=json.loads(sys.argv[1]); assert len(m["include"])==240; assert all(j["task_count"]==10 and j["replay_count"]==0 for j in m["include"]); assert sum(j["task_count"] for j in m["include"])==2400' "$matrix"
+          printf 'matrix=%s\n' "$matrix" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-p2-matched-solver
+          path: build/hanoi_p2/tabubu_HanoiTraffic_v2
+          if-no-files-found: error
+          retention-days: 2
+
+  solve:
+    name: ${{ matrix.batch_id }} | ${{ matrix.task_count }} optimize
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJSON(inputs.max_parallel || '20') }}
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: hanoi-p2-matched-solver
+          path: build/hanoi_p2
+      - name: Optimize P2 using actual day-specific traffic
+        env:
+          TASKS_JSON: ${{ matrix.tasks_json }}
+        run: |
+          set -euo pipefail
+          chmod +x build/hanoi_p2/tabubu_HanoiTraffic_v2
+          python3 scripts/hanoi_case_study_33_cloud.py run-batch \
+            --binary build/hanoi_p2/tabubu_HanoiTraffic_v2 \
+            --profile-root "$SPEED_PROFILE_ROOT" \
+            --work-root "$RUNNER_TEMP/hanoi_p2_matched_profiles" \
+            --aggregation harmonic --tasks-json "$TASKS_JSON" \
+            --iterations "$MAX_ITERATIONS" --segment-iters "$SEGMENT_ITERATIONS" \
+            --time-limit "$TIME_LIMIT_SECONDS" --output result
+      - name: Upload logs, final solutions, and evaluations
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-p2-matched-${{ matrix.batch_id }}
+          path: result/
+          if-no-files-found: error
+          retention-days: 90
+
+  aggregate:
+    name: Aggregate P2 (2400 optimizations and evaluations)
+    needs: solve
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install Excel dependency
+        run: python3 -m pip install --disable-pip-version-check openpyxl
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: hanoi-p2-matched-p2-batch*
+          path: collected_results
+      - name: Build P2 workbook and check completeness
+        run: |
+          python3 scripts/hanoi_case_study_33_cloud.py aggregate \
+            --policy P2 --input-root collected_results \
+            --output hanoi_p2/hanoi_20_p2_matched_results.xlsx
+      - name: Upload P2 workbook
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-p2-matched-results
+          path: hanoi_p2/
+          if-no-files-found: error
+          retention-days: 90

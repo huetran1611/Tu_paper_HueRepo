@@ -296,13 +296,13 @@ def build_matrix(policy: str | None = None) -> dict[str, list[dict[str, object]]
     queues = policy_tasks()
     if policy is not None:
         tasks = queues[policy]
-        # The separate P0/P1 workflows share 250 batches of four optimizations.
-        batch_size = 4
+        # P2 has no cross-profile replays and fits in 240 batches of ten solves.
+        batch_size = 10 if policy == "P2" else 4
         return {"include": [
             {
                 "batch_id": f"{policy.lower()}-batch{index // batch_size + 1:03d}",
                 "task_count": len(tasks[index:index + batch_size]),
-                "replay_count": len(tasks[index:index + batch_size]) * (12 if policy == "P0" else 3),
+                "replay_count": len(tasks[index:index + batch_size]) * {"P0": 12, "P1": 3, "P2": 0}[policy],
                 "tasks_json": json.dumps([compact_task(task) for task in tasks[index:index + batch_size]], separators=(",", ":")),
             }
             for index in range(0, len(tasks), batch_size)
@@ -954,7 +954,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command", required=True)
     matrix_parser = subparsers.add_parser("matrix")
-    matrix_parser.add_argument("--policy", choices=("P0", "P1"))
+    matrix_parser.add_argument("--policy", choices=("P0", "P1", "P2"))
     subparsers.add_parser("single-trip-matrix")
     validate = subparsers.add_parser("validate-data")
     validate.add_argument("--repo", type=Path, default=Path.cwd())
@@ -986,7 +986,7 @@ def main() -> None:
     aggregate_parser = subparsers.add_parser("aggregate")
     aggregate_parser.add_argument("--input-root", type=Path, required=True)
     aggregate_parser.add_argument("--output", type=Path, required=True)
-    aggregate_parser.add_argument("--policy", choices=("P0", "P1"))
+    aggregate_parser.add_argument("--policy", choices=("P0", "P1", "P2"))
     aggregate_st = subparsers.add_parser("aggregate-single-trip")
     aggregate_st.add_argument("--input-root", type=Path, required=True)
     aggregate_st.add_argument("--output", type=Path, required=True)

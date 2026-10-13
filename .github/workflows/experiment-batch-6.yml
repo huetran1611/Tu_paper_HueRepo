@@ -1,0 +1,19 @@
+name: Experiment 6/7 - 30 trip/capacity + 220 vehicle sweep
+
+on:
+  workflow_dispatch:
+    inputs:
+      time_limit_sec:
+        description: "Per solver process time limit in seconds"
+        required: true
+        default: "7200"
+
+permissions:
+  contents: read
+
+jobs:
+  batch:
+    uses: ./.github/workflows/experiment-batch-reusable.yml
+    with:
+      batch_number: 6
+      time_limit_sec: ${{ github.event.inputs.time_limit_sec || '7200' }}

@@ -1,0 +1,19 @@
+name: Experiment 5/7 - 250 trip/capacity
+
+on:
+  workflow_dispatch:
+    inputs:
+      time_limit_sec:
+        description: "Per solver process time limit in seconds"
+        required: true
+        default: "7200"
+
+permissions:
+  contents: read
+
+jobs:
+  batch:
+    uses: ./.github/workflows/experiment-batch-reusable.yml
+    with:
+      batch_number: 5
+      time_limit_sec: ${{ github.event.inputs.time_limit_sec || '7200' }}

@@ -1,0 +1,38 @@
+name: Experiment summary - collect all 7 flows
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_ids:
+        description: "Seven successful batch run IDs, separated by commas or spaces"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  summarize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download, validate and summarize 1600 solver results
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_IDS: ${{ inputs.run_ids }}
+        run: python3 scripts/experiment_batches/collect.py --repo "$GITHUB_REPOSITORY" --run-ids "$RUN_IDS"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: experiments-1600-processes-summary
+          path: |
+            big_instance_dd227_*.csv
+            big_instance_dd227_summary.xlsx
+            instance_vehicle_sweep_*.csv
+            instance_vehicle_sweep_summary.xlsx
+            time_dependent_trip_capacity_*.csv
+            experiment_process_totals.csv
+            experiment_run_sources.json
+          if-no-files-found: error
+          retention-days: 90

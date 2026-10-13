@@ -1,0 +1,80 @@
+name: Experiment batch - one solver process per job
+
+on:
+  workflow_call:
+    inputs:
+      batch_number:
+        required: true
+        type: number
+      time_limit_sec:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      plan_hash: ${{ steps.plan.outputs.plan_hash }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Generate single-process jobs
+        id: plan
+        run: python3 scripts/experiment_batches/plan.py --batch ${{ inputs.batch_number }}
+      - name: Build solvers
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/time_dependent_trip_capacity build/big_instance_dd227 build/instance_vehicle_sweep
+          for dd in 2.27 5.0 10.0; do
+            suffix="${dd//./}"
+            for spec in "tabubu_TimeDependent.cpp:multi_trip" "tabubu_TimeDependent_1trip.cpp:one_trip"; do
+              src="${spec%%:*}"
+              mode="${spec##*:}"
+              patched="build/time_dependent_trip_capacity/patched_${mode}_dd${suffix}.cpp"
+              sed -E "s/double Dd = [0-9.]+/double Dd = ${dd}/" "${src}" > "${patched}"
+              g++ -O2 -std=c++20 "${patched}" -o "build/time_dependent_trip_capacity/tabubu_${mode}_dd${suffix}"
+            done
+          done
+          cp build/time_dependent_trip_capacity/tabubu_multi_trip_dd227 build/big_instance_dd227/tabubu_big_instance_dd227
+          cp build/time_dependent_trip_capacity/tabubu_multi_trip_dd227 build/instance_vehicle_sweep/tabubu_TimeDependent
+      - uses: actions/upload-artifact@v4
+        with:
+          name: experiment-batch-${{ inputs.batch_number }}-solvers
+          path: build/**/tabubu_*
+          retention-days: 7
+
+  solve:
+    name: ${{ matrix.job_id }} | ${{ matrix.experiment }} | one solver process
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: experiment-batch-${{ inputs.batch_number }}-solvers
+          path: build
+      - name: Run one solver process
+        env:
+          TASK_JSON: ${{ matrix.task_json }}
+          BATCH_NUMBER: ${{ inputs.batch_number }}
+          PLAN_HASH: ${{ needs.prepare.outputs.plan_hash }}
+          TIME_LIMIT_SEC: ${{ inputs.time_limit_sec }}
+        run: |
+          chmod +x build/time_dependent_trip_capacity/tabubu_* build/big_instance_dd227/tabubu_* build/instance_vehicle_sweep/tabubu_*
+          python3 scripts/experiment_batches/run.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: experiment-${{ matrix.experiment }}-batch-${{ inputs.batch_number }}-job-${{ matrix.job_id }}
+          path: ${{ matrix.result_dir }}/**
+          if-no-files-found: error
+          retention-days: 90

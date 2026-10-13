@@ -1,0 +1,101 @@
+name: TD 200 500 - Dd 2.27 - truck load - 30min
+
+on:
+  push:
+    branches: [codex/td-load-dd227-30min]
+    paths:
+      - .github/workflows/td-200-500-dd227-truck-load-30min.yml
+      - scripts/td_truck_load_30min.py
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  OMP_NUM_THREADS: '1'
+  OPENBLAS_NUM_THREADS: '1'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Validate instances and create 32-job matrix
+        id: matrix
+        run: |
+          matrix="$(python3 scripts/td_truck_load_30min.py matrix)"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+      - name: Build current V2 multi-trip solver
+        run: |
+          mkdir -p build/td_load_30min
+          g++ -O3 -std=c++20 src_v2/tabubu_TimeDependent_v2.cpp -o build/td_load_30min/solver
+      - uses: actions/upload-artifact@v4
+        with:
+          name: td-load-30min-solver
+          path: build/td_load_30min/solver
+          retention-days: 1
+
+  solve:
+    name: Solve ${{ matrix.instance }} once
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      max-parallel: 32
+      matrix: ${{ fromJSON(needs.build.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: td-load-30min-solver
+          path: build/td_load_30min
+      - name: Run exactly one solver process and calculate trip payloads
+        env:
+          INSTANCE: ${{ matrix.instance }}
+        run: |
+          chmod +x build/td_load_30min/solver
+          python3 scripts/td_truck_load_30min.py run \
+            --binary build/td_load_30min/solver \
+            --instance "$INSTANCE" \
+            --wall-limit-sec 1800 \
+            --source-commit "$GITHUB_SHA" \
+            --run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            --output "result/$INSTANCE"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: td-load-30min-${{ matrix.instance }}
+          path: result/
+          if-no-files-found: error
+          retention-days: 90
+
+  aggregate:
+    needs: solve
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: td-load-30min-*
+          merge-multiple: true
+          path: collected_results
+      - name: Summarize all 32 instances
+        run: |
+          python3 scripts/td_truck_load_30min.py aggregate \
+            --input collected_results \
+            --output truck_load_summary \
+            --summary-file "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: td-load-30min-summary
+          path: truck_load_summary/
+          if-no-files-found: error
+          retention-days: 90

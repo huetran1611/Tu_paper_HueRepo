@@ -1,10 +1,15 @@
-name: Hanoi P2 - 4 folds - 5 sequential jobs
+name: Hanoi P2 - 4 folds - 240 optimization jobs
 
 on:
   push:
     paths:
       - .github/workflows/hanoi-p2-fourfold-sequential.yml
   workflow_dispatch:
+    inputs:
+      max_parallel:
+        description: Maximum simultaneous optimization jobs (1 to 40)
+        required: true
+        default: '20'
 
 permissions:
   contents: read
@@ -18,75 +23,122 @@ env:
   PYTHONDONTWRITEBYTECODE: '1'
 
 jobs:
-  batch_1:
-    name: Batch 1 of 5 - 48 sequential cases
+  prepare:
+    name: Validate 240 cases and build solver
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
     steps:
       - uses: actions/checkout@v5
-      - uses: ./.github/actions/hanoi-p2-fold-batch
         with:
-          batch: '1'
+          sparse-checkout: |
+            .github
+            scripts
+            src_v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: scripts/requirements-hanoi-p2-pilot.txt
+      - name: Install dependencies
+        run: python -m pip install -r scripts/requirements-hanoi-p2-pilot.txt
+      - name: Validate concurrency and protocol
+        env:
+          MAX_PARALLEL: ${{ inputs.max_parallel || '20' }}
+        run: |
+          [[ "$MAX_PARALLEL" =~ ^[1-9][0-9]*$ ]]
+          test "$MAX_PARALLEL" -le 40
+          python -m unittest discover -s scripts -p test_hanoi_p2_cloud_pilot.py
+      - name: Build solver and clock regression test
+        run: |
+          mkdir -p build/hanoi_p2_cloud
+          g++ -O3 -std=c++20 src_v2/tabubu_HanoiTraffic_v2.cpp -o build/hanoi_p2_cloud/solver
+          g++ -O2 -std=c++20 scripts/test_hanoi_solver_clock.cpp -o build/hanoi_p2_cloud/test_clock
+          build/hanoi_p2_cloud/test_clock
+      - name: Create 240-job matrix
+        id: matrix
+        run: |
+          matrix="$(python scripts/hanoi_p2_cloud_pilot.py matrix)"
+          printf 'matrix=%s\n' "$matrix" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-p2-fourfold-solver
+          path: build/hanoi_p2_cloud/solver
+          if-no-files-found: error
+          retention-days: 2
 
-  batch_2:
-    name: Batch 2 of 5 - 48 sequential cases
-    needs: batch_1
-    if: ${{ !cancelled() }}
+  solve:
+    name: ${{ matrix.task_key }}
+    needs: prepare
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJSON(inputs.max_parallel || '20') }}
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v5
-      - uses: ./.github/actions/hanoi-p2-fold-batch
         with:
-          batch: '2'
+          sparse-checkout: |
+            .github
+            scripts
+            src_v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: scripts/requirements-hanoi-p2-pilot.txt
+      - name: Install dependencies
+        run: python -m pip install -r scripts/requirements-hanoi-p2-pilot.txt
+      - uses: actions/download-artifact@v4
+        with:
+          name: hanoi-p2-fourfold-solver
+          path: build/hanoi_p2_cloud
+      - name: Optimize one case and replay its held-out date
+        env:
+          TASK_KEY: ${{ matrix.task_key }}
+        run: |
+          chmod +x build/hanoi_p2_cloud/solver
+          python -u scripts/hanoi_p2_cloud_pilot.py batch \
+            --task-key "$TASK_KEY" --binary build/hanoi_p2_cloud/solver \
+            --output result --profiles "$RUNNER_TEMP/p2-profiles"
+      - name: Upload this case
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-p2-fourfold-case-${{ matrix.task_key }}
+          path: result/
+          if-no-files-found: error
+          retention-days: 30
 
-  batch_3:
-    name: Batch 3 of 5 - 48 sequential cases
-    needs: batch_2
-    if: ${{ !cancelled() }}
+  aggregate:
+    name: Aggregate and verify all 240 cases
+    needs: [prepare, solve]
+    if: ${{ !cancelled() && needs.prepare.result == 'success' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 360
     steps:
       - uses: actions/checkout@v5
-      - uses: ./.github/actions/hanoi-p2-fold-batch
         with:
-          batch: '3'
-
-  batch_4:
-    name: Batch 4 of 5 - 48 sequential cases
-    needs: batch_3
-    if: ${{ !cancelled() }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 360
-    steps:
-      - uses: actions/checkout@v5
-      - uses: ./.github/actions/hanoi-p2-fold-batch
+          sparse-checkout: |
+            .github
+            scripts
+            src_v2
+      - uses: actions/setup-python@v5
         with:
-          batch: '4'
-
-  batch_5:
-    name: Batch 5 of 5 - 48 cases and final report
-    needs: batch_4
-    if: ${{ !cancelled() }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 360
-    steps:
-      - uses: actions/checkout@v5
-      - uses: ./.github/actions/hanoi-p2-fold-batch
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: scripts/requirements-hanoi-p2-pilot.txt
+      - name: Install dependencies
+        run: python -m pip install -r scripts/requirements-hanoi-p2-pilot.txt
+      - uses: actions/download-artifact@v4
         with:
-          batch: '5'
-      - name: Download all five batch artifacts
-        if: ${{ !cancelled() }}
-        uses: actions/download-artifact@v4
-        with:
-          pattern: hanoi-p2-fourfold-batch-*
+          pattern: hanoi-p2-fourfold-case-*
           path: collected
-      - name: Aggregate and verify all 240 cases
-        if: ${{ !cancelled() }}
+      - name: Generate Excel and 17h report
         run: |
           python scripts/hanoi_p2_cloud_pilot.py aggregate \
             --input collected --output final_report
-      - name: Upload final Excel and 17h report
+      - name: Upload final report
         if: always()
         uses: actions/upload-artifact@v4
         with:

@@ -1,4 +1,4 @@
-"""Compact data export and sequential four-fold P2 optimization on GitHub."""
+"""Compact data export and four-fold P2 optimization on GitHub."""
 import argparse
 import csv
 from functools import lru_cache
@@ -46,6 +46,15 @@ def split_batch(all_tasks, batch):
     if len(all_tasks) != 240 or batch not in range(1, 6):
         raise ValueError("Expected 240 tasks and batch number 1 through 5")
     return all_tasks[(batch-1)*48:batch*48]
+
+
+def select_tasks(all_tasks, batch=None, task_key=None):
+    if task_key is not None:
+        selected = [task for task in all_tasks if task["key"] == task_key]
+        if len(selected) != 1:
+            raise ValueError("Unknown or duplicate task key")
+        return selected
+    return split_batch(all_tasks, batch)
 
 
 def build_bundle(args):
@@ -130,7 +139,7 @@ class Profiles:
 
 def run_batch(args):
     profiles = Profiles(args.bundle)
-    selected = split_batch(tasks(profiles.instances), args.batch)
+    selected = select_tasks(tasks(profiles.instances), args.batch, args.task_key)
     if args.limit:
         selected = selected[:args.limit]
     args.output.mkdir(parents=True, exist_ok=True)
@@ -243,10 +252,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bundle", type=Path, default=BUNDLE)
     commands = parser.add_subparsers(dest="command", required=True)
+    commands.add_parser("matrix")
     build = commands.add_parser("build-bundle")
     build.add_argument("--data-root", type=Path, required=True)
     batch = commands.add_parser("batch")
-    batch.add_argument("--batch", type=int, required=True)
+    selection = batch.add_mutually_exclusive_group(required=True)
+    selection.add_argument("--batch", type=int)
+    selection.add_argument("--task-key")
     batch.add_argument("--binary", type=Path, required=True)
     batch.add_argument("--output", type=Path, required=True)
     batch.add_argument("--profiles", type=Path, required=True)
@@ -256,6 +268,13 @@ def main():
     collect.add_argument("--input", type=Path, required=True)
     collect.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
+    if args.command == "matrix":
+        manifest = json.loads((args.bundle / "manifest.json").read_text())
+        matrix = {"include": [{"task_key": task["key"]} for task in tasks(manifest["instances"])]}
+        if len(matrix["include"]) != 240:
+            raise ValueError("Expected exactly 240 optimization jobs")
+        print(json.dumps(matrix, separators=(",", ":")))
+        return
     for key in ("bundle", "output", "input", "profiles", "data_root"):
         if hasattr(args, key):
             setattr(args, key, getattr(args, key).resolve())

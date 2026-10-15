@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 import tempfile
 
-from hanoi_p2_cloud_pilot import DAY_TYPES, aggregate, split_batch, tasks
+from hanoi_p2_cloud_pilot import DAY_TYPES, aggregate, select_tasks, split_batch, tasks
 from hanoi_pilot_selected import FLAGS
 
 
@@ -31,6 +31,14 @@ class CloudPilotTests(unittest.TestCase):
     def test_invalid_batch_rejected(self):
         with self.assertRaises(ValueError):
             split_batch(self.tasks, 6)
+
+    def test_one_case_per_matrix_job(self):
+        for task in self.tasks:
+            self.assertEqual(select_tasks(self.tasks, task_key=task["key"]), [task])
+
+    def test_unknown_task_rejected(self):
+        with self.assertRaises(ValueError):
+            select_tasks(self.tasks, task_key="not-a-task")
 
     def test_selected_capacity_and_search_settings(self):
         for flag in ("--truck-capacity=40", "--iters=9000", "--seed=42", "--c-seg=2",

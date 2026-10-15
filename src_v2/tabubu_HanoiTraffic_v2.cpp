@@ -103,12 +103,15 @@ const int MAX_SEGMENT = 200;
 const int MAX_NO_IMPROVE = 1000;
 const int MAX_ITER_PER_SEGMENT = 1000;
 const int MAX_ITERATIONS = MAX_SEGMENT * MAX_ITER_PER_SEGMENT;
-const int H_MODE = 2;
-const int H_DIV = 4;
-const double gamma1 = 0.5;
-const double gamma2 = 0.3;
-const double gamma3 = 0.1;
-const double gamma4 = 0.3;
+int H_MODE = 2;
+int H_DIV = 4;
+double gamma1 = 0.5;
+double gamma2 = 0.3;
+double gamma3 = 0.1;
+double gamma4 = 0.3;
+static double CFG_C_SEG = 0.0; // zero preserves the legacy segment length
+static double CFG_C_TAU = 2.0;
+static double CFG_CROSS_CLUSTER_PENALTY = 1.0;
 
 // Runtime-configurable search knobs (initialized from compile-time defaults)
 static int CFG_NUM_INITIAL = NUM_OF_INITIAL_SOLUTIONS;
@@ -150,15 +153,15 @@ static double PENALTY_LAMBDA_CAPACITY = 1.0;      // λ for capacity violations
 static double PENALTY_LAMBDA_ENERGY = 1.0;        // λ for energy violations  
 static double PENALTY_LAMBDA_DEADLINE = 1.0;      // λ for deadline violations
 
-static const double PENALTY_TARGET_VIOLATION = 0.01; // tau_v
-static const double PENALTY_ADAPTATION_RATE = 1.0;   // kappa
+static double PENALTY_TARGET_VIOLATION = 0.01; // tau_v
+static double PENALTY_ADAPTATION_RATE = 1.0;   // kappa
 
-static const double T0 = 150.0; // initial temperature for simulated annealing acceptance
+static double T0 = 150.0; // initial temperature for simulated annealing acceptance
 double alpha = 0.9998; // cooling rate for simulated annealing
 
 // Destroy and repair helper
 vvd edge_records; // edge_records[i][j]: stores working times for edge (i,j)
-const double DESTROY_RATE = 0.2; // fraction of customers to remove during destroy phase
+double DESTROY_RATE = 0.2; // fraction of customers to remove during destroy phase
 
 struct Solution {
     vvi truck_routes; //truck_routes[i]: sequence of customers served by truck i
@@ -570,7 +573,7 @@ void input(string filepath){
 void update_tabu_tenures() {
     // Base heuristic: roughly proportional to sqrt(n) or n/5
     // sqrt(n) scales better for very large instances
-    int base = max(20, (int)(2.0 * sqrt(n))); 
+    int base = max(20, (int)(CFG_C_TAU * sqrt(n)));
     
     TABU_TENURE_BASE = base;
     TABU_TENURE_10 = base;          // Swap
@@ -763,6 +766,10 @@ int get_time_segment(double t) {
     t += start_hour - static_cast<double>(CFG_TRAFFIC_FIRST_HOUR);
     double period_hr = time_segment.back() - time_segment.front();
     if (period_hr <= 1e-12) period_hr = 12.0;
+    if (!CFG_TRUCK_VIJL_FILE.empty()) {
+        if (t < time_segment.front()) return 0;
+        if (t >= time_segment.back()) return (int)time_segment.size() - 2;
+    }
     t = fmod(t - time_segment.front(), period_hr);
     if (t < 0) t += period_hr;
     t += time_segment.front();
@@ -799,15 +806,24 @@ pair<double, double> compute_truck_route_time(const vi& route, double start=0) {
             double t_hr = time / 3600.0;
             int seg = get_time_segment(t_hr); // 0-based index into truck_theta_ijl
             double v = get_truck_edge_speed(from, to, seg); // v_ijl = theta_ijl * vmax_ij
+            double offset_hr = (CFG_TRAFFIC_START_HOUR >= 0.0 ? CFG_TRAFFIC_START_HOUR
+                                : CFG_TRAFFIC_FIRST_HOUR) - CFG_TRAFFIC_FIRST_HOUR;
+            double profile_t_hr = t_hr + offset_hr;
+            if (!CFG_TRUCK_VIJL_FILE.empty() && profile_t_hr >= time_segment.back()) {
+                time += dist_left / v;
+                dist_left = 0.0;
+                break;
+            }
             // Time left in this cyclic custom segment. If the trip goes beyond
             // one profile period, boundaries must advance to the current cycle.
             double period_hr = (time_segment.size() >= 2 && time_segment.back() > time_segment.front())
                                ? (time_segment.back() - time_segment.front())
                                : 12.0;
-            double cycle_start_hr = floor((t_hr - time_segment.front()) / period_hr) * period_hr + time_segment.front();
+            double cycle_start_hr = floor((profile_t_hr - time_segment.front()) / period_hr) * period_hr + time_segment.front();
             double next_boundary_hr = (seg + 1 < (int)time_segment.size())
                                       ? cycle_start_hr + (time_segment[seg + 1] - time_segment.front())
                                       : cycle_start_hr + period_hr;
+            next_boundary_hr -= offset_hr;
             if (next_boundary_hr <= t_hr + 1e-12) next_boundary_hr += period_hr;
             double segment_end_time_sec = next_boundary_hr * 3600.0;
             double t_seg_end = segment_end_time_sec - time; // seconds remaining in this segment
@@ -1807,7 +1823,7 @@ Solution generate_initial_solution_v2(uint64_t seed = UINT64_MAX) {
         int best_idx = -1;
         double best_score = 1e300;
         int tie_count = 0;
-        const double eta = 1.0;
+        const double eta = CFG_CROSS_CLUSTER_PENALTY;
         for (int i = 0; i < (int)candidates.size(); ++i) {
             const Candidate& cand = candidates[i];
             double norm_ext = (max_ext - min_ext <= 1e-9) ? 0.0 : (cand.extension - min_ext) / (max_ext - min_ext);
@@ -6539,6 +6555,20 @@ int main(int argc, char* argv[]) {
 	        if (arg == "--hanoi") { CFG_HANOI_INPUT = true; continue; }
 	        if (arg == "--truck-single-trip") { CFG_TRUCK_SINGLE_TRIP = true; continue; }
 	        string v;
+        if (parse_kv_flag(arg, "--c-seg", v)) { CFG_C_SEG = stod(v); continue; }
+        if (parse_kv_flag(arg, "--c-tau", v)) { CFG_C_TAU = stod(v); continue; }
+        if (parse_kv_flag(arg, "--h-mode", v)) { H_MODE = stoi(v); continue; }
+        if (parse_kv_flag(arg, "--h-div", v)) { H_DIV = stoi(v); continue; }
+        if (parse_kv_flag(arg, "--gamma1", v)) { gamma1 = stod(v); continue; }
+        if (parse_kv_flag(arg, "--gamma2", v)) { gamma2 = stod(v); continue; }
+        if (parse_kv_flag(arg, "--gamma3", v)) { gamma3 = stod(v); continue; }
+        if (parse_kv_flag(arg, "--gamma4", v)) { gamma4 = stod(v); continue; }
+        if (parse_kv_flag(arg, "--sa-t0", v)) { T0 = stod(v); continue; }
+        if (parse_kv_flag(arg, "--sa-alpha", v)) { alpha = stod(v); continue; }
+        if (parse_kv_flag(arg, "--penalty-kappa", v)) { PENALTY_ADAPTATION_RATE = stod(v); continue; }
+        if (parse_kv_flag(arg, "--target-violation", v)) { PENALTY_TARGET_VIOLATION = stod(v); continue; }
+        if (parse_kv_flag(arg, "--destroy-rate", v)) { DESTROY_RATE = stod(v); continue; }
+        if (parse_kv_flag(arg, "--cross-cluster-penalty", v)) { CFG_CROSS_CLUSTER_PENALTY = stod(v); continue; }
 	        if (parse_kv_flag(arg, "--attempts", v)) { CFG_NUM_INITIAL = max(1, stoi(v)); attempts_explicitly_set = true; continue; }
 	        if (parse_kv_flag(arg, "--iters", v)) { CFG_MAX_ITERATIONS = max(1, stoi(v)); continue; }
 	        if (parse_kv_flag(arg, "--segment-iters", v)) { CFG_MAX_ITER_PER_SEGMENT = max(1, stoi(v)); continue; }
@@ -6569,6 +6599,14 @@ int main(int argc, char* argv[]) {
         if (parse_kv_flag(arg, "--drone-capacity", v)) { Dd = max(1e-9, stod(v)); continue; }
         if (parse_kv_flag(arg, "--drone-speed-kph", v)) { v_fly_drone = max(1e-9, stod(v) / 3.6); continue; }
         if (arg == "--auto-tune") { auto_tune = true; continue; }
+    }
+    if (!(CFG_C_SEG >= 0 && CFG_C_TAU > 0 && H_MODE >= 1 && H_DIV > H_MODE &&
+          gamma1 > gamma2 && gamma2 > gamma3 && gamma3 >= 0 && gamma4 > 0 && gamma4 <= 1 &&
+          T0 > 0 && alpha > 0 && alpha <= 1 && PENALTY_ADAPTATION_RATE > 0 &&
+          PENALTY_TARGET_VIOLATION >= 0 && DESTROY_RATE > 0 && DESTROY_RATE <= 1 &&
+          CFG_CROSS_CLUSTER_PENALTY >= 0)) {
+        cerr << "Error: invalid search parameter configuration.\n";
+        return 1;
     }
     RNG_STREAM_COUNTER = 0;
     srand(CFG_RUN_SEED);
@@ -6642,6 +6680,13 @@ int main(int argc, char* argv[]) {
         return feasible ? 0 : 2;
     }
 
+        if (CFG_C_SEG > 0) CFG_MAX_ITER_PER_SEGMENT = max(1, (int)ceil(CFG_C_SEG * n));
+        cout << "Tuning config: c_seg=" << CFG_C_SEG << ", c_tau=" << CFG_C_TAU
+             << ", tenure=" << TABU_TENURE_BASE << ", H_mode=" << H_MODE << ", H_div=" << H_DIV
+             << ", gamma=" << gamma1 << "," << gamma2 << "," << gamma3 << "," << gamma4
+             << ", T0=" << T0 << ", alpha=" << alpha << ", kappa=" << PENALTY_ADAPTATION_RATE
+             << ", tau_v=" << PENALTY_TARGET_VIOLATION << ", destroy=" << DESTROY_RATE
+             << ", eta=" << CFG_CROSS_CLUSTER_PENALTY << ", truck_capacity=" << Dh << "\n";
 	    if (requested_segments > 0) {
 	        CFG_MAX_ITERATIONS = max(1, requested_segments * CFG_MAX_ITER_PER_SEGMENT);
 	    }

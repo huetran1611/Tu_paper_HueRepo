@@ -1,0 +1,41 @@
+name: Sequential Hanoi P2 fold batch
+description: Run 48 P2 optimizations one at a time with matched held-out replay
+inputs:
+  batch:
+    description: Batch index, 1 through 5
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    - name: Install numerical dependencies
+      shell: bash
+      run: python -m pip install -r scripts/requirements-hanoi-p2-pilot.txt
+    - name: Validate batch protocol
+      shell: bash
+      run: PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s scripts -p test_hanoi_p2_cloud_pilot.py
+    - name: Build solver
+      shell: bash
+      run: |
+        mkdir -p build/hanoi_p2_cloud
+        g++ -O3 -std=c++20 src_v2/tabubu_HanoiTraffic_v2.cpp -o build/hanoi_p2_cloud/solver
+        g++ -O2 -std=c++20 scripts/test_hanoi_solver_clock.cpp -o build/hanoi_p2_cloud/test_clock
+        build/hanoi_p2_cloud/test_clock
+    - name: Run 48 cases sequentially
+      shell: bash
+      env:
+        BATCH: ${{ inputs.batch }}
+      run: |
+        python -u scripts/hanoi_p2_cloud_pilot.py batch \
+          --batch "$BATCH" --binary build/hanoi_p2_cloud/solver \
+          --output "results/batch-$BATCH" --profiles "$RUNNER_TEMP/p2-profiles"
+    - name: Upload solutions, replay, logs and progress
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: hanoi-p2-fourfold-batch-${{ inputs.batch }}
+        path: results/batch-${{ inputs.batch }}/
+        if-no-files-found: error
+        retention-days: 30

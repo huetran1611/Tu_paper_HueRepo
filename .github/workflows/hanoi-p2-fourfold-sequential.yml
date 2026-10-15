@@ -1,0 +1,96 @@
+name: Hanoi P2 - 4 folds - 5 sequential jobs
+
+on:
+  push:
+    paths:
+      - .github/workflows/hanoi-p2-fourfold-sequential.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hanoi-p2-fourfold-sequential
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  PYTHONDONTWRITEBYTECODE: '1'
+
+jobs:
+  batch_1:
+    name: Batch 1 of 5 - 48 sequential cases
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/hanoi-p2-fold-batch
+        with:
+          batch: '1'
+
+  batch_2:
+    name: Batch 2 of 5 - 48 sequential cases
+    needs: batch_1
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/hanoi-p2-fold-batch
+        with:
+          batch: '2'
+
+  batch_3:
+    name: Batch 3 of 5 - 48 sequential cases
+    needs: batch_2
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/hanoi-p2-fold-batch
+        with:
+          batch: '3'
+
+  batch_4:
+    name: Batch 4 of 5 - 48 sequential cases
+    needs: batch_3
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/hanoi-p2-fold-batch
+        with:
+          batch: '4'
+
+  batch_5:
+    name: Batch 5 of 5 - 48 cases and final report
+    needs: batch_4
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/hanoi-p2-fold-batch
+        with:
+          batch: '5'
+      - name: Download all five batch artifacts
+        if: ${{ !cancelled() }}
+        uses: actions/download-artifact@v4
+        with:
+          pattern: hanoi-p2-fourfold-batch-*
+          path: collected
+      - name: Aggregate and verify all 240 cases
+        if: ${{ !cancelled() }}
+        run: |
+          python scripts/hanoi_p2_cloud_pilot.py aggregate \
+            --input collected --output final_report
+      - name: Upload final Excel and 17h report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-p2-fourfold-final-report
+          path: final_report/
+          if-no-files-found: warn
+          retention-days: 90

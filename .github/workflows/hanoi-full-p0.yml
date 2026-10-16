@@ -1,0 +1,131 @@
+name: Hanoi P0 - baseline and buffer 10 percent
+run-name: Hanoi P0 - setup ${{ inputs.setup_run_id }} - batch ${{ inputs.batch }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      setup_run_id:
+        description: Run ID of the successful PI initialization
+        type: string
+        required: true
+      batch:
+        description: P0 batch number (up to 250 optimization jobs)
+        type: choice
+        options: ['1', '2', '3', '4', '5', '6', '7']
+        default: '1'
+        required: true
+      max_parallel:
+        description: Maximum concurrent compute jobs in this batch
+        type: choice
+        options: ['5', '10', '20', '40']
+        default: '20'
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  PYTHONDONTWRITEBYTECODE: '1'
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      matrix: ${{ steps.matrix.outputs.value }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/
+            /scripts/
+            /src_v2/
+      - uses: ./.github/actions/hanoi-capsule-bootstrap
+        with:
+          setup_run_id: ${{ inputs.setup_run_id }}
+      - name: Select this policy and batch
+        id: matrix
+        env:
+          BATCH: ${{ inputs.batch }}
+        run: |
+          MATRIX=$(python scripts/hanoi_full_experiment.py matrix --capsule "$RUNNER_TEMP/hanoi-capsule" --policy P0 --batch "$BATCH")
+          echo "value=$MATRIX" >> "$GITHUB_OUTPUT"
+
+  experiment:
+    needs: prepare
+    name: P0 ${{ matrix.key }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJSON(inputs.max_parallel) }}
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/
+            /scripts/
+            /src_v2/
+      - uses: ./.github/actions/hanoi-capsule-bootstrap
+        with:
+          setup_run_id: ${{ inputs.setup_run_id }}
+      - name: Optimize once and replay the fixed plan
+        env:
+          BATCH: ${{ inputs.batch }}
+          TASK_KEY: ${{ matrix.key }}
+        run: |
+          python -u scripts/hanoi_full_experiment.py run-task \
+            --capsule "$RUNNER_TEMP/hanoi-capsule" --policy P0 --batch "$BATCH" \
+            --task-key "$TASK_KEY" --output results/task
+      - name: Preserve each job independently, including failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hn-${{ inputs.setup_run_id }}-raw-${{ matrix.key }}-run-${{ github.run_id }}-a${{ github.run_attempt }}
+          path: results/task/
+          retention-days: 90
+          if-no-files-found: warn
+
+  batch_report:
+    needs: [prepare, experiment]
+    if: ${{ !cancelled() && needs.prepare.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/
+            /scripts/
+            /src_v2/
+      - uses: ./.github/actions/hanoi-capsule-bootstrap
+        with:
+          setup_run_id: ${{ inputs.setup_run_id }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: hn-${{ inputs.setup_run_id }}-raw-*
+          path: collected
+      - name: Pack completed records and report exact missing jobs
+        env:
+          BATCH: ${{ inputs.batch }}
+        run: |
+          python scripts/hanoi_full_experiment.py pack-batch \
+            --capsule "$RUNNER_TEMP/hanoi-capsule" --policy P0 --batch "$BATCH" \
+            --input collected --output batch_report
+      - name: Preserve batch records even if some jobs failed
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-full-${{ inputs.setup_run_id }}-batch-P0-${{ inputs.batch }}-run-${{ github.run_id }}-a${{ github.run_attempt }}
+          path: batch_report/
+          retention-days: 90
+          if-no-files-found: warn

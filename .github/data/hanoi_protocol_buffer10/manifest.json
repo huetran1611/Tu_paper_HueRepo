@@ -1,0 +1,178 @@
+{
+  "synthetic_data": true,
+  "instances": [
+    "set_03",
+    "set_05",
+    "set_07",
+    "set_08",
+    "set_09",
+    "set_11",
+    "set_12",
+    "set_14",
+    "set_15",
+    "set_16",
+    "set_17",
+    "set_19",
+    "set_20",
+    "set_21",
+    "set_23",
+    "set_25",
+    "set_27",
+    "set_30",
+    "set_32",
+    "set_33"
+  ],
+  "dates": [
+    "2026-09-07",
+    "2026-09-14",
+    "2026-09-21",
+    "2026-09-28",
+    "2026-09-05",
+    "2026-09-12",
+    "2026-09-19",
+    "2026-09-26",
+    "2026-09-06",
+    "2026-09-13",
+    "2026-09-20",
+    "2026-09-27"
+  ],
+  "hours": [
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17
+  ],
+  "input_hashes": {
+    "set_03": {
+      "instance.txt": "48b40852c851dffe89be16809f0a0fa6042a6643d8053bf2b81e22adb6c675a2",
+      "truck_distance_m.txt": "22ca6280031866a5e0898ae1258453ff42c3038a5680dfa067d21acbfd22470e",
+      "drone_distance_m.txt": "8be7748cecf96e3ba1c2c5102cdeddc0dc960fdf6a5c098827a1e7ab375cf4e2",
+      "original_daily_npz": "7768de1350213597b7711b5e3cc751a7d2b171158a994c31706fdb8800fa0707"
+    },
+    "set_05": {
+      "instance.txt": "2d1803845f3cf25213eb0b1bb26a31196639ecfa183fd2ef44da1c510a6dfaa0",
+      "truck_distance_m.txt": "0d33162d5ef6d8ba55e08e4bc963f4144be01ac8605e3c9db1dadac33ea159a1",
+      "drone_distance_m.txt": "e5968d16a9a24f636b09d2b22af760b2c8858efc9e609153c840d67293378764",
+      "original_daily_npz": "e04af616db807371e7ccd9f31f7e9d0643ad352a6623d58aaf74ae95ab826842"
+    },
+    "set_07": {
+      "instance.txt": "24c66384aa3cc770f7ecbcbe57761374ffd8a7cc838fd51ffa245760da3e873d",
+      "truck_distance_m.txt": "d970ef4001fe49e62ee803d0ddb29fe59d1746a49691305fbcd20226bd3287ff",
+      "drone_distance_m.txt": "1b986de80dd71a7ad76fe6e5b749d13b2c5e6646da017735ec3bdc27d79ff777",
+      "original_daily_npz": "cb5ae3af4084def2106abcd739a17406df23040ae381f81f3e7e2ef870b30d2d"
+    },
+    "set_08": {
+      "instance.txt": "17134af4a26ea268d263f90fa11edaa05c1ee158ce59c9ac6495b837f24a5810",
+      "truck_distance_m.txt": "513deb3c71a0e8c10f6f2397a94dcacea3e17f666d7cb4e357dc63102949f786",
+      "drone_distance_m.txt": "65f6decdc37ffb11a70c7fd209c6ebf9130c386eee77498f5b7aeaf9d2a6c453",
+      "original_daily_npz": "d2a41a7523086062764499c51406ffbe7ba5e3331fbd27b1f5d5aaafa744c075"
+    },
+    "set_09": {
+      "instance.txt": "406c2bacb0e2ee77e5b63f56c5bf2f6d60b4bae26c3a9fda57b09044ec0615a7",
+      "truck_distance_m.txt": "5f3f844572b20722eb02a67879c1639ede052ca2c349f56720e55b69446cc02d",
+      "drone_distance_m.txt": "67cf53ab9ea40fc7ac066aa7e1292d32420e0b501baec3abc8799376ed9e8626",
+      "original_daily_npz": "5cbf11ccf379b53e22b44ad47329012ef9f64de58b9c18e4e6e59683bfec6340"
+    },
+    "set_11": {
+      "instance.txt": "db4dfa054c11d88d073e9d4cb583c57a3084ca7208f4424bc0529e5f30422a4e",
+      "truck_distance_m.txt": "5539e58a3b431c7204eabf65223f58d46d3c79cd381c083ffab500a18097012a",
+      "drone_distance_m.txt": "f91872bccd8582cc92a1ce01812a00d50cf76e3bfd886bd0f546e8d65a88e7e2",
+      "original_daily_npz": "cad078b048e8e027e013a70a574c8d7a9fadacf44014ee9b2f24e2c576e9a167"
+    },
+    "set_12": {
+      "instance.txt": "203793de9375733cbd66914d3c72016a417a7ebcd2ca1cc884f46e68d56a302f",
+      "truck_distance_m.txt": "9052a61371d8c4781520456bc0a17893ce0075617b1de5a26570baa906fc75a1",
+      "drone_distance_m.txt": "4e9f87d344740ee6bd758d3554c26df03401f2ea67348ee1f443f412607ebd5d",
+      "original_daily_npz": "b682e61d2e2a3ec90876ea6401b43abf5f3240a0f3df5a3409a9c44458f79856"
+    },
+    "set_14": {
+      "instance.txt": "a20b50b20f1bdd2c239c229958ee8ac919478f97b3390599e8a1a0a5a9ccc116",
+      "truck_distance_m.txt": "1f37a96bfdeb20510f6f9059a15afcc09a4533aecf9c4e119645a1c8351db50f",
+      "drone_distance_m.txt": "ae9c2a2f70a6b4ddc528defa159b2209100152fa5c92f6f403bef81bed9763d6",
+      "original_daily_npz": "5937d27a8bbb140547341fdae69abdb2cb5f1806c9fcdc04ccc4fd7207e0ccb3"
+    },
+    "set_15": {
+      "instance.txt": "2ba568e48f8dc945622eebc516f4f10faee4abf36fddda4cfdb3ff41615ebabd",
+      "truck_distance_m.txt": "97f8a6911842898ed72ab7f3962d374dea9571192f7ee99d228bb1ede84e1601",
+      "drone_distance_m.txt": "1aad9a4e9a5ab5412b29ba40432ea89479d48a4fec2785b6af53b073bfc469a7",
+      "original_daily_npz": "0ebf35ffa4575be6afa70887b26c7f1adc236a9459b596e5e33fd802e54cee73"
+    },
+    "set_16": {
+      "instance.txt": "8721f89f7a13f959de2e9edd5df516f1af098c235a67272b994215ed258741ba",
+      "truck_distance_m.txt": "80f19cadfe43740b4d97a7fb7c5da06b4e8b63c24dedbe67106481b975aa08f7",
+      "drone_distance_m.txt": "c6c30bdcc1f7ca8e082496f47f20dd2f860421b238875ddfb086875da5f60833",
+      "original_daily_npz": "f15811d0842e57d87c13e19f6741d7ae1abce450b4d4baa5f4808a76dda5e490"
+    },
+    "set_17": {
+      "instance.txt": "78605f847a23ff6a2b8fbc9d4ec7d6094e1596b3a76e79fc50d018263e55844c",
+      "truck_distance_m.txt": "332ef99836f934196f7b081dfa81f53a81fdda9b90ff3d3e811f5a38b7bb6ff8",
+      "drone_distance_m.txt": "ed64e3042aa01cc048a4c229e0c98216b79e142b2e1e662c4ac1dad67b0517b3",
+      "original_daily_npz": "bf41bd69e5b9366ac4ba34f667edce0f310e307f0857838af4e027d1d711a2c6"
+    },
+    "set_19": {
+      "instance.txt": "d7a3982dc1c73e4963c3ff45f2886a3c95c6e2f7a2986c590e0d98772e8a293a",
+      "truck_distance_m.txt": "67f97a7d49df416dd4c3ebe5a61df732ae3ced650cb9fe41999082a6d35956de",
+      "drone_distance_m.txt": "30291320ff64da8a0de470236268c351098ac398426cb6aa0666ea7cb9f4f9d6",
+      "original_daily_npz": "83094239548ae717b80d84662e84d1fe84ce19816a0f174366101773b303161e"
+    },
+    "set_20": {
+      "instance.txt": "bf8feb472c2d4247742dce13666a430c00f702b4a14999d9c14b16312a229d54",
+      "truck_distance_m.txt": "ba0a21c1a35ff8ba67ffbc0521246475e487c03d4f5a192392f9b3b3a589ad2f",
+      "drone_distance_m.txt": "0c0b11843a2bff5dcf3e4da9eb58712d39cbdd09eaea3ed59115339492bc869f",
+      "original_daily_npz": "bad3233ed1e888df83c861d23f75df2f12808dd648449d5b32d1e34a20d7c175"
+    },
+    "set_21": {
+      "instance.txt": "3187e4f45ef7ea235583b2479574c7158e7c34c3b60a06aa9e040da8b95df0a5",
+      "truck_distance_m.txt": "3f3dccb8e74ff5262ea4f4f120fada0c675a6701575425781f94931e3993296e",
+      "drone_distance_m.txt": "41846ce6e866c11bdedf91faadf1a6dc8e342a526f8ec40680b3c278f616a4de",
+      "original_daily_npz": "c134986aba3cf005a3514b1af8fb1c6efbbbe0fe680617aa05c090ff1a351e68"
+    },
+    "set_23": {
+      "instance.txt": "9296167e5871c33b7dbb67dd817e15a44aa0fd8dfe52a37dd905b2b3928a7e11",
+      "truck_distance_m.txt": "4453ecf0c3a9b0360a9274a25d3f10577e7a9daac97cb75cfa8b624878f80179",
+      "drone_distance_m.txt": "1a718f591b5753398b4a1531ef1151ecc0eabcd36a2e2da28852e89b95096960",
+      "original_daily_npz": "ec82d271d7f10848e25356bac2608aa5b4f0226318823a19281330d6a7f0ddf1"
+    },
+    "set_25": {
+      "instance.txt": "f9a358d699eadebd76b575072162f7a4375e957368363c21b2de2fba289ff43f",
+      "truck_distance_m.txt": "18cd6d72c9f7ccbaedf8178f46f42e24c1134826d27eecf30646d93493c0dc78",
+      "drone_distance_m.txt": "966a11d302d968ac9d645ffe7b4dc1469b030ac22af97dc948fd04a19354e903",
+      "original_daily_npz": "8e3bbb24b35d602b99834ed92d679562be2af79745d3c997a574f5f871443e69"
+    },
+    "set_27": {
+      "instance.txt": "6a4465480ca5f598f5ae087d90b69500b183a4a2db8aaddf76150e4e52d1e57a",
+      "truck_distance_m.txt": "af494e9c57abfdfc0b691bdba683ae1ac997e686fcf64c06de4763e664b861ce",
+      "drone_distance_m.txt": "5da91e1c29d259075af2dca224a70aec45869f08f9f6988b47e9da8a7ca1c8d4",
+      "original_daily_npz": "c8c76350b8076c6a51ce7645478d2783aa0e34ef0fd84b17ae1f4fb0e50b013e"
+    },
+    "set_30": {
+      "instance.txt": "0527374212a02bd8635936b2d031916c01c0075769faef1c7fe6956831bf2886",
+      "truck_distance_m.txt": "10ab99136591dda8588dbf5867b661d9491790cf066ad7df0885f6c13af02312",
+      "drone_distance_m.txt": "bc3d124aee649c4e90dd1f516572127ad121f688fd91caf9f77e61d7fa2eea04",
+      "original_daily_npz": "4da90e5fc179f4cec8a272ec7ead08d4cb467a4b15f8c09012149e20dff65941"
+    },
+    "set_32": {
+      "instance.txt": "e7824f78cac0986dc82b4bdb09befbc42828f1e094125692f0601739b086392c",
+      "truck_distance_m.txt": "c5f5fa06d3704b414ccfd6808db36df9e0a62e1c42fa15b039b0782188bcaa08",
+      "drone_distance_m.txt": "dde2238c85b668100783c098051e463ba1c86384893b97fb5c48be43753f751c",
+      "original_daily_npz": "a79be0f0760a2e97bcf4098bd0aaa51ce2351618ac7b0c0f5c8fa965729ed640"
+    },
+    "set_33": {
+      "instance.txt": "81963a19b311b1146ed106a7499316e740addebb5565641db97d0875c64676ef",
+      "truck_distance_m.txt": "0e0d07fdc41a192885f6604b9703158906183ef55bd8264acd1115858f98d5e9",
+      "drone_distance_m.txt": "9918b1afc6a3b5adc114514e6dfe40e7b8ee4f0f8fd430b5779333ef11cd39bb",
+      "original_daily_npz": "68c22edceccc96f3bd6cd9d165b2d4c8669570034bb21d3cd812b67844276b29"
+    }
+  },
+  "profiles_sha256": "b162e430d3da5d2345bc1aa7e9b7de051575e3cbeb498833ac6ef0fd77f22d46",
+  "reconstruction_max_difference_kph": 0.0,
+  "description": "Exact fixed-path harmonic OD speeds reconstructed from shared road exposure; original instance/distance files copied unchanged"
+}

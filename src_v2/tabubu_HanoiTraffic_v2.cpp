@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
@@ -103,12 +104,15 @@ const int MAX_SEGMENT = 200;
 const int MAX_NO_IMPROVE = 1000;
 const int MAX_ITER_PER_SEGMENT = 1000;
 const int MAX_ITERATIONS = MAX_SEGMENT * MAX_ITER_PER_SEGMENT;
-const int H_MODE = 2;
-const int H_DIV = 4;
-const double gamma1 = 0.5;
-const double gamma2 = 0.3;
-const double gamma3 = 0.1;
-const double gamma4 = 0.4;
+int H_MODE = 2;
+int H_DIV = 4;
+double gamma1 = 0.5;
+double gamma2 = 0.3;
+double gamma3 = 0.1;
+double gamma4 = 0.3;
+static double CFG_C_SEG = 0.0; // zero preserves the legacy segment length
+static double CFG_C_TAU = 2.0;
+static double CFG_CROSS_CLUSTER_PENALTY = 1.0;
 
 // Runtime-configurable search knobs (initialized from compile-time defaults)
 static int CFG_NUM_INITIAL = NUM_OF_INITIAL_SOLUTIONS;
@@ -124,6 +128,11 @@ static string CFG_TRUCK_DISTANCE_FILE; // optional Hanoi file: i j distance_m
 static string CFG_DRONE_DISTANCE_FILE; // optional Hanoi file: i j distance_m
 static string CFG_VEHICLE_CONFIG_FILE; // optional JSON file for truck/drone parameters
 static double CFG_SEGMENT_LENGTH_SEC = 3600.0; // time-dependent segment length in seconds
+static int CFG_TRAFFIC_FIRST_HOUR = 0; // informational origin for dynamically loaded traffic segments
+static double CFG_TRAFFIC_START_HOUR = -1.0; // negative means use the first hour in the traffic file
+static bool CFG_TRUCK_SINGLE_TRIP = false;
+static unsigned CFG_RUN_SEED = 42u;
+static uint64_t RNG_STREAM_COUNTER = 0;
 static int CFG_OVERRIDE_TRUCKS = -1;
 static int CFG_OVERRIDE_DRONES = -1;
 static bool CFG_HANOI_INPUT = false;
@@ -134,20 +143,26 @@ static double CFG_HANOI_TRUCK_SERVICE_SEC = 60.0;
 static double CFG_HANOI_DRONE_SERVICE_SEC = 60.0;
 static double CFG_HANOI_DEADLINE_SEC = 3600.0;
 
+static std::mt19937 make_run_rng() {
+    uint64_t stream = RNG_STREAM_COUNTER++;
+    uint64_t mixed = (uint64_t)CFG_RUN_SEED + 0x9E3779B97F4A7C15ULL * (stream + 1);
+    return std::mt19937((uint32_t)(mixed ^ (mixed >> 32)));
+}
+
 // Adaptive penalty coefficients for constraint violations
 static double PENALTY_LAMBDA_CAPACITY = 1.0;      // λ for capacity violations
 static double PENALTY_LAMBDA_ENERGY = 1.0;        // λ for energy violations  
 static double PENALTY_LAMBDA_DEADLINE = 1.0;      // λ for deadline violations
 
-static const double PENALTY_TARGET_VIOLATION = 0.01; // tau_v
-static const double PENALTY_ADAPTATION_RATE = 1.0;   // kappa
+static double PENALTY_TARGET_VIOLATION = 0.01; // tau_v
+static double PENALTY_ADAPTATION_RATE = 1.0;   // kappa
 
-static const double T0 = 150.0; // initial temperature for simulated annealing acceptance
+static double T0 = 150.0; // initial temperature for simulated annealing acceptance
 double alpha = 0.9998; // cooling rate for simulated annealing
 
 // Destroy and repair helper
 vvd edge_records; // edge_records[i][j]: stores working times for edge (i,j)
-const double DESTROY_RATE = 0.2; // fraction of customers to remove during destroy phase
+double DESTROY_RATE = 0.2; // fraction of customers to remove during destroy phase
 
 struct Solution {
     vvi truck_routes; //truck_routes[i]: sequence of customers served by truck i
@@ -311,6 +326,7 @@ static void load_distance_matrix_file(const string& filepath, vvd& matrix, const
     matrix.assign(n + 1, vd(n + 1, 0.0));
     string line;
     vector<double> values;
+    int loaded_entries = 0;
     while (getline(fin, line)) {
         if (!parse_space_numeric_record(line, values)) continue;
         if (values.size() < 3) continue;
@@ -318,7 +334,10 @@ static void load_distance_matrix_file(const string& filepath, vvd& matrix, const
         int j = (int)values[1];
         if (i < 0 || i > n || j < 0 || j > n) continue;
         matrix[i][j] = values[2];
+        ++loaded_entries;
     }
+    cout << "Loaded " << loaded_entries << " " << label
+         << " distance entries from " << filepath << "\n";
 }
 
 static void load_hanoi_vijl_file(const string& filepath) {
@@ -329,25 +348,40 @@ static void load_hanoi_vijl_file(const string& filepath) {
         exit(1);
     }
 
-    const int first_hour = 6;
-    const int segment_count = 12; // 6-7, 7-8, ..., 17-18
-    truck_vmax_ij.assign(n + 1, vd(n + 1, 1.0));
-    truck_theta_ijl.assign(segment_count, vvd(n + 1, vd(n + 1, max(1.0, vmax))));
-    time_segments_sigma.assign(segment_count, 1.0);
-
+    vector<array<double, 4>> records;
+    int first_hour = numeric_limits<int>::max();
+    int last_hour = numeric_limits<int>::min();
     string line;
     vector<double> values;
     while (getline(fin, line)) {
         if (!parse_space_numeric_record(line, values)) continue;
         if (values.size() < 4) continue;
-        int i = (int)values[0];
-        int j = (int)values[1];
         int actual_hour = (int)values[2];
+        records.push_back({values[0], values[1], values[2], values[3]});
+        first_hour = min(first_hour, actual_hour);
+        last_hour = max(last_hour, actual_hour);
+    }
+    if (records.empty() || first_hour > last_hour) {
+        cerr << "Error: No valid records in Hanoi v_ijl file " << filepath << endl;
+        exit(1);
+    }
+    const int segment_count = last_hour - first_hour + 1;
+    CFG_TRAFFIC_FIRST_HOUR = first_hour;
+    truck_vmax_ij.assign(n + 1, vd(n + 1, 1.0));
+    truck_theta_ijl.assign(segment_count, vvd(n + 1, vd(n + 1, max(1.0, vmax))));
+    time_segments_sigma.assign(segment_count, 1.0);
+
+    for (const auto& record : records) {
+        int i = (int)record[0];
+        int j = (int)record[1];
+        int actual_hour = (int)record[2];
         int l = actual_hour - first_hour;
-        double speed_mps = values[3] / 3.6;
+        double speed_mps = record[3] / 3.6;
         if (i < 0 || i > n || j < 0 || j > n || l < 0 || l >= segment_count || speed_mps <= 1e-8) continue;
         truck_theta_ijl[l][i][j] = speed_mps;
     }
+    cout << "Loaded " << segment_count << " traffic segments from "
+         << first_hour << "h to " << last_hour << "h\n";
 }
 
 void input_hanoi_nodes(string filepath) {
@@ -540,7 +574,7 @@ void input(string filepath){
 void update_tabu_tenures() {
     // Base heuristic: roughly proportional to sqrt(n) or n/5
     // sqrt(n) scales better for very large instances
-    int base = max(20, (int)(2.0 * sqrt(n))); 
+    int base = max(20, (int)(CFG_C_TAU * sqrt(n)));
     
     TABU_TENURE_BASE = base;
     TABU_TENURE_10 = base;          // Swap
@@ -640,23 +674,37 @@ static void load_truck_theta_ijl_file(const string& filepath) {
         exit(1);
     }
 
-    int segment_count = truck_time_segment_count();
+    vector<array<double, 4>> records;
+    int max_segment = -1;
     string line;
     vector<double> values;
     while (getline(fin, line)) {
         if (!parse_numeric_record(line, values)) continue;
         if (values.size() < 4) continue;
-        int i = (int)values[0];
-        int j = (int)values[1];
-        int l = (int)values[2];
-        double theta = values[3];
+        records.push_back({values[0], values[1], values[2], values[3]});
+        max_segment = max(max_segment, (int)values[2]);
+    }
+    if (records.empty() || max_segment < 0) {
+        cerr << "Error: No valid records in truck theta file " << filepath << endl;
+        exit(1);
+    }
+    int segment_count = max_segment + 1;
+    truck_theta_ijl.assign(segment_count, vvd(n + 1, vd(n + 1, 1.0)));
+    time_segments_sigma.assign(segment_count, 1.0);
+    for (const auto& record : records) {
+        int i = (int)record[0];
+        int j = (int)record[1];
+        int l = (int)record[2];
+        double theta = record[3];
         if (i < 0 || i > n || j < 0 || j > n || l < 0 || l >= segment_count || theta <= 1e-8) continue;
         truck_theta_ijl[l][i][j] = theta;
     }
+    cout << "Loaded " << segment_count << " traffic segments (l=0.."
+         << max_segment << ") from theta file\n";
 }
 
 static void configure_time_dependent_truck_speed_model() {
-    if (CFG_HANOI_INPUT && !CFG_TRUCK_VIJL_FILE.empty()) {
+    if (!CFG_TRUCK_VIJL_FILE.empty()) {
         load_hanoi_vijl_file(CFG_TRUCK_VIJL_FILE);
         return;
     }
@@ -713,8 +761,16 @@ int get_time_segment(double t) {
     // Return 0-based segment index in [0, k-1].
     // If outside boundaries, loop back to the start segment.
     if (time_segment.size() < 2) return 0;
+    double start_hour = CFG_TRAFFIC_START_HOUR >= 0.0
+                        ? CFG_TRAFFIC_START_HOUR
+                        : static_cast<double>(CFG_TRAFFIC_FIRST_HOUR);
+    t += start_hour - static_cast<double>(CFG_TRAFFIC_FIRST_HOUR);
     double period_hr = time_segment.back() - time_segment.front();
     if (period_hr <= 1e-12) period_hr = 12.0;
+    if (!CFG_TRUCK_VIJL_FILE.empty()) {
+        if (t < time_segment.front()) return 0;
+        if (t >= time_segment.back()) return (int)time_segment.size() - 2;
+    }
     t = fmod(t - time_segment.front(), period_hr);
     if (t < 0) t += period_hr;
     t += time_segment.front();
@@ -751,15 +807,24 @@ pair<double, double> compute_truck_route_time(const vi& route, double start=0) {
             double t_hr = time / 3600.0;
             int seg = get_time_segment(t_hr); // 0-based index into truck_theta_ijl
             double v = get_truck_edge_speed(from, to, seg); // v_ijl = theta_ijl * vmax_ij
+            double offset_hr = (CFG_TRAFFIC_START_HOUR >= 0.0 ? CFG_TRAFFIC_START_HOUR
+                                : CFG_TRAFFIC_FIRST_HOUR) - CFG_TRAFFIC_FIRST_HOUR;
+            double profile_t_hr = t_hr + offset_hr;
+            if (!CFG_TRUCK_VIJL_FILE.empty() && profile_t_hr >= time_segment.back()) {
+                time += dist_left / v;
+                dist_left = 0.0;
+                break;
+            }
             // Time left in this cyclic custom segment. If the trip goes beyond
             // one profile period, boundaries must advance to the current cycle.
             double period_hr = (time_segment.size() >= 2 && time_segment.back() > time_segment.front())
                                ? (time_segment.back() - time_segment.front())
                                : 12.0;
-            double cycle_start_hr = floor((t_hr - time_segment.front()) / period_hr) * period_hr + time_segment.front();
+            double cycle_start_hr = floor((profile_t_hr - time_segment.front()) / period_hr) * period_hr + time_segment.front();
             double next_boundary_hr = (seg + 1 < (int)time_segment.size())
                                       ? cycle_start_hr + (time_segment[seg + 1] - time_segment.front())
                                       : cycle_start_hr + period_hr;
+            next_boundary_hr -= offset_hr;
             if (next_boundary_hr <= t_hr + 1e-12) next_boundary_hr += period_hr;
             double segment_end_time_sec = next_boundary_hr * 3600.0;
             double t_seg_end = segment_end_time_sec - time; // seconds remaining in this segment
@@ -952,7 +1017,16 @@ vector<double> check_drone_route_feasibility(const vi& route) {
 // Unified wrapper
 vector<double> check_route_feasibility(const vi& route, double start=0, bool is_truck = true) {
     if (is_truck) {
-        return check_truck_route_feasibility(route, start);
+        vd metrics = check_truck_route_feasibility(route, start);
+        if (CFG_TRUCK_SINGLE_TRIP) {
+            for (int i = 1; i + 1 < (int)route.size(); ++i) {
+                if (route[i] == 0) {
+                    metrics[3] += 1e6;
+                    break;
+                }
+            }
+        }
+        return metrics;
     } else {
         return check_drone_route_feasibility(route);
     }
@@ -1750,7 +1824,7 @@ Solution generate_initial_solution_v2(uint64_t seed = UINT64_MAX) {
         int best_idx = -1;
         double best_score = 1e300;
         int tie_count = 0;
-        const double eta = 1.0;
+        const double eta = CFG_CROSS_CLUSTER_PENALTY;
         for (int i = 0; i < (int)candidates.size(); ++i) {
             const Candidate& cand = candidates[i];
             double norm_ext = (max_ext - min_ext <= 1e-9) ? 0.0 : (cand.extension - min_ext) / (max_ext - min_ext);
@@ -5623,6 +5697,16 @@ int hamming_distance(const Solution& sol1, const Solution& sol2) {
 }
 
 Solution recalculate_solution(Solution sol) {
+    if (CFG_TRUCK_SINGLE_TRIP) {
+        for (vi& route : sol.truck_routes) {
+            vi single_trip = {0};
+            for (int node : route) {
+                if (node != 0) single_trip.push_back(node);
+            }
+            single_trip.push_back(0);
+            route.swap(single_trip);
+        }
+    }
     for (int i = 0; i < h; ++i) {
         vd metrics = check_route_feasibility(sol.truck_routes[i], 0.0, true);
         sol.truck_route_times[i] = metrics[0];
@@ -5648,6 +5732,11 @@ bool check_solution_integrity(const Solution& sol) {
     vector<bool> served(n + 1, false);
     for (int i = 0; i < h; ++i) {
         const vi& route = sol.truck_routes[i];
+        if (CFG_TRUCK_SINGLE_TRIP) {
+            for (size_t j = 1; j + 1 < route.size(); ++j) {
+                if (route[j] == 0) return false;
+            }
+        }
         for (size_t j = 0; j < route.size(); ++j) {
             int customer = route[j];
             if (customer != 0 && served[customer]){
@@ -5731,7 +5820,7 @@ static vi route_with_removed_customer(const vi& route, int cust) {
 }
 
 Solution repair_solution_common(Solution sol, const unordered_set<int>& to_destroy) {
-    std::mt19937 rng(std::chrono::steady_clock::now().time_since_epoch().count());
+    std::mt19937 rng = make_run_rng();
     Solution new_sol = sol;
     
     for (int i = 0; i < h; ++i) {
@@ -5846,7 +5935,7 @@ Solution destroy_worst_repair_random(Solution sol) {
 
 Solution destroy_random_repair_random(Solution sol) {
     unordered_set<int> to_destroy;
-    std::mt19937 rng(std::chrono::steady_clock::now().time_since_epoch().count());
+    std::mt19937 rng = make_run_rng();
     int destroy_count = static_cast<int>(n * 0.3); // Destroy 10%
     std::uniform_int_distribution<int> dist(1, n);
     while ((int)to_destroy.size() < destroy_count) {
@@ -5864,7 +5953,7 @@ Solution destroy_sisr_repair(Solution sol) {
     const int destroy_target = max(1, (int)(n * DESTROY_RATE));
     
     unordered_set<int> to_destroy;
-    std::mt19937 rng(std::chrono::steady_clock::now().time_since_epoch().count());
+    std::mt19937 rng = make_run_rng();
     
     // 1. Calculate Average Route Size (Trucks only)
     double total_len = 0;
@@ -6361,6 +6450,74 @@ static bool write_output_file(const std::string& out_path, const Solution& sol, 
     return true;
 }
 
+static bool load_solution_routes(const string& path, Solution& sol, string& error) {
+    ifstream stream(path);
+    if (!stream) {
+        error = "cannot open solution file: " + path;
+        return false;
+    }
+    sol.truck_routes.assign(h, {});
+    sol.drone_routes.assign(d, {});
+    vector<bool> truck_seen(h, false), drone_seen(d, false);
+    string line;
+    while (getline(stream, line)) {
+        bool is_truck = line.rfind("Truck ", 0) == 0 &&
+                        line.size() > 6 && isdigit(static_cast<unsigned char>(line[6]));
+        bool is_drone = line.rfind("Drone ", 0) == 0 &&
+                        line.size() > 6 && isdigit(static_cast<unsigned char>(line[6]));
+        if (!is_truck && !is_drone) continue;
+        size_t colon = line.find(':');
+        if (colon == string::npos) continue;
+        size_t pipe = line.find('|', colon + 1);
+        string label = line.substr(0, colon);
+        string route_text = line.substr(
+            colon + 1, pipe == string::npos ? string::npos : pipe - colon - 1
+        );
+        size_t space = label.find(' ');
+        int vehicle = -1;
+        try {
+            vehicle = stoi(label.substr(space + 1)) - 1;
+        } catch (const exception&) {
+            error = "invalid vehicle label: " + label;
+            return false;
+        }
+        vi route;
+        stringstream parser(route_text);
+        int node;
+        while (parser >> node) {
+            if (node < 0 || node > n) {
+                error = "route node outside [0," + to_string(n) + "]";
+                return false;
+            }
+            route.push_back(node);
+        }
+        if (route.empty()) route.push_back(0);
+        if (is_truck) {
+            if (vehicle < 0 || vehicle >= h) {
+                error = "truck id outside instance range";
+                return false;
+            }
+            sol.truck_routes[vehicle] = route;
+            truck_seen[vehicle] = true;
+        } else {
+            if (vehicle < 0 || vehicle >= d) {
+                error = "drone id outside instance range";
+                return false;
+            }
+            sol.drone_routes[vehicle] = route;
+            drone_seen[vehicle] = true;
+        }
+    }
+    if (find(truck_seen.begin(), truck_seen.end(), false) != truck_seen.end() ||
+        find(drone_seen.begin(), drone_seen.end(), false) != drone_seen.end()) {
+        error = "solution file does not contain every truck and drone route";
+        return false;
+    }
+    sol.truck_route_times.assign(h, 0.0);
+    sol.drone_route_times.assign(d, 0.0);
+    return true;
+}
+
 int main(int argc, char* argv[]) {
 	    if (argc < 2) {
 	        cerr << "Usage: " << argv[0]
@@ -6369,10 +6526,12 @@ int main(int argc, char* argv[]) {
 	             << " [--trucks=N] [--drones=N]"
 	             << " [--knn-k=K] [--knn-window=W]"
 	             << " [--truck-vmax-file=PATH] [--truck-theta-file=PATH]"
-	             << " [--hanoi] [--truck-distance-file=PATH] [--drone-distance-file=PATH] [--truck-vijl-file=PATH]"
+	             << " [--hanoi] [--truck-distance-file=PATH] [--drone-distance-file=PATH] [--truck-vijl-file=PATH] [--start-hour=HOUR]"
+	             << " [--evaluate-solution=PATH] [--truck-single-trip]"
 	             << " [--demand-seed=N] [--deadline-sec=SEC] [--truck-service-sec=SEC] [--drone-service-sec=SEC]"
 	             << " [--truck-capacity=KG] [--drone-capacity=KG] [--drone-speed-kph=KPH]"
 	             << " [--vehicle-config=PATH]"
+	             << " [--seed=N]"
              << "\n";
         return 1;
     }
@@ -6381,6 +6540,7 @@ int main(int argc, char* argv[]) {
 	    bool auto_tune = false;
 	    bool attempts_explicitly_set = false;
 	    int requested_segments = -1;
+	    string evaluate_solution_file;
 	    for (int ai = 2; ai < argc; ++ai) {
 	        string arg = argv[ai], v;
 	        if (parse_kv_flag(arg, "--vehicle-config", v)) {
@@ -6394,7 +6554,22 @@ int main(int argc, char* argv[]) {
 	        string arg = argv[ai];
 	        if (arg == "--print-distance-matrix") { print_dist_matrix = true; continue; }
 	        if (arg == "--hanoi") { CFG_HANOI_INPUT = true; continue; }
+	        if (arg == "--truck-single-trip") { CFG_TRUCK_SINGLE_TRIP = true; continue; }
 	        string v;
+        if (parse_kv_flag(arg, "--c-seg", v)) { CFG_C_SEG = stod(v); continue; }
+        if (parse_kv_flag(arg, "--c-tau", v)) { CFG_C_TAU = stod(v); continue; }
+        if (parse_kv_flag(arg, "--h-mode", v)) { H_MODE = stoi(v); continue; }
+        if (parse_kv_flag(arg, "--h-div", v)) { H_DIV = stoi(v); continue; }
+        if (parse_kv_flag(arg, "--gamma1", v)) { gamma1 = stod(v); continue; }
+        if (parse_kv_flag(arg, "--gamma2", v)) { gamma2 = stod(v); continue; }
+        if (parse_kv_flag(arg, "--gamma3", v)) { gamma3 = stod(v); continue; }
+        if (parse_kv_flag(arg, "--gamma4", v)) { gamma4 = stod(v); continue; }
+        if (parse_kv_flag(arg, "--sa-t0", v)) { T0 = stod(v); continue; }
+        if (parse_kv_flag(arg, "--sa-alpha", v)) { alpha = stod(v); continue; }
+        if (parse_kv_flag(arg, "--penalty-kappa", v)) { PENALTY_ADAPTATION_RATE = stod(v); continue; }
+        if (parse_kv_flag(arg, "--target-violation", v)) { PENALTY_TARGET_VIOLATION = stod(v); continue; }
+        if (parse_kv_flag(arg, "--destroy-rate", v)) { DESTROY_RATE = stod(v); continue; }
+        if (parse_kv_flag(arg, "--cross-cluster-penalty", v)) { CFG_CROSS_CLUSTER_PENALTY = stod(v); continue; }
 	        if (parse_kv_flag(arg, "--attempts", v)) { CFG_NUM_INITIAL = max(1, stoi(v)); attempts_explicitly_set = true; continue; }
 	        if (parse_kv_flag(arg, "--iters", v)) { CFG_MAX_ITERATIONS = max(1, stoi(v)); continue; }
 	        if (parse_kv_flag(arg, "--segment-iters", v)) { CFG_MAX_ITER_PER_SEGMENT = max(1, stoi(v)); continue; }
@@ -6411,7 +6586,10 @@ int main(int argc, char* argv[]) {
         if (parse_kv_flag(arg, "--truck-distance-file", v)) { CFG_TRUCK_DISTANCE_FILE = v; continue; }
         if (parse_kv_flag(arg, "--drone-distance-file", v)) { CFG_DRONE_DISTANCE_FILE = v; continue; }
         if (parse_kv_flag(arg, "--truck-vijl-file", v)) { CFG_TRUCK_VIJL_FILE = v; continue; }
+        if (parse_kv_flag(arg, "--start-hour", v)) { CFG_TRAFFIC_START_HOUR = stod(v); continue; }
+        if (parse_kv_flag(arg, "--evaluate-solution", v)) { evaluate_solution_file = v; continue; }
         if (parse_kv_flag(arg, "--vehicle-config", v)) { CFG_VEHICLE_CONFIG_FILE = v; continue; }
+        if (parse_kv_flag(arg, "--seed", v)) { CFG_RUN_SEED = (unsigned)stoul(v); continue; }
         if (parse_kv_flag(arg, "--demand-seed", v)) { CFG_HANOI_DEMAND_SEED = (unsigned)stoul(v); continue; }
         if (parse_kv_flag(arg, "--demand-min", v)) { CFG_HANOI_DEMAND_MIN = stod(v); continue; }
         if (parse_kv_flag(arg, "--demand-max", v)) { CFG_HANOI_DEMAND_MAX = stod(v); continue; }
@@ -6423,6 +6601,16 @@ int main(int argc, char* argv[]) {
         if (parse_kv_flag(arg, "--drone-speed-kph", v)) { v_fly_drone = max(1e-9, stod(v) / 3.6); continue; }
         if (arg == "--auto-tune") { auto_tune = true; continue; }
     }
+    if (!(CFG_C_SEG >= 0 && CFG_C_TAU > 0 && H_MODE >= 1 && H_DIV > H_MODE &&
+          gamma1 > gamma2 && gamma2 > gamma3 && gamma3 >= 0 && gamma4 > 0 && gamma4 <= 1 &&
+          T0 > 0 && alpha > 0 && alpha <= 1 && PENALTY_ADAPTATION_RATE > 0 &&
+          PENALTY_TARGET_VIOLATION >= 0 && DESTROY_RATE > 0 && DESTROY_RATE <= 1 &&
+          CFG_CROSS_CLUSTER_PENALTY >= 0)) {
+        cerr << "Error: invalid search parameter configuration.\n";
+        return 1;
+    }
+    RNG_STREAM_COUNTER = 0;
+    srand(CFG_RUN_SEED);
 
     // Read input instance
     if (input_file.find(".nodes.csv") != string::npos || input_file.find(".amsts.csv") != string::npos) CFG_HANOI_INPUT = true;
@@ -6436,15 +6624,70 @@ int main(int argc, char* argv[]) {
     // Recalculate tenures based on instance size
     update_tabu_tenures();
     // Build distance matrix for downstream time computations
-    if (!CFG_HANOI_INPUT) compute_distance_matrices(loc);
-    configure_time_segment_boundaries();
+    if (!CFG_HANOI_INPUT) {
+        compute_distance_matrices(loc);
+        if (!CFG_TRUCK_DISTANCE_FILE.empty()) {
+            load_distance_matrix_file(CFG_TRUCK_DISTANCE_FILE, truck_distance_matrix, "truck");
+        }
+        if (!CFG_DRONE_DISTANCE_FILE.empty()) {
+            load_distance_matrix_file(CFG_DRONE_DISTANCE_FILE, drone_distance_matrix, "drone");
+            distance_matrix = drone_distance_matrix;
+        }
+    }
     // Build edge/time-dependent truck speed model: v_ijl = theta_ijl * vmax_ij.
     configure_time_dependent_truck_speed_model();
+    configure_time_segment_boundaries();
+    if (CFG_TRAFFIC_START_HOUR < 0.0) {
+        CFG_TRAFFIC_START_HOUR = static_cast<double>(CFG_TRAFFIC_FIRST_HOUR);
+    }
+    double traffic_last_hour = CFG_TRAFFIC_FIRST_HOUR + max(1, (int)time_segments_sigma.size()) - 1;
+    if (CFG_TRAFFIC_START_HOUR < CFG_TRAFFIC_FIRST_HOUR || CFG_TRAFFIC_START_HOUR > traffic_last_hour) {
+        cerr << "Error: --start-hour must be in [" << CFG_TRAFFIC_FIRST_HOUR
+             << ", " << traffic_last_hour << "] for the loaded traffic profile.\n";
+        return 1;
+    }
+    cout << "Traffic start hour: " << CFG_TRAFFIC_START_HOUR << "h\n";
     if (print_dist_matrix) {
         print_distance_matrix();
         return 0; // only print distance matrix and exit
     }
+    if (!evaluate_solution_file.empty()) {
+        Solution evaluated;
+        string error;
+        if (!load_solution_routes(evaluate_solution_file, evaluated, error)) {
+            cerr << "Error: " << error << "\n";
+            return 1;
+        }
+        if (!check_solution_integrity(evaluated)) {
+            cerr << "Error: evaluated solution does not serve customers 1.." << n
+                 << " exactly once\n";
+            return 1;
+        }
+        evaluated = recalculate_solution(evaluated);
+        bool feasible = evaluated.deadline_violation <= 1e-8 &&
+                        evaluated.energy_violation <= 1e-8 &&
+                        evaluated.capacity_violation <= 1e-8;
+        cout.setf(std::ios::fixed);
+        cout << setprecision(6);
+        cout << "Evaluated fixed solution at start hour: " << CFG_TRAFFIC_START_HOUR << "\n";
+        print_solution_stream(evaluated, cout);
+        cout << "Final solution feasibility: " << (feasible ? "FEASIBLE" : "INFEASIBLE") << "\n";
+        if (!write_output_file(
+                "output_solution_evaluated.txt", evaluated, evaluated.total_makespan,
+                0.0, feasible, evaluated.total_makespan, evaluated.total_makespan)) {
+            cerr << "Error: failed to write output_solution_evaluated.txt\n";
+            return 1;
+        }
+        return feasible ? 0 : 2;
+    }
 
+        if (CFG_C_SEG > 0) CFG_MAX_ITER_PER_SEGMENT = max(1, (int)ceil(CFG_C_SEG * n));
+        cout << "Tuning config: c_seg=" << CFG_C_SEG << ", c_tau=" << CFG_C_TAU
+             << ", tenure=" << TABU_TENURE_BASE << ", H_mode=" << H_MODE << ", H_div=" << H_DIV
+             << ", gamma=" << gamma1 << "," << gamma2 << "," << gamma3 << "," << gamma4
+             << ", T0=" << T0 << ", alpha=" << alpha << ", kappa=" << PENALTY_ADAPTATION_RATE
+             << ", tau_v=" << PENALTY_TARGET_VIOLATION << ", destroy=" << DESTROY_RATE
+             << ", eta=" << CFG_CROSS_CLUSTER_PENALTY << ", truck_capacity=" << Dh << "\n";
 	    if (requested_segments > 0) {
 	        CFG_MAX_ITERATIONS = max(1, requested_segments * CFG_MAX_ITER_PER_SEGMENT);
 	    }
@@ -6503,7 +6746,7 @@ int main(int argc, char* argv[]) {
     all_results.reserve(CFG_NUM_INITIAL);
 
     auto start_time = std::chrono::high_resolution_clock::now();
-    int ablation_seed = 42;
+    int ablation_seed = (int)CFG_RUN_SEED;
     for (int attempt = 0; attempt < CFG_NUM_INITIAL; ++attempt) {
         Solution initial_solution = generate_initial_solution_v2(ablation_seed + attempt);
         vd iter_current, iter_best;

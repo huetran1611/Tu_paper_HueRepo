@@ -1,0 +1,53 @@
+name: Load frozen Hanoi experiment
+description: Download the initialization capsule and checkout its exact source commit
+inputs:
+  setup_run_id:
+    description: Run ID of Hanoi PI initialization
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Validate initialization run ID
+      shell: bash
+      env:
+        SETUP_RUN_ID: ${{ inputs.setup_run_id }}
+      run: python3 -c 'import os; assert os.environ["SETUP_RUN_ID"].isdigit(), "Expected numeric setup_run_id"'
+    - uses: actions/download-artifact@v4
+      with:
+        name: hanoi-full-capsule
+        path: ${{ runner.temp }}/hanoi-capsule
+        run-id: ${{ inputs.setup_run_id }}
+        github-token: ${{ github.token }}
+    - name: Read frozen commit
+      id: frozen
+      shell: bash
+      env:
+        SETUP_RUN_ID: ${{ inputs.setup_run_id }}
+      run: |
+        python3 - <<'PY'
+        import json, os, pathlib, re
+        path = pathlib.Path(os.environ['RUNNER_TEMP']) / 'hanoi-capsule/experiment.json'
+        metadata = json.loads(path.read_text())
+        assert metadata['experiment_id'] == os.environ['SETUP_RUN_ID']
+        assert re.fullmatch(r'[0-9a-f]{40}', metadata['commit'])
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
+            print('commit=' + metadata['commit'], file=out)
+        PY
+    - uses: actions/checkout@v5
+      with:
+        ref: ${{ steps.frozen.outputs.commit }}
+        persist-credentials: false
+        sparse-checkout-cone-mode: false
+        sparse-checkout: |
+          /.github/
+          /scripts/
+          /src_v2/
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    - name: Install pinned dependencies and verify frozen experiment
+      shell: bash
+      run: |
+        python -m pip install -r scripts/requirements-hanoi-full.txt
+        chmod +x "$RUNNER_TEMP/hanoi-capsule/solver"
+        python scripts/hanoi_full_experiment.py check --capsule "$RUNNER_TEMP/hanoi-capsule"

@@ -1,0 +1,216 @@
+name: Hanoi PI - reference and initialization
+run-name: Hanoi PI - setup ${{ inputs.setup_run_id }} - batch ${{ inputs.batch }} - ${{ inputs.mode }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Initialize once, run PI batches, or aggregate all policies
+        type: choice
+        options: [initialize, batch, aggregate]
+        default: initialize
+        required: true
+      setup_run_id:
+        description: Run ID of the successful PI initialization (blank only for initialize)
+        type: string
+        required: false
+      batch:
+        description: PI batch number (up to 250 optimization jobs)
+        type: choice
+        options: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
+        default: '1'
+        required: true
+      max_parallel:
+        description: Maximum concurrent compute jobs in this batch
+        type: choice
+        options: ['5', '10', '20', '40']
+        default: '20'
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  PYTHONDONTWRITEBYTECODE: '1'
+
+jobs:
+  initialize:
+    if: ${{ inputs.mode == 'initialize' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/
+            /scripts/
+            /src_v2/
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install -r scripts/requirements-hanoi-full.txt
+      - name: Build solver and run evaluator tests
+        run: |
+          mkdir -p build/hanoi_p2_deadline_pilot
+          g++ -O3 -std=c++20 scripts/hanoi_pilot_event_bridge.cpp -o build/hanoi_p2_deadline_pilot/protocol_solver
+          g++ -O2 -std=c++20 scripts/test_hanoi_solver_clock.cpp -o build/hanoi_p2_deadline_pilot/test_clock
+          build/hanoi_p2_deadline_pilot/test_clock
+          python -m unittest discover -s scripts -p test_hanoi_pilot_event_bridge.py
+          python -m unittest discover -s scripts -p test_hanoi_full_experiment.py
+      - name: Freeze code, data, task list and solver
+        run: |
+          python scripts/hanoi_full_experiment.py freeze \
+            --binary build/hanoi_p2_deadline_pilot/protocol_solver \
+            --output "$RUNNER_TEMP/hanoi-capsule" \
+            --experiment-id "$GITHUB_RUN_ID" --commit "$GITHUB_SHA"
+          echo "Initialization run ID: $GITHUB_RUN_ID" >> "$GITHUB_STEP_SUMMARY"
+          echo "Use this ID for all P0, P1, P2 and PI batches." >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-full-capsule
+          path: ${{ runner.temp }}/hanoi-capsule/
+          retention-days: 90
+          if-no-files-found: error
+
+  prepare:
+    if: ${{ inputs.mode == 'batch' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      matrix: ${{ steps.matrix.outputs.value }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/
+            /scripts/
+            /src_v2/
+      - uses: ./.github/actions/hanoi-capsule-bootstrap
+        with:
+          setup_run_id: ${{ inputs.setup_run_id }}
+      - name: Select this policy and batch
+        id: matrix
+        env:
+          BATCH: ${{ inputs.batch }}
+        run: |
+          MATRIX=$(python scripts/hanoi_full_experiment.py matrix --capsule "$RUNNER_TEMP/hanoi-capsule" --policy PI --batch "$BATCH")
+          echo "value=$MATRIX" >> "$GITHUB_OUTPUT"
+
+  experiment:
+    if: ${{ inputs.mode == 'batch' }}
+    needs: prepare
+    name: PI ${{ matrix.key }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJSON(inputs.max_parallel) }}
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/
+            /scripts/
+            /src_v2/
+      - uses: ./.github/actions/hanoi-capsule-bootstrap
+        with:
+          setup_run_id: ${{ inputs.setup_run_id }}
+      - name: Optimize once and replay the fixed plan
+        env:
+          BATCH: ${{ inputs.batch }}
+          TASK_KEY: ${{ matrix.key }}
+        run: |
+          python -u scripts/hanoi_full_experiment.py run-task \
+            --capsule "$RUNNER_TEMP/hanoi-capsule" --policy PI --batch "$BATCH" \
+            --task-key "$TASK_KEY" --output results/task
+      - name: Preserve each job independently, including failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hn-${{ inputs.setup_run_id }}-raw-${{ matrix.key }}-run-${{ github.run_id }}-a${{ github.run_attempt }}
+          path: results/task/
+          retention-days: 90
+          if-no-files-found: warn
+
+  batch_report:
+    needs: [prepare, experiment]
+    if: ${{ !cancelled() && needs.prepare.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/
+            /scripts/
+            /src_v2/
+      - uses: ./.github/actions/hanoi-capsule-bootstrap
+        with:
+          setup_run_id: ${{ inputs.setup_run_id }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: hn-${{ inputs.setup_run_id }}-raw-*
+          path: collected
+      - name: Pack completed records and report exact missing jobs
+        env:
+          BATCH: ${{ inputs.batch }}
+        run: |
+          python scripts/hanoi_full_experiment.py pack-batch \
+            --capsule "$RUNNER_TEMP/hanoi-capsule" --policy PI --batch "$BATCH" \
+            --input collected --output batch_report
+      - name: Preserve batch records even if some jobs failed
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-full-${{ inputs.setup_run_id }}-batch-PI-${{ inputs.batch }}-run-${{ github.run_id }}-a${{ github.run_attempt }}
+          path: batch_report/
+          retention-days: 90
+          if-no-files-found: warn
+
+  aggregate:
+    if: ${{ inputs.mode == 'aggregate' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/
+            /scripts/
+            /src_v2/
+      - uses: ./.github/actions/hanoi-capsule-bootstrap
+        with:
+          setup_run_id: ${{ inputs.setup_run_id }}
+      - name: Collect batch records for this experiment only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/hanoi_full_experiment.py fetch-batches \
+            --capsule "$RUNNER_TEMP/hanoi-capsule" --repo "$GITHUB_REPOSITORY" --output collected
+      - name: Pair with PI and export verified CSV and LaTeX
+        run: |
+          python scripts/hanoi_full_experiment.py aggregate \
+            --capsule "$RUNNER_TEMP/hanoi-capsule" --input collected --output final_report
+      - name: Preserve report and coverage diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-full-${{ inputs.setup_run_id }}-final-run-${{ github.run_id }}-a${{ github.run_attempt }}
+          path: |
+            final_report/
+            collected/download_manifest.json
+          retention-days: 90
+          if-no-files-found: warn

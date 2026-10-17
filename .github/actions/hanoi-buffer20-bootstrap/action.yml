@@ -1,0 +1,20 @@
+name: Load original Hanoi capsule and buffer20 runner
+description: Preserve the new runner while loading the exact original solver and helpers
+inputs:
+  setup_run_id:
+    description: Successful original baseline initialization run
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Preserve extension runner before frozen checkout
+      shell: bash
+      run: cp scripts/hanoi_buffer20_experiment.py "$RUNNER_TEMP/hanoi_buffer20_experiment.py"
+    - uses: ./.github/actions/hanoi-capsule-bootstrap
+      with:
+        setup_run_id: ${{ inputs.setup_run_id }}
+    - name: Validate original capsule and extension universe
+      shell: bash
+      run: |
+        PYTHONPATH="$GITHUB_WORKSPACE/scripts" python "$RUNNER_TEMP/hanoi_buffer20_experiment.py" check \
+          --capsule "$RUNNER_TEMP/hanoi-capsule"

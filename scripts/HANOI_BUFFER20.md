@@ -58,6 +58,8 @@ The new runner is saved to the runner's temporary directory before the
 original bootstrap checks out the frozen source commit. This avoids editing
 the frozen code or bypassing its source/binary/data hash checks. Extension
 identity includes both the parent protocol and the new runner's SHA-256.
+The extension action metadata is also restored after checkout so GitHub can
+perform its composite-action post-job cleanup; it is not part of the frozen code.
 
 Raw and packed artifact names include the extension identity, source run
 and attempt. Original artifacts are never overwritten. Use **Re-run failed

@@ -184,8 +184,12 @@ class Buffer20Tests(unittest.TestCase):
         action = yaml.load((full.ROOT / ".github/actions/hanoi-buffer20-bootstrap/action.yml").read_text(), Loader=yaml.BaseLoader)
         steps = action["runs"]["steps"]
         self.assertIn("cp scripts/hanoi_buffer20_experiment.py", steps[0]["run"])
+        self.assertIn("hanoi-buffer20-bootstrap.yml", steps[0]["run"])
         self.assertEqual(steps[1]["uses"], "./.github/actions/hanoi-capsule-bootstrap")
-        self.assertIn("$GITHUB_WORKSPACE/scripts", steps[2]["run"])
+        self.assertEqual(steps[2]["if"], "always()")
+        self.assertIn("cp", steps[2]["run"])
+        self.assertIn(".github/actions/hanoi-buffer20-bootstrap/action.yml", steps[2]["run"])
+        self.assertIn("$GITHUB_WORKSPACE/scripts", steps[3]["run"])
 
     def test_fetch_filters_parent_and_extension_and_rejects_unsafe_paths(self):
         prefix = f"hanoi-b20-123-{self.extension_id[:12]}-batch-"

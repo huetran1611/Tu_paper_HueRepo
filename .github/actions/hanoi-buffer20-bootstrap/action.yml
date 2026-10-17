@@ -9,10 +9,18 @@ runs:
   steps:
     - name: Preserve extension runner before frozen checkout
       shell: bash
-      run: cp scripts/hanoi_buffer20_experiment.py "$RUNNER_TEMP/hanoi_buffer20_experiment.py"
+      run: |
+        cp scripts/hanoi_buffer20_experiment.py "$RUNNER_TEMP/hanoi_buffer20_experiment.py"
+        cp .github/actions/hanoi-buffer20-bootstrap/action.yml "$RUNNER_TEMP/hanoi-buffer20-bootstrap.yml"
     - uses: ./.github/actions/hanoi-capsule-bootstrap
       with:
         setup_run_id: ${{ inputs.setup_run_id }}
+    - name: Restore extension action metadata for GitHub post-job cleanup
+      if: always()
+      shell: bash
+      run: |
+        mkdir -p .github/actions/hanoi-buffer20-bootstrap
+        cp "$RUNNER_TEMP/hanoi-buffer20-bootstrap.yml" .github/actions/hanoi-buffer20-bootstrap/action.yml
     - name: Validate original capsule and extension universe
       shell: bash
       run: |

@@ -1,0 +1,135 @@
+name: Hanoi buffer 0.5 percent - freshness 59m42s
+run-name: Hanoi buffer 0.5pct - setup ${{ inputs.setup_run_id }} - batch ${{ inputs.batch }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      setup_run_id:
+        description: ORIGINAL initialization ID; reuse exact solver, traffic and PI
+        type: string
+        default: '38888658850'
+        required: true
+      batch:
+        description: Batch number, exactly 250 new policy optimizations
+        type: choice
+        options: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16']
+        default: '1'
+        required: true
+      max_parallel:
+        description: Maximum concurrent compute jobs per batch
+        type: choice
+        options: ['5', '10', '20', '40']
+        default: '20'
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  PYTHONDONTWRITEBYTECODE: '1'
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    outputs:
+      matrix: ${{ steps.matrix.outputs.value }}
+      extension: ${{ steps.matrix.outputs.extension }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/
+            /scripts/
+            /src_v2/
+      - uses: ./.github/actions/hanoi-buffer005-bootstrap
+        with:
+          setup_run_id: ${{ inputs.setup_run_id }}
+      - name: Select buffer 0.5 percent batch
+        id: matrix
+        env:
+          BATCH: ${{ inputs.batch }}
+        run: |
+          export PYTHONPATH="$GITHUB_WORKSPACE/scripts"
+          MATRIX=$(python "$RUNNER_TEMP/hanoi_buffer005_experiment.py" matrix --capsule "$RUNNER_TEMP/hanoi-capsule" --batch "$BATCH")
+          CHECK=$(python "$RUNNER_TEMP/hanoi_buffer005_experiment.py" check --capsule "$RUNNER_TEMP/hanoi-capsule")
+          EXTENSION=$(printf '%s' "$CHECK" | python -c 'import json,sys; print(json.load(sys.stdin)["short_id"])')
+          echo "value=$MATRIX" >> "$GITHUB_OUTPUT"
+          echo "extension=$EXTENSION" >> "$GITHUB_OUTPUT"
+
+  experiment:
+    needs: prepare
+    name: Buffer0.5pct ${{ matrix.key }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJSON(inputs.max_parallel) }}
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/
+            /scripts/
+            /src_v2/
+      - uses: ./.github/actions/hanoi-buffer005-bootstrap
+        with:
+          setup_run_id: ${{ inputs.setup_run_id }}
+      - name: Optimize at 3582 seconds, then replay fixed routes at original 3600 seconds
+        env:
+          BATCH: ${{ inputs.batch }}
+          TASK_KEY: ${{ matrix.key }}
+        run: |
+          PYTHONPATH="$GITHUB_WORKSPACE/scripts" python -u "$RUNNER_TEMP/hanoi_buffer005_experiment.py" run-task \
+            --capsule "$RUNNER_TEMP/hanoi-capsule" --batch "$BATCH" --task-key "$TASK_KEY" --output results/task
+      - name: Preserve each solution and replay independently
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hn005-${{ inputs.setup_run_id }}-${{ needs.prepare.outputs.extension }}-raw-${{ matrix.key }}-run-${{ github.run_id }}-a${{ github.run_attempt }}
+          path: results/task/
+          retention-days: 90
+          if-no-files-found: warn
+
+  batch_report:
+    needs: [prepare, experiment]
+    if: ${{ !cancelled() && needs.prepare.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/
+            /scripts/
+            /src_v2/
+      - uses: ./.github/actions/hanoi-buffer005-bootstrap
+        with:
+          setup_run_id: ${{ inputs.setup_run_id }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: hn005-${{ inputs.setup_run_id }}-${{ needs.prepare.outputs.extension }}-raw-*
+          path: collected
+      - name: Validate and pack records, with explicit missing task coverage
+        env:
+          BATCH: ${{ inputs.batch }}
+        run: |
+          PYTHONPATH="$GITHUB_WORKSPACE/scripts" python "$RUNNER_TEMP/hanoi_buffer005_experiment.py" pack-batch \
+            --capsule "$RUNNER_TEMP/hanoi-capsule" --batch "$BATCH" --input collected --output batch_report
+      - name: Preserve partial results even if technical failures occurred
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-b005-${{ inputs.setup_run_id }}-${{ needs.prepare.outputs.extension }}-batch-${{ inputs.batch }}-run-${{ github.run_id }}-a${{ github.run_attempt }}
+          path: batch_report/
+          retention-days: 90
+          if-no-files-found: warn

@@ -1,0 +1,28 @@
+name: Load original Hanoi capsule and buffer 5 percent runner
+description: Reuse the frozen solver with epsilon 0.05 and 3420-second planning freshness
+inputs:
+  setup_run_id:
+    description: Original baseline initialization run
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Preserve extension before frozen checkout
+      shell: bash
+      run: |
+        cp scripts/hanoi_buffer05_experiment.py "$RUNNER_TEMP/hanoi_buffer05_experiment.py"
+        cp .github/actions/hanoi-buffer05-bootstrap/action.yml "$RUNNER_TEMP/hanoi-buffer05-bootstrap.yml"
+    - uses: ./.github/actions/hanoi-capsule-bootstrap
+      with:
+        setup_run_id: ${{ inputs.setup_run_id }}
+    - name: Restore action metadata for post-job cleanup
+      if: always()
+      shell: bash
+      run: |
+        mkdir -p .github/actions/hanoi-buffer05-bootstrap
+        cp "$RUNNER_TEMP/hanoi-buffer05-bootstrap.yml" .github/actions/hanoi-buffer05-bootstrap/action.yml
+    - name: Validate frozen capsule and fractional buffer
+      shell: bash
+      run: |
+        PYTHONPATH="$GITHUB_WORKSPACE/scripts" python "$RUNNER_TEMP/hanoi_buffer05_experiment.py" check \
+          --capsule "$RUNNER_TEMP/hanoi-capsule"

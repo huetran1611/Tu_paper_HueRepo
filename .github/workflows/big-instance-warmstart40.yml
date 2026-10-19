@@ -1,0 +1,84 @@
+name: Big normal - 66 multi-trip warm starts - truck 40kg
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [big-warmstart40-20261019]
+    paths:
+      - .github/workflows/big-instance-warmstart40.yml
+      - .github/data/big-warmstart40.zip
+      - scripts/big_instance_warmstart40_cloud.py
+
+permissions:
+  contents: read
+
+concurrency:
+  group: big-warmstart40-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PYTHONDONTWRITEBYTECODE: '1'
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install openpyxl==3.1.5 requests==2.32.3
+      - id: matrix
+        run: python scripts/big_instance_warmstart40_cloud.py matrix
+      - run: python scripts/big_instance_warmstart40_cloud.py build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: warmstart40-linux-solver
+          path: |
+            build/big_warmstart40/solver
+            build/big_warmstart40/build.json
+          retention-days: 90
+          if-no-files-found: error
+
+  optimize:
+    needs: prepare
+    name: Normal ${{ matrix.instance }} / slot ${{ matrix.slot }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 70
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/checkout@v5
+        with:
+          ref: 902415a453ae5174403151323de4398f7d456c6d
+          path: historical
+          sparse-checkout: instance_time_dependent
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install openpyxl==3.1.5 requests==2.32.3
+      - uses: actions/download-artifact@v4
+        with:
+          name: warmstart40-linux-solver
+          path: build/big_warmstart40
+      - run: chmod +x build/big_warmstart40/solver
+      - name: Optimize with 3600-second hard process limit
+        env:
+          SLOT: ${{ matrix.slot }}
+        run: python scripts/big_instance_warmstart40_cloud.py task --slot "$SLOT"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: warm40-slot-${{ matrix.slot }}-attempt-${{ github.run_attempt }}
+          path: |
+            build/big_warmstart40/tasks/${{ matrix.slot }}/
+            build/big_warmstart40/plan.json
+            build/big_warmstart40/build.json
+          retention-days: 90
+          if-no-files-found: warn

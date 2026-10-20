@@ -1,0 +1,14 @@
+{
+  "sha256": "edac78ea0b04abe0e5c8b15a5762f1f4de668c71d235ce6b044e58798431b62e",
+  "profiles_sha256": "cdb7ed25d6b29b6a62cc9b115f511e55ce80a779203d5331ca1d779fcc9843a8",
+  "original_solver_sha256": "84be0a0b88bec149ae625398ad5e4a37cd6faac05180ea51ccd13a6b0aafe3e0",
+  "original_source_commit": "d8498413299123c36bd36037e70f23533afe6510",
+  "buffers_pct": [
+    0,
+    5,
+    10,
+    15
+  ],
+  "optimization_count": 18400,
+  "scheduled_replays": 28800
+}

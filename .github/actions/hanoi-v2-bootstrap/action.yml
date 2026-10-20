@@ -1,0 +1,31 @@
+name: Load immutable Hanoi V2 capsule
+description: Load the new traffic, original frozen solver and versioned execution code
+inputs:
+  setup_run_id:
+    required: true
+    description: Successful Hanoi V2 initialization run ID, never the V1 ID
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        SETUP: ${{ inputs.setup_run_id }}
+      run: python3 -c 'import os; assert os.environ["SETUP"].isdigit(), "Numeric V2 initialization ID required"'
+    - uses: actions/download-artifact@v4
+      with:
+        name: hanoi-v2-capsule
+        path: ${{ runner.temp }}/hanoi-v2-capsule
+        run-id: ${{ inputs.setup_run_id }}
+        github-token: ${{ github.token }}
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    - shell: bash
+      env:
+        SETUP: ${{ inputs.setup_run_id }}
+      run: |
+        set -euo pipefail
+        python -c 'import json,os,pathlib; m=json.loads((pathlib.Path(os.environ["RUNNER_TEMP"])/"hanoi-v2-capsule/experiment.json").read_text()); assert m["experiment_id"]==os.environ["SETUP"] and m["dataset_version"]=="hanoi_v2_group_permutation"'
+        python -m pip install -r "$RUNNER_TEMP/hanoi-v2-capsule/runtime/scripts/requirements-hanoi-v2.txt"
+        chmod +x "$RUNNER_TEMP/hanoi-v2-capsule/solver"
+        python "$RUNNER_TEMP/hanoi-v2-capsule/runtime/scripts/hanoi_v2_experiment.py" check --capsule "$RUNNER_TEMP/hanoi-v2-capsule"

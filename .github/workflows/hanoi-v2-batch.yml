@@ -1,0 +1,116 @@
+name: Hanoi V2 reusable batch - up to 250 independent jobs
+on:
+  workflow_call:
+    inputs:
+      setup_run_id:
+        type: string
+        required: true
+      group:
+        type: string
+        required: true
+      batch:
+        type: number
+        required: true
+      max_parallel:
+        type: number
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  PYTHONDONTWRITEBYTECODE: '1'
+  MPLCONFIGDIR: /tmp/hanoi-v2-mpl
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: /.github/actions/hanoi-v2-bootstrap/
+      - uses: ./.github/actions/hanoi-v2-bootstrap
+        with:
+          setup_run_id: ${{ inputs.setup_run_id }}
+      - id: matrix
+        env:
+          GROUP: ${{ inputs.group }}
+          BATCH: ${{ inputs.batch }}
+        run: |
+          MATRIX=$(python "$RUNNER_TEMP/hanoi-v2-capsule/runtime/scripts/hanoi_v2_experiment.py" matrix --capsule "$RUNNER_TEMP/hanoi-v2-capsule" --policy "$GROUP" --batch "$BATCH")
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+
+  experiment:
+    needs: prepare
+    name: V2 ${{ matrix.key }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ inputs.max_parallel }}
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: /.github/actions/hanoi-v2-bootstrap/
+      - uses: ./.github/actions/hanoi-v2-bootstrap
+        with:
+          setup_run_id: ${{ inputs.setup_run_id }}
+      - name: Optimize once, then replay unchanged routes on held-out V2 traffic
+        env:
+          GROUP: ${{ inputs.group }}
+          BATCH: ${{ inputs.batch }}
+          TASK_KEY: ${{ matrix.key }}
+        run: |
+          python -u "$RUNNER_TEMP/hanoi-v2-capsule/runtime/scripts/hanoi_v2_experiment.py" run-task \
+            --capsule "$RUNNER_TEMP/hanoi-v2-capsule" --policy "$GROUP" --batch "$BATCH" \
+            --task-key "$TASK_KEY" --output "$GITHUB_WORKSPACE/results/task"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hnv2-${{ inputs.setup_run_id }}-raw-${{ matrix.key }}-run-${{ github.run_id }}-a${{ github.run_attempt }}
+          path: results/task/
+          retention-days: 90
+          if-no-files-found: warn
+
+  batch_report:
+    needs: [prepare, experiment]
+    if: ${{ !cancelled() && needs.prepare.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: /.github/actions/hanoi-v2-bootstrap/
+      - uses: ./.github/actions/hanoi-v2-bootstrap
+        with:
+          setup_run_id: ${{ inputs.setup_run_id }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: hnv2-${{ inputs.setup_run_id }}-raw-*
+          path: collected
+      - name: Validate all records and disclose missing or conflicting tasks
+        env:
+          GROUP: ${{ inputs.group }}
+          BATCH: ${{ inputs.batch }}
+        run: |
+          python "$RUNNER_TEMP/hanoi-v2-capsule/runtime/scripts/hanoi_v2_experiment.py" pack-batch \
+            --capsule "$RUNNER_TEMP/hanoi-v2-capsule" --policy "$GROUP" --batch "$BATCH" \
+            --input collected --output batch_report
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hanoi-v2-${{ inputs.setup_run_id }}-batch-${{ inputs.group }}-${{ inputs.batch }}-run-${{ github.run_id }}-a${{ github.run_attempt }}
+          path: batch_report/
+          retention-days: 90
+          if-no-files-found: warn

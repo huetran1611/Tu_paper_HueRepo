@@ -1,0 +1,127 @@
+name: Hanoi V2 - initialize, batch, aggregate - buffers 0 5 10 15
+run-name: Hanoi V2 - ${{ inputs.mode || 'initialize' }} - ${{ inputs.group || 'PI' }} - batch ${{ inputs.batch || '1' }} - setup ${{ inputs.setup_run_id }}
+on:
+  push:
+    branches: [codex/hanoi-v2-20261020]
+    paths: [.github/triggers/hanoi-v2-initialize]
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        options: [initialize, batch, aggregate]
+        default: initialize
+        required: true
+        description: Initialize ONCE; then run batches; aggregate only when complete
+      setup_run_id:
+        type: string
+        required: false
+        description: NEW successful V2 initialize run ID (blank only for initialize)
+      group:
+        type: choice
+        options: [PI, P0, monday, saturday, sunday]
+        default: PI
+        required: true
+        description: PI 10 batches; P0 13; each day group 18 (P1 shared + P2 same type)
+      batch:
+        type: string
+        default: '1'
+        required: true
+        description: Batch index; at most 250 optimization jobs per batch
+      max_parallel:
+        type: choice
+        options: ['5', '10', '20', '40']
+        default: '20'
+        required: true
+        description: Maximum parallel optimization jobs in this batch
+
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: hanoi-v2-${{ inputs.mode }}-${{ inputs.setup_run_id || github.run_id }}-${{ inputs.group }}-${{ inputs.batch }}
+  cancel-in-progress: false
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  PYTHONDONTWRITEBYTECODE: '1'
+  MPLCONFIGDIR: /tmp/hanoi-v2-mpl
+
+jobs:
+  initialize:
+    if: ${{ github.event_name == 'push' || inputs.mode == 'initialize' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/hanoi-v2/
+            /scripts/hanoi_v2_experiment.py
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install exact historical requirements plus pinned plotting dependency
+        run: |
+          python -m zipfile -e .github/hanoi-v2/inputs.zip "$RUNNER_TEMP/v2-bootstrap-inputs"
+          python -m pip install -r "$RUNNER_TEMP/v2-bootstrap-inputs/runtime/scripts/requirements-hanoi-v2.txt"
+      - name: Freeze V2 inputs, exact original Linux solver and complete task list
+        run: |
+          python scripts/hanoi_v2_experiment.py freeze --capsule "$RUNNER_TEMP/hanoi-v2-capsule" \
+            --experiment-id "$GITHUB_RUN_ID" --commit "$GITHUB_SHA"
+          chmod +x "$RUNNER_TEMP/hanoi-v2-capsule/solver"
+          python "$RUNNER_TEMP/hanoi-v2-capsule/runtime/scripts/hanoi_v2_experiment.py" check --capsule "$RUNNER_TEMP/hanoi-v2-capsule"
+      - name: Compute route-independent S1 on V2 profiles
+        run: |
+          python "$RUNNER_TEMP/hanoi-v2-capsule/runtime/scripts/hanoi_v2_experiment.py" s1 \
+            --capsule "$RUNNER_TEMP/hanoi-v2-capsule" --output "$RUNNER_TEMP/hanoi-v2-capsule/S1"
+          echo "V2 initialization ID: $GITHUB_RUN_ID" >> "$GITHUB_STEP_SUMMARY"
+          cat "$RUNNER_TEMP/hanoi-v2-capsule/batch_plan.json" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hanoi-v2-capsule
+          path: ${{ runner.temp }}/hanoi-v2-capsule/
+          retention-days: 90
+          if-no-files-found: error
+
+  batch:
+    if: ${{ inputs.mode == 'batch' }}
+    uses: ./.github/workflows/hanoi-v2-batch.yml
+    with:
+      setup_run_id: ${{ inputs.setup_run_id }}
+      group: ${{ inputs.group }}
+      batch: ${{ fromJSON(inputs.batch) }}
+      max_parallel: ${{ fromJSON(inputs.max_parallel) }}
+
+  aggregate:
+    if: ${{ inputs.mode == 'aggregate' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: /.github/actions/hanoi-v2-bootstrap/
+      - uses: ./.github/actions/hanoi-v2-bootstrap
+        with:
+          setup_run_id: ${{ inputs.setup_run_id }}
+      - name: Download only batch reports for this V2 initialization
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python "$RUNNER_TEMP/hanoi-v2-capsule/runtime/scripts/hanoi_v2_experiment.py" fetch-batches \
+            --capsule "$RUNNER_TEMP/hanoi-v2-capsule" --repo "$GITHUB_REPOSITORY" --output collected
+      - name: Pair with NEW original PI; export raw CSV, Excel, LaTeX and figures
+        run: |
+          python "$RUNNER_TEMP/hanoi-v2-capsule/runtime/scripts/hanoi_v2_experiment.py" aggregate \
+            --capsule "$RUNNER_TEMP/hanoi-v2-capsule" --input collected --output final_report
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hanoi-v2-${{ inputs.setup_run_id }}-final-run-${{ github.run_id }}-a${{ github.run_attempt }}
+          path: |
+            final_report/
+            collected/download_manifest.json
+          retention-days: 90
+          if-no-files-found: warn

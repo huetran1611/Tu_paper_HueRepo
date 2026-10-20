@@ -1,0 +1,58 @@
+name: Hanoi V2 - continue all batches after validated pilot
+on:
+  push:
+    branches: [codex/hanoi-v2-20261020]
+    paths: [.github/triggers/hanoi-v2-continue-after-pilot]
+  workflow_dispatch:
+    inputs:
+      setup_run_id:
+        type: string
+        default: '39416770489'
+        required: true
+      pilot_run_id:
+        type: string
+        default: '39416901265'
+        required: true
+
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: hanoi-v2-continue-${{ inputs.setup_run_id || '39416770489' }}
+  cancel-in-progress: false
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  PYTHONDONTWRITEBYTECODE: '1'
+
+jobs:
+  validate_and_dispatch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/actions/hanoi-v2-bootstrap/
+            /scripts/hanoi_v2_continue.py
+      - uses: ./.github/actions/hanoi-v2-bootstrap
+        with:
+          setup_run_id: ${{ inputs.setup_run_id || '39416770489' }}
+      - name: Validate pilot technically, then dispatch remaining unique batches
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SETUP: ${{ inputs.setup_run_id || '39416770489' }}
+          PILOT: ${{ inputs.pilot_run_id || '39416901265' }}
+        run: |
+          python -u scripts/hanoi_v2_continue.py \
+            --capsule "$RUNNER_TEMP/hanoi-v2-capsule" --setup-run-id "$SETUP" \
+            --pilot-run-id "$PILOT" --ref codex/hanoi-v2-20261020 \
+            --repo "$GITHUB_REPOSITORY" --output controller_status --max-parallel 20
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hanoi-v2-continuation-${{ inputs.setup_run_id || '39416770489' }}-run-${{ github.run_id }}-a${{ github.run_attempt }}
+          path: controller_status/launch_state.json
+          if-no-files-found: warn
+          retention-days: 90

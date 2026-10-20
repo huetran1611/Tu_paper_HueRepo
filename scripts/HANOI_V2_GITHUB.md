@@ -101,3 +101,19 @@ The historical source is recovered read-only from commit
 `d8498413299123c36bd36037e70f23533afe6510`, verified against the original capsule.
 Do not replace its solver binary/source with a modified current working-tree
 version and still describe the rerun as changing only traffic data.
+
+## Authorized Continuation After Pilot
+
+`.github/workflows/hanoi-v2-continue.yml` waits for Monday batch 1 (run
+39416901265) of V2 setup 39416770489. On successful completion it downloads
+the packed pilot, checks all 250 records against the frozen protocol, and
+dispatches only the remaining 76 unique group/batch pairs. Existing matching
+runs are skipped; conflicting duplicates require review. Technical failure or
+incomplete records stop continuation. RF and test feasibility are NOT gating
+criteria. All four buffers remain 0%, 5%, 10%, 15%.
+
+The controller runs on GitHub, not as a local daemon. It waits at most 120
+minutes for the pilot and preserves a launch-state artifact even on failure.
+Dispatching all batches does not mean optimization has completed. Aggregation
+still requires every batch to finish. Its explicit push trigger is
+`.github/triggers/hanoi-v2-continue-after-pilot` on the dedicated V2 branch.

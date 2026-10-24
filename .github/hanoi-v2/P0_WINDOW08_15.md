@@ -3,7 +3,7 @@
 Workflow: `.github/workflows/hanoi-v2-p0-window08-15.yml`.
 Open **Actions → Hanoi V2 - P0 only - window 08 to 15 → Run workflow**
 on the branch containing this workflow and its helper script.
-The workflow has a manual trigger only; creating these files does not start a run.
+The workflow supports a manual trigger once registered by GitHub. On branch `codex/hanoi-v2-p0-window08-15`, changing `.github/triggers/hanoi-v2-p0-window15` and pushing starts the complete experiment with 20 concurrent shards.
 
 - 20 original V2 instances × 4 folds × 10 original seeds × buffers 0/5/10/15% = 3,200 independent P0 optimizations.
 - Every feasible plan is replayed unchanged on three held-out dates (9,600 scheduled replay slots).

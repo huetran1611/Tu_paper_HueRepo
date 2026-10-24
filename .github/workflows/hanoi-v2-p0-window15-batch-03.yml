@@ -1,0 +1,19 @@
+name: Hanoi V2 P0 window15 - batch 03 - 250 single-process jobs
+run-name: P0 [08,15) batch 03/13 - 250 independent optimization jobs
+on:
+  push:
+    branches: [codex/hanoi-v2-p0-window08-15]
+    paths: [.github/triggers/hanoi-v2-p0-window15-single-jobs]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: hanoi-v2-p0-window15-single-batch-3
+  cancel-in-progress: false
+jobs:
+  batch:
+    uses: ./.github/workflows/hanoi-v2-p0-window15-single-batch.yml
+    with:
+      setup_run_id: '40059267291'
+      batch: 3

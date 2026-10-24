@@ -1,0 +1,119 @@
+name: Hanoi V2 P0 window15 reusable single-task batch
+on:
+  workflow_call:
+    inputs:
+      setup_run_id:
+        type: string
+        required: true
+      batch:
+        type: number
+        required: true
+permissions:
+  contents: read
+  actions: read
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  PYTHONDONTWRITEBYTECODE: '1'
+  MPLCONFIGDIR: /tmp/hanoi-v2-p0-window15-mpl
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          name: hanoi-v2-p0-window15-capsule
+          run-id: ${{ inputs.setup_run_id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/p0-window15
+      - name: Install unchanged frozen requirements
+        run: python -m pip install -r "$RUNNER_TEMP/p0-window15/runtime/scripts/requirements-hanoi-v2.txt"
+      - id: matrix
+        name: Build one job for each independent P0 task
+        env:
+          BATCH: ${{ inputs.batch }}
+        run: |
+          MATRIX=$(python "$RUNNER_TEMP/p0-window15/runtime/scripts/hanoi_v2_experiment.py" matrix \
+            --capsule "$RUNNER_TEMP/p0-window15" --policy P0 --batch "$BATCH")
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+  optimize:
+    needs: prepare
+    name: ${{ matrix.key }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 250
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          name: hanoi-v2-p0-window15-capsule
+          run-id: ${{ inputs.setup_run_id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/p0-window15
+      - name: Install unchanged frozen requirements
+        run: |
+          python -m pip install -r "$RUNNER_TEMP/p0-window15/runtime/scripts/requirements-hanoi-v2.txt"
+          chmod +x "$RUNNER_TEMP/p0-window15/solver"
+      - name: One optimization process, then replay unchanged routes on three held-out dates
+        env:
+          TASK_KEY: ${{ matrix.key }}
+          BATCH: ${{ inputs.batch }}
+        run: |
+          python -u "$RUNNER_TEMP/p0-window15/runtime/scripts/hanoi_v2_experiment.py" run-task \
+            --capsule "$RUNNER_TEMP/p0-window15" --policy P0 --batch "$BATCH" \
+            --task-key "$TASK_KEY" --output "$GITHUB_WORKSPACE/results/task"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: p0w15-b${{ inputs.batch }}-${{ matrix.key }}
+          path: results/task/
+          overwrite: true
+          retention-days: 90
+          if-no-files-found: warn
+  batch_report:
+    needs: [prepare, optimize]
+    if: ${{ !cancelled() && needs.prepare.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          name: hanoi-v2-p0-window15-capsule
+          run-id: ${{ inputs.setup_run_id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/p0-window15
+      - name: Install unchanged frozen requirements
+        run: python -m pip install -r "$RUNNER_TEMP/p0-window15/runtime/scripts/requirements-hanoi-v2.txt"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: p0w15-b${{ inputs.batch }}-*
+          path: collected
+      - name: Validate exact task coverage and preserve all solution/event payloads
+        env:
+          BATCH: ${{ inputs.batch }}
+        run: |
+          python "$RUNNER_TEMP/p0-window15/runtime/scripts/hanoi_v2_experiment.py" pack-batch \
+            --capsule "$RUNNER_TEMP/p0-window15" --policy P0 --batch "$BATCH" \
+            --input collected --output batch_report
+          cat batch_report/batch_coverage.json >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hanoi-v2-p0-window15-batch-${{ inputs.batch }}-report
+          path: batch_report/
+          overwrite: true
+          retention-days: 90
+          if-no-files-found: warn

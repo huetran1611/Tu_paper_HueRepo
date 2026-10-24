@@ -2,9 +2,6 @@ name: Hanoi V2 - P0 only - window 08 to 15
 run-name: Hanoi V2 P0 [08,15) - start 08 - all 3200 optimizations
 
 on:
-  push:
-    branches: [codex/hanoi-v2-p0-window08-15]
-    paths: [.github/triggers/hanoi-v2-p0-window15]
   workflow_dispatch:
     inputs:
       max_parallel:

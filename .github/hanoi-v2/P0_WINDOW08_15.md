@@ -1,22 +1,12 @@
 # P0-only Hanoi V2 rerun on [08:00,15:00)
 
-Workflow: `.github/workflows/hanoi-v2-p0-window08-15.yml`.
-Open **Actions → Hanoi V2 - P0 only - window 08 to 15 → Run workflow**
-on the branch containing this workflow and its helper script.
-The workflow supports a manual trigger once registered by GitHub. On branch `codex/hanoi-v2-p0-window08-15`, changing `.github/triggers/hanoi-v2-p0-window15` and pushing starts the complete experiment with 20 concurrent shards.
+Active layout: 13 workflows `hanoi-v2-p0-window15-batch-01.yml` through `-13.yml`, using `hanoi-v2-p0-window15-single-batch.yml`.
+Batches 1–12 contain 250 optimization jobs each; batch 13 contains 200. Each matrix job runs exactly one P0 optimization and its three sequential held-out replays. The matrix permits up to 250 jobs concurrently per workflow; account-wide GitHub runner limits still apply.
 
-- 20 original V2 instances × 4 folds × 10 original seeds × buffers 0/5/10/15% = 3,200 independent P0 optimizations.
-- Every feasible plan is replayed unchanged on three held-out dates (9,600 scheduled replay slots).
-- Static P0 uses the harmonic mean over nine training dates and seven hourly intervals [08:00,15:00). Start time is 08:00.
-- Original V2 input zip, Linux solver, pinned dependencies, 9,000 iterations, truck capacity 40 kg and drone capacity 2.27 kg are unchanged.
-- P1, P2 and PI are not optimized. The preparation job recalculates route-independent S1 diagnostics for the three policies at departure 08:00.
-- A new protocol ID and all modified source hashes isolate the experiment from the original [08,17) results.
-- 160 shards, 20 sequential tasks each; default maximum 20 concurrent shards. Failed technical tasks remain distinct from planning non-success.
+All batches download the same verified capsule artifact from run 40059267291 (its prepare job succeeded before cancellation). Only inputs, frozen code and S1 are reused, not optimization results. The artifact expires after 90 days; a fresh preparation is required after expiry.
 
-Artifacts: `hanoi-v2-p0-window15-capsule`, `hanoi-v2-p0-window15-shard-*`, and `hanoi-v2-p0-window15-report`.
-The report includes planning/replay CSVs, coverage, P0 summaries and S1. Shard JSONs embed routes and per-customer event CSVs.
-Download into a new directory such as `result_final/result_hanoi_v2/p0_window08_15/`.
-Existing results are not overwritten. These are raw reruns: bottom-up buffer selection, cross-policy transfer and pooled PI updates have not been applied.
-Gap calculation requires joining the new replays to the existing PI references; the workflow does not manufacture new PI values or silently reuse the old P0 plans.
+Scope: 20 instances × 4 folds × 10 seeds × 4 buffers (0/5/10/15%) = 3200 optimizations and 9600 scheduled replay slots. P0 uses nine train dates and seven hourly intervals [08:00,15:00); departure 08:00. Original solver, 9000 iterations, truck capacity 40 kg and drone capacity 2.27 kg are unchanged. P1/P2/PI are not optimized.
 
-Local checks use Conda base explicitly. Optimization itself runs on Linux GitHub runners using the frozen Linux binary.
+Push `.github/triggers/hanoi-v2-p0-window15-single-jobs` on branch `codex/hanoi-v2-p0-window08-15` to start all 13 workflows. Each batch exports raw task artifacts and a validated batch report; failed jobs can be rerun independently. Raw task JSONs embed original routes and customer-event CSVs. Download all reports before applying bottom-up buffer selection or updating pooled PI.
+
+The former 160-shard workflow is retained for provenance, with its push trigger removed. Its run was cancelled at the user's request.

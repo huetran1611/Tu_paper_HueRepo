@@ -14,6 +14,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
@@ -215,10 +216,10 @@ jobs:
         run: python3 -m pip install --disable-pip-version-check -r scripts/requirements-v2-segment.txt
 
       - name: Download all individual results
-        uses: actions/download-artifact@v4
-        with:
-          pattern: v2-segment-result-*
-          path: collected_results
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+          --pattern 'v2-segment-result-*' --dir collected_results
 
       - name: Aggregate results
         run: |

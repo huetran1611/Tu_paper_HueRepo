@@ -1,0 +1,108 @@
+name: Workload tie-breaking reusable single-process batch
+on:
+  workflow_call:
+    inputs:
+      setup_run_id:
+        type: string
+        required: true
+      batch:
+        type: number
+        required: true
+permissions:
+  contents: read
+  actions: read
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  PYTHONDONTWRITEBYTECODE: '1'
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          name: workload-tiebreak-experiment
+          run-id: ${{ inputs.setup_run_id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/workload-experiment
+      - id: matrix
+        env:
+          BATCH: ${{ inputs.batch }}
+        run: |
+          MATRIX=$(python "$RUNNER_TEMP/workload-experiment/workload_tiebreak_experiment.py" matrix --bundle "$RUNNER_TEMP/workload-experiment" --batch "$BATCH")
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+  solve:
+    needs: prepare
+    name: ${{ matrix.key }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 250
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          name: workload-tiebreak-experiment
+          run-id: ${{ inputs.setup_run_id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/workload-experiment
+      - name: One process - run until the full iteration budget is exhausted
+        env:
+          TASK_KEY: ${{ matrix.key }}
+        run: |
+          chmod +x "$RUNNER_TEMP/workload-experiment/bin/"*
+          python -u "$RUNNER_TEMP/workload-experiment/workload_tiebreak_experiment.py" run \
+            --bundle "$RUNNER_TEMP/workload-experiment" --task-key "$TASK_KEY" \
+            --output "$GITHUB_WORKSPACE/results/task"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: workload-b${{ inputs.batch }}-${{ matrix.key }}
+          path: results/task/
+          overwrite: true
+          retention-days: 90
+          if-no-files-found: warn
+  report:
+    needs: [prepare, solve]
+    if: ${{ !cancelled() && needs.prepare.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          name: workload-tiebreak-experiment
+          run-id: ${{ inputs.setup_run_id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/workload-experiment
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: workload-b${{ inputs.batch }}-*
+          path: collected
+      - name: Validate all iteration counts and batch coverage
+        env:
+          BATCH: ${{ inputs.batch }}
+        run: |
+          python "$RUNNER_TEMP/workload-experiment/workload_tiebreak_experiment.py" aggregate \
+            --bundle "$RUNNER_TEMP/workload-experiment" --batch "$BATCH" \
+            --input collected --output report
+          cat report/coverage.json >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: workload-tiebreak-batch-${{ inputs.batch }}-report
+          path: report/
+          overwrite: true
+          retention-days: 90
+          if-no-files-found: warn

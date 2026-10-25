@@ -1,0 +1,2416 @@
+{
+  "instances": [
+    {
+      "dataset": "6_100",
+      "instance": "6.5.1",
+      "customers": 6,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/6.5.1.txt",
+          "sha256": "7ab4aa1c068452e8cf4d99ba1ddee37e86eaf633fe93dace88e327e5981d17ee",
+          "bytes": 551
+        },
+        {
+          "path": "data/6_100/6.5.1.vmax_ij.txt",
+          "sha256": "a2a9642fb5bac67558ce2d07aaf35f5c2697147e5dd4345000c1c8f880c3cb20",
+          "bytes": 666
+        },
+        {
+          "path": "data/6_100/6.5.1.theta_ijl.txt",
+          "sha256": "3033d77a6e5dc0fc9d320f1610bed82eb6dc9375fbaa6ec5b75700d6ca11652c",
+          "bytes": 5709
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "6.5.2",
+      "customers": 6,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/6.5.2.txt",
+          "sha256": "d1ad168fd91e1578c903ea60b9de95b1d864f30c0d207ddccd868945e8a7920e",
+          "bytes": 552
+        },
+        {
+          "path": "data/6_100/6.5.2.vmax_ij.txt",
+          "sha256": "6b19cfbd79f51d21433140af56c6f05f307123fb18d07857eadada95bb419e5d",
+          "bytes": 666
+        },
+        {
+          "path": "data/6_100/6.5.2.theta_ijl.txt",
+          "sha256": "ddd0cb739e272c0d69ab92cd74da4ae46238ed72ce3b011f8446f32f8a93b584",
+          "bytes": 5709
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "6.5.3",
+      "customers": 6,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/6.5.3.txt",
+          "sha256": "64895351d92120850ad8968741e4f40fe41862fa2bc35ce93223c2faf8fa7735",
+          "bytes": 552
+        },
+        {
+          "path": "data/6_100/6.5.3.vmax_ij.txt",
+          "sha256": "6f5f374392fab5aa1d8164d0773cc52eda7165f2940328ab76089eed87bb06f3",
+          "bytes": 666
+        },
+        {
+          "path": "data/6_100/6.5.3.theta_ijl.txt",
+          "sha256": "3ed990daa523a474bea7289faf69bc02418ed5bb0eb07d581f952db2f20f96e9",
+          "bytes": 5709
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "6.5.4",
+      "customers": 6,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/6.5.4.txt",
+          "sha256": "fae7ae86614bccfc8b6f921dad0e2467c1f0e130549efb5bcec2631e62a7c153",
+          "bytes": 552
+        },
+        {
+          "path": "data/6_100/6.5.4.vmax_ij.txt",
+          "sha256": "f363c09bf0f172ce8e4c2d388d18792dc92eb3715948fd516efdb8d39aa6a502",
+          "bytes": 666
+        },
+        {
+          "path": "data/6_100/6.5.4.theta_ijl.txt",
+          "sha256": "4f85f5c404a669bec943a534b22881d2cb7e3a56cfa219aedf213fa255e61665",
+          "bytes": 5709
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "6.10.1",
+      "customers": 6,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/6.10.1.txt",
+          "sha256": "682cb779f07fbdc380e31d539283ae72b65a264627b809dec4593abe21dd23fe",
+          "bytes": 554
+        },
+        {
+          "path": "data/6_100/6.10.1.vmax_ij.txt",
+          "sha256": "a3f49207e6b74c35a4d06230b4900533964d3d2bd0039ef01dad4e47db928f80",
+          "bytes": 666
+        },
+        {
+          "path": "data/6_100/6.10.1.theta_ijl.txt",
+          "sha256": "68d38983b6eb4429840ae36d43bcade447cc61814e33ab3b2e604a2bc8c4bac1",
+          "bytes": 5709
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "6.10.2",
+      "customers": 6,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/6.10.2.txt",
+          "sha256": "b730bef4457df3ecbe8554234ada5d32207c317b8e85a2058857fec1cf212924",
+          "bytes": 553
+        },
+        {
+          "path": "data/6_100/6.10.2.vmax_ij.txt",
+          "sha256": "7407234a7f79af7a444cb2748c4ebc6c1e86173995a4ec905de6ccdfecd8a345",
+          "bytes": 666
+        },
+        {
+          "path": "data/6_100/6.10.2.theta_ijl.txt",
+          "sha256": "4a66a7abbaac68466782558be71d246af97356f3edb322befa05646c5dbf7953",
+          "bytes": 5709
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "6.10.3",
+      "customers": 6,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/6.10.3.txt",
+          "sha256": "a4bc0f091b5a81b951fe93dc5d671b68d2f0b2e32de74eca8c8dfa00b2095114",
+          "bytes": 551
+        },
+        {
+          "path": "data/6_100/6.10.3.vmax_ij.txt",
+          "sha256": "1a15c9ea6045450d9b499013ce208601ee1e618c01e03f26b12479b19dccd12f",
+          "bytes": 666
+        },
+        {
+          "path": "data/6_100/6.10.3.theta_ijl.txt",
+          "sha256": "3e9de05a6025b29b71379bf79b02247f22bdfa688859635643f74b1a49480b80",
+          "bytes": 5709
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "6.10.4",
+      "customers": 6,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/6.10.4.txt",
+          "sha256": "985ce1628d7782de2bfae667580db1363533b52ff15cf3fad5b120fd814c967a",
+          "bytes": 553
+        },
+        {
+          "path": "data/6_100/6.10.4.vmax_ij.txt",
+          "sha256": "33d74d92dbf272b562e0e1925c4aa60392115cfb2232c8397999bee1f807b484",
+          "bytes": 666
+        },
+        {
+          "path": "data/6_100/6.10.4.theta_ijl.txt",
+          "sha256": "a2b5872857331f3b5ec86ae8da8d7a8e03de1a168bf4336abd53ed6df5d04477",
+          "bytes": 5709
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "6.20.1",
+      "customers": 6,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/6.20.1.txt",
+          "sha256": "3b24c33e010809c1298f460dba77b20497158339cabd3f7cba793de11fb3a671",
+          "bytes": 557
+        },
+        {
+          "path": "data/6_100/6.20.1.vmax_ij.txt",
+          "sha256": "1a025f90b2ba929d8ffa1c6da21a0bfb94348d0a9b62448cf3d2000f4046e116",
+          "bytes": 666
+        },
+        {
+          "path": "data/6_100/6.20.1.theta_ijl.txt",
+          "sha256": "6f1aa431c788e130bd05d04f4e4e6ec0495e1e5296aa70befeb241109e6836ef",
+          "bytes": 5709
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "6.20.2",
+      "customers": 6,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/6.20.2.txt",
+          "sha256": "0a1ca74ff4508bd2bdd9bf5dbf9c401d6870cfba3098b61c834b539eb41d8cb0",
+          "bytes": 554
+        },
+        {
+          "path": "data/6_100/6.20.2.vmax_ij.txt",
+          "sha256": "9b47f3d50f5536a711de8e3d29fdb17f3b3ab27fa8ee8f7be835a1e9373d71ca",
+          "bytes": 666
+        },
+        {
+          "path": "data/6_100/6.20.2.theta_ijl.txt",
+          "sha256": "e0e47459fe2e3cd98f5e4bb75f59d713d892ab7439aa761a80612ebf5ba166cb",
+          "bytes": 5709
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "6.20.3",
+      "customers": 6,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/6.20.3.txt",
+          "sha256": "03014b5f0a484c856d92b5281b1f7530dbfddb7db860ec224d9803c0125f1126",
+          "bytes": 556
+        },
+        {
+          "path": "data/6_100/6.20.3.vmax_ij.txt",
+          "sha256": "4991a9d4265728976379677ab79a5023b7a3a56488466acfd4b95771b2fe7bd0",
+          "bytes": 666
+        },
+        {
+          "path": "data/6_100/6.20.3.theta_ijl.txt",
+          "sha256": "693eb1de23c62a7776f4d7c7411da6d0a106d85b613c903d66ae0396d251d1fa",
+          "bytes": 5709
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "6.20.4",
+      "customers": 6,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/6.20.4.txt",
+          "sha256": "a7975df8bf57f77b1ba51a8f47c79a520896fc2e9a3f4da55ef656fd7ac87c8b",
+          "bytes": 552
+        },
+        {
+          "path": "data/6_100/6.20.4.vmax_ij.txt",
+          "sha256": "859afb791b8dc6592d1f7d325d72e044850e7ca2416eab50851f44c187c27962",
+          "bytes": 666
+        },
+        {
+          "path": "data/6_100/6.20.4.theta_ijl.txt",
+          "sha256": "d6e4b5a64e5eef0520fd476755ec066979e8efd74b198418b1952c58582ae92b",
+          "bytes": 5709
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "10.5.1",
+      "customers": 10,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/10.5.1.txt",
+          "sha256": "372a6453161f10e423eb5fa33f7caeaa14e0954c7f16a31923f6d30aa7854b1f",
+          "bytes": 813
+        },
+        {
+          "path": "data/6_100/10.5.1.vmax_ij.txt",
+          "sha256": "f31d9dbcf012a1d3923583fdf0025b22864e47fc5bd2f8e4ffe8acfc3f9f2931",
+          "bytes": 1638
+        },
+        {
+          "path": "data/6_100/10.5.1.theta_ijl.txt",
+          "sha256": "06a54729bcbe82b1e63932c42119e2a5672be32e1839cb580bbfb4af6f4f0485",
+          "bytes": 15061
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "10.5.2",
+      "customers": 10,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/10.5.2.txt",
+          "sha256": "024b1e1e032cceb352e4cfac1446083699b08f2f951b80bd789e3234b0698490",
+          "bytes": 816
+        },
+        {
+          "path": "data/6_100/10.5.2.vmax_ij.txt",
+          "sha256": "c5133025420b4caeeb1091aa0829262b6693c9e2be1d581e35de221252d06bab",
+          "bytes": 1638
+        },
+        {
+          "path": "data/6_100/10.5.2.theta_ijl.txt",
+          "sha256": "3b43633c7414a6430c8c3971cf8cc1b330a54ff89f77e74f51ce5a1464d59918",
+          "bytes": 15061
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "10.5.3",
+      "customers": 10,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/10.5.3.txt",
+          "sha256": "77b9bf66c6538b64dcb16f4b5c5fb1ae44ca9bdfab283381ebc492c9d58fe97f",
+          "bytes": 814
+        },
+        {
+          "path": "data/6_100/10.5.3.vmax_ij.txt",
+          "sha256": "ba0112ac49d67a5bef246fc014393c9cefce1eef7a83147d150cec7812e0a2a9",
+          "bytes": 1638
+        },
+        {
+          "path": "data/6_100/10.5.3.theta_ijl.txt",
+          "sha256": "03415bddd8477993dec258f9eace24dc7477e06033a476a0e1bb1c3f51cb1e92",
+          "bytes": 15061
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "10.5.4",
+      "customers": 10,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/10.5.4.txt",
+          "sha256": "e0ee1fd5c5f6155568a2323b9023b77f73f5cfd53c3e72b0f837610d239f8fb9",
+          "bytes": 818
+        },
+        {
+          "path": "data/6_100/10.5.4.vmax_ij.txt",
+          "sha256": "97c413007abe92082df25faa5198535307c78dc3a756c0158892ed974759eff8",
+          "bytes": 1638
+        },
+        {
+          "path": "data/6_100/10.5.4.theta_ijl.txt",
+          "sha256": "792d5995716d7416f2bf620cd3892f7a08124a8ec3e84d5ae24aa9adc3a2eb06",
+          "bytes": 15061
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "10.10.1",
+      "customers": 10,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/10.10.1.txt",
+          "sha256": "88c6f2aaee41eaf55779390eab16e7a0bb5d6a3425e563e18a9978a96397d348",
+          "bytes": 815
+        },
+        {
+          "path": "data/6_100/10.10.1.vmax_ij.txt",
+          "sha256": "284dea70720e687aad3ad115e50ba4ecf43650c85ee61c329b4e40e76be0c310",
+          "bytes": 1638
+        },
+        {
+          "path": "data/6_100/10.10.1.theta_ijl.txt",
+          "sha256": "007130158fdb5f630d2daf851df646e87cd65153ada8b27a8332eb73ba2ee884",
+          "bytes": 15061
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "10.10.2",
+      "customers": 10,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/10.10.2.txt",
+          "sha256": "33277950d5f5c26284bb1911e324511127d4d5b7a92ede0ffde07c398e12b90c",
+          "bytes": 821
+        },
+        {
+          "path": "data/6_100/10.10.2.vmax_ij.txt",
+          "sha256": "bda9291b94836401b2a1cd45602a70779da8efa1aef50787a94a049faa755281",
+          "bytes": 1638
+        },
+        {
+          "path": "data/6_100/10.10.2.theta_ijl.txt",
+          "sha256": "df6ab1ffb306f555c5b35abc295a0bbaff9c3c4cbcebbba9241b832811344d39",
+          "bytes": 15061
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "10.10.3",
+      "customers": 10,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/10.10.3.txt",
+          "sha256": "d40d657b53670ec2442f2d66ab63e9839b36cf26114b1b8359c56e3c0e02de77",
+          "bytes": 813
+        },
+        {
+          "path": "data/6_100/10.10.3.vmax_ij.txt",
+          "sha256": "c1b13a0de1840e1daf68795f8fb630c0d7f4206f84ecae0a5afc0cadbdc6b6c1",
+          "bytes": 1638
+        },
+        {
+          "path": "data/6_100/10.10.3.theta_ijl.txt",
+          "sha256": "435fc422706cc4a4ffd1241f6ddaebbe9728c7e7d04ad03a7940f6bdb6fbafa8",
+          "bytes": 15061
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "10.10.4",
+      "customers": 10,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/10.10.4.txt",
+          "sha256": "acd65cbb752271b207d043d9417f561e9261bf3178d5411b46d5bcc08820b0a6",
+          "bytes": 817
+        },
+        {
+          "path": "data/6_100/10.10.4.vmax_ij.txt",
+          "sha256": "190cac2a7334699dca7b0c0dcd8c17db471a137224a927759ab2f6a6a410398a",
+          "bytes": 1638
+        },
+        {
+          "path": "data/6_100/10.10.4.theta_ijl.txt",
+          "sha256": "58e8c752c95d8dd439b597388bce17b98c206d0d9a1a671bcdbbe93704158427",
+          "bytes": 15061
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "10.20.1",
+      "customers": 10,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/10.20.1.txt",
+          "sha256": "beab44335df98032b07a8b5231df260d54f955b1c17ddb31eba80d9e719714f2",
+          "bytes": 807
+        },
+        {
+          "path": "data/6_100/10.20.1.vmax_ij.txt",
+          "sha256": "8a4fc300dc4efaf8f4e7e61898bb8060ccb37ca09c9eab51342bbeb3a83cfbfc",
+          "bytes": 1638
+        },
+        {
+          "path": "data/6_100/10.20.1.theta_ijl.txt",
+          "sha256": "1f0dad80db5416815a7918b3de6cb4bbd3ea1cfd75cf2df1fa3f739732e1020b",
+          "bytes": 15061
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "10.20.2",
+      "customers": 10,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/10.20.2.txt",
+          "sha256": "587158ae5b20b7835374a35a23f2a89b0569f3db268d1fa126fafead97f0689f",
+          "bytes": 817
+        },
+        {
+          "path": "data/6_100/10.20.2.vmax_ij.txt",
+          "sha256": "6b1f1f6d45e8675565abee6746afed5fb8041d11ab545c041946d32263a35345",
+          "bytes": 1638
+        },
+        {
+          "path": "data/6_100/10.20.2.theta_ijl.txt",
+          "sha256": "b46e7c0a3ad5d57a02eb4e25c96ea32b43b5367c98e11b69cabc009506fe05ba",
+          "bytes": 15061
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "10.20.3",
+      "customers": 10,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/10.20.3.txt",
+          "sha256": "bc195cd698dc42449805249507e9d7ce01529eafba4b4f6569add4dc8b0075c0",
+          "bytes": 816
+        },
+        {
+          "path": "data/6_100/10.20.3.vmax_ij.txt",
+          "sha256": "b5d4d45fcac6eda5dcfc3dc39c22da9e5cea116b026e3b057e5fa7eaaa9a8c1d",
+          "bytes": 1638
+        },
+        {
+          "path": "data/6_100/10.20.3.theta_ijl.txt",
+          "sha256": "850a33a66d462ccb7d480b3c41e5a769c43134074cb88e8f8f7228f22905ef2e",
+          "bytes": 15061
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "10.20.4",
+      "customers": 10,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/10.20.4.txt",
+          "sha256": "25eaec5dd627470cdbcd71f41dee38ded35a773afc9f6b75bc5ab42ec5c167d0",
+          "bytes": 815
+        },
+        {
+          "path": "data/6_100/10.20.4.vmax_ij.txt",
+          "sha256": "28446f6c1021537473e4a96c028725160d38b1fe0433da955664ff952f5d8ec1",
+          "bytes": 1638
+        },
+        {
+          "path": "data/6_100/10.20.4.theta_ijl.txt",
+          "sha256": "c3435a3d68608ccb4b58a26cdba519eb4df14a6230eaa8ae05f00b15597bb523",
+          "bytes": 15061
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "12.5.1",
+      "customers": 12,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/12.5.1.txt",
+          "sha256": "14f726ffd6139ff8de5a94ec59251540090a179b6d3b4cc2ee38edabcc0b9ad7",
+          "bytes": 948
+        },
+        {
+          "path": "data/6_100/12.5.1.vmax_ij.txt",
+          "sha256": "6aaac4336d83c3a75e93d744cc189e610dba962d1b18bf715c4f9ae454f979ca",
+          "bytes": 2334
+        },
+        {
+          "path": "data/6_100/12.5.1.theta_ijl.txt",
+          "sha256": "31133338a3907fd72316bc2746e2c27e96fc3da3ac10dbda18cfa08577d3ee97",
+          "bytes": 21849
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "12.5.2",
+      "customers": 12,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/12.5.2.txt",
+          "sha256": "2d0b6c6b34dd9f6bc215f579dd62f4e844fe49f202c26d39aa34cf1693b844a7",
+          "bytes": 941
+        },
+        {
+          "path": "data/6_100/12.5.2.vmax_ij.txt",
+          "sha256": "adbd953bd76ba228f1da1e3df4c7fa58414f6b9078e8f34e8a49dcffc62dfb10",
+          "bytes": 2334
+        },
+        {
+          "path": "data/6_100/12.5.2.theta_ijl.txt",
+          "sha256": "bc283fc2fa7655593e977de2b51d3c285ea1b996ce72b2677ef37d561102d97f",
+          "bytes": 21849
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "12.5.3",
+      "customers": 12,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/12.5.3.txt",
+          "sha256": "0a7b3b6a0b7264855d73b6985e15fb8639e5a8db2eb3700b65b50a3f8a706264",
+          "bytes": 950
+        },
+        {
+          "path": "data/6_100/12.5.3.vmax_ij.txt",
+          "sha256": "139a2b57567a7f3f279ff6ad243ff066b6b2a5626f827ab4f25a4db92c7b5db5",
+          "bytes": 2334
+        },
+        {
+          "path": "data/6_100/12.5.3.theta_ijl.txt",
+          "sha256": "398c2455024e47bf4012e63d9dec0e4286e264ccd9890a33813dab5f877c38c9",
+          "bytes": 21849
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "12.5.4",
+      "customers": 12,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/12.5.4.txt",
+          "sha256": "a6531f3654e02085cdaffd4f1371b50832da98deefc749b9a1e766458cf3b538",
+          "bytes": 945
+        },
+        {
+          "path": "data/6_100/12.5.4.vmax_ij.txt",
+          "sha256": "5b3890d82548dee2cfbb76d57f5421f556edd41bec5285fa8172bc39b77a48da",
+          "bytes": 2334
+        },
+        {
+          "path": "data/6_100/12.5.4.theta_ijl.txt",
+          "sha256": "c1e73474ba76f4cc023de1f69e88a209e9d7b591485631142616fbf950369d84",
+          "bytes": 21849
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "12.10.1",
+      "customers": 12,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/12.10.1.txt",
+          "sha256": "eb982abf8870c1fb4100b8b4f0793354f32771218fbde20709084220a062feae",
+          "bytes": 946
+        },
+        {
+          "path": "data/6_100/12.10.1.vmax_ij.txt",
+          "sha256": "ee45012a1a934436ef0483e9c3615d838fb1ac044e85f4a62530ad193bc1e337",
+          "bytes": 2334
+        },
+        {
+          "path": "data/6_100/12.10.1.theta_ijl.txt",
+          "sha256": "55480c71f13931e289207de0e49181471b8d8d91ac5c781f2aec04beb8c1e9ae",
+          "bytes": 21849
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "12.10.2",
+      "customers": 12,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/12.10.2.txt",
+          "sha256": "b42f5b25d62286acad8046b7b17264e0565194aa3435269b28a6a30203840520",
+          "bytes": 944
+        },
+        {
+          "path": "data/6_100/12.10.2.vmax_ij.txt",
+          "sha256": "e86a1e33e7b2038c5455479547fe82c007929d590a03e532c1b676dfa081985d",
+          "bytes": 2334
+        },
+        {
+          "path": "data/6_100/12.10.2.theta_ijl.txt",
+          "sha256": "b647061e41c31066fb3204294ac8090c4c60e022d8f4b3a4b9312b5326ffeec0",
+          "bytes": 21849
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "12.10.3",
+      "customers": 12,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/12.10.3.txt",
+          "sha256": "a30fd3bd8035a13f3ecba67ee909ff3e90d782feeab86ffa8951666758328b9a",
+          "bytes": 945
+        },
+        {
+          "path": "data/6_100/12.10.3.vmax_ij.txt",
+          "sha256": "9e225d039e1ba81e063e9edefba6f995083638fe749d1aa137df2f395f7fa834",
+          "bytes": 2334
+        },
+        {
+          "path": "data/6_100/12.10.3.theta_ijl.txt",
+          "sha256": "0f887f02d9a891d4d28424f2e0423ee1d2c2102c04a82657866094a34cccf9da",
+          "bytes": 21849
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "12.10.4",
+      "customers": 12,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/12.10.4.txt",
+          "sha256": "04615607e6cad8e989594c5b057bdd2988f70c64e4a5caff77d1e183776e71a9",
+          "bytes": 948
+        },
+        {
+          "path": "data/6_100/12.10.4.vmax_ij.txt",
+          "sha256": "950064072b1f57f573de0af703d4d98e2018cf8c33240523c0b3d6d5f3873506",
+          "bytes": 2334
+        },
+        {
+          "path": "data/6_100/12.10.4.theta_ijl.txt",
+          "sha256": "1abc37178712826ac3f7dfa2097140f5c57622bee9cfa14fff45f3d729e0c0fd",
+          "bytes": 21849
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "12.20.1",
+      "customers": 12,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/12.20.1.txt",
+          "sha256": "90aad6146feddd2d1a68c7aa166879401760111f0400493068391d6d4eb9a07e",
+          "bytes": 944
+        },
+        {
+          "path": "data/6_100/12.20.1.vmax_ij.txt",
+          "sha256": "20001785d373ed49a59e053b555aae3049406adad79cc1081858f8f241614924",
+          "bytes": 2334
+        },
+        {
+          "path": "data/6_100/12.20.1.theta_ijl.txt",
+          "sha256": "12a064f717df6626810f32e77266fb00e8b21eb7eeb4a76720a7aa7c81450c8e",
+          "bytes": 21849
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "12.20.2",
+      "customers": 12,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/12.20.2.txt",
+          "sha256": "2f01922e491c50ec2cde4fd8891a5a6af77c7346ae652c1cd94785405b369860",
+          "bytes": 947
+        },
+        {
+          "path": "data/6_100/12.20.2.vmax_ij.txt",
+          "sha256": "7df87a8b651d74ed054debfb124a115135a81da964ea39f23d10e42d92c5ec69",
+          "bytes": 2334
+        },
+        {
+          "path": "data/6_100/12.20.2.theta_ijl.txt",
+          "sha256": "c36ffe24df2c5bba322103ee4edf588abb8e3a8db1182cee221dd4c16e10ea96",
+          "bytes": 21849
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "12.20.3",
+      "customers": 12,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/12.20.3.txt",
+          "sha256": "489b503b063df8b60e9c9edee15a69f273749b61d66b8ee6f0add219e43ea0cd",
+          "bytes": 948
+        },
+        {
+          "path": "data/6_100/12.20.3.vmax_ij.txt",
+          "sha256": "b164fdae22d57f2ebfdc4574dc3f8819a7abf6413619747f68b572bb07a7e81c",
+          "bytes": 2334
+        },
+        {
+          "path": "data/6_100/12.20.3.theta_ijl.txt",
+          "sha256": "d8fb442c371dcdba64e4bd7c1616c693e84a6946b93189d243404824c4d94591",
+          "bytes": 21849
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "12.20.4",
+      "customers": 12,
+      "trucks": 1,
+      "drones": 1,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/12.20.4.txt",
+          "sha256": "8f15970028016af204aed514644c9ef6c73be3798935d16a8ee95b9379c81aa2",
+          "bytes": 948
+        },
+        {
+          "path": "data/6_100/12.20.4.vmax_ij.txt",
+          "sha256": "99bc6dda1c0389c0081dbda67300edfe7aa35fc9ed58c3677e90bdc8481e5221",
+          "bytes": 2334
+        },
+        {
+          "path": "data/6_100/12.20.4.theta_ijl.txt",
+          "sha256": "1c98e62c975795d26c5027042b0bb17c19aa375bdae4a6799b471e8356c80d58",
+          "bytes": 21849
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "20.5.1",
+      "customers": 20,
+      "trucks": 2,
+      "drones": 2,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/20.5.1.txt",
+          "sha256": "f1ec0a181ef9b1795527ccab79cc27735c828831193b521af8831dd75a4a60c7",
+          "bytes": 1474
+        },
+        {
+          "path": "data/6_100/20.5.1.vmax_ij.txt",
+          "sha256": "8a20d902b34253d426ea513238e8c7fdf6a134ecb1535988c940d66f607bf4a3",
+          "bytes": 6398
+        },
+        {
+          "path": "data/6_100/20.5.1.theta_ijl.txt",
+          "sha256": "695fcd1c009c05d0fb06886c5b5df4fd1544bd85a82aaa5668b363d91388a140",
+          "bytes": 61641
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "20.5.2",
+      "customers": 20,
+      "trucks": 2,
+      "drones": 2,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/20.5.2.txt",
+          "sha256": "7641cf6e9893baedbd8c4fd5ed70c98135247d44441cad1cbbfb90310519fcdc",
+          "bytes": 1455
+        },
+        {
+          "path": "data/6_100/20.5.2.vmax_ij.txt",
+          "sha256": "488ddfafecce559ea960bd89f764eb15b0ccebfaee723dc4eccbb750feba24ee",
+          "bytes": 6398
+        },
+        {
+          "path": "data/6_100/20.5.2.theta_ijl.txt",
+          "sha256": "ec6f46bda3ad070d556da50a034ce1fab806339c14585bc6591b525eeab683a6",
+          "bytes": 61641
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "20.5.3",
+      "customers": 20,
+      "trucks": 2,
+      "drones": 2,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/20.5.3.txt",
+          "sha256": "391e4a5e543e62ec4d6fa6f3279290a4624eec8334256dd7464cb100e2460fe4",
+          "bytes": 1477
+        },
+        {
+          "path": "data/6_100/20.5.3.vmax_ij.txt",
+          "sha256": "41fe8c2ad1a3028c176fdbc8c270ff267b0e1b4cfb6bc6ec66cfe5a6b0769dcd",
+          "bytes": 6398
+        },
+        {
+          "path": "data/6_100/20.5.3.theta_ijl.txt",
+          "sha256": "39d674ce01b38a429e635da556ba4f38d64cf23b617bad445ffbc4dd977b0305",
+          "bytes": 61641
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "20.5.4",
+      "customers": 20,
+      "trucks": 2,
+      "drones": 2,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/20.5.4.txt",
+          "sha256": "b3ae9459fab4606872dea1bf344bcb2c67b0aaaa8556e0fb932ff277c0ac4c9b",
+          "bytes": 1472
+        },
+        {
+          "path": "data/6_100/20.5.4.vmax_ij.txt",
+          "sha256": "8887ff348a30b4fa68ae23a4eded15c9d38761c9d6aca48eb492acb0f256d065",
+          "bytes": 6398
+        },
+        {
+          "path": "data/6_100/20.5.4.theta_ijl.txt",
+          "sha256": "3390e08d289e5e5bfbece049c4cf97cc67a960cf8bac328cce32637168c41a4e",
+          "bytes": 61641
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "20.10.1",
+      "customers": 20,
+      "trucks": 2,
+      "drones": 2,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/20.10.1.txt",
+          "sha256": "1d4e0d683806e7853a47769ae3f2776ab7754fffe69658185f6f0d4d1dcaabf7",
+          "bytes": 1468
+        },
+        {
+          "path": "data/6_100/20.10.1.vmax_ij.txt",
+          "sha256": "75ad3a10630baf9438b0da43ad846b89ee0ba30d1500e6f748745e5b05947a6e",
+          "bytes": 6398
+        },
+        {
+          "path": "data/6_100/20.10.1.theta_ijl.txt",
+          "sha256": "7735208a381e03291ed4b4429565cab77a5b7fa72b2ad6072c5b888b6c1b2972",
+          "bytes": 61641
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "20.10.2",
+      "customers": 20,
+      "trucks": 2,
+      "drones": 2,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/20.10.2.txt",
+          "sha256": "64d048fdfb15890541af6d98197b4c98c28bc21a19bfc67a52e77b1386e4a2d9",
+          "bytes": 1474
+        },
+        {
+          "path": "data/6_100/20.10.2.vmax_ij.txt",
+          "sha256": "04b82757eb38c993e442d38a68877e617b77b6859d6381e878f924f2dcf03679",
+          "bytes": 6398
+        },
+        {
+          "path": "data/6_100/20.10.2.theta_ijl.txt",
+          "sha256": "3231eb9f4cb77c2dbcb50479dadfee08cded0539008ae9647aab2b8a69fc4c5a",
+          "bytes": 61641
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "20.10.3",
+      "customers": 20,
+      "trucks": 2,
+      "drones": 2,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/20.10.3.txt",
+          "sha256": "6d737136c758d42d7977bae82564dc14554edc118b9015b5b5b2477b108ee7eb",
+          "bytes": 1474
+        },
+        {
+          "path": "data/6_100/20.10.3.vmax_ij.txt",
+          "sha256": "97aeb8de7bfde72fbb4fe2a7525756c383932737a8cb762bd92c5118d5b60a74",
+          "bytes": 6398
+        },
+        {
+          "path": "data/6_100/20.10.3.theta_ijl.txt",
+          "sha256": "0067448284e91c29fc64346ab38e61f3273791828660a2a41fdcfa3b11a7b818",
+          "bytes": 61641
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "20.10.4",
+      "customers": 20,
+      "trucks": 2,
+      "drones": 2,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/20.10.4.txt",
+          "sha256": "e2f5022220a072429ff48e83ed55c31c7e64b0ab8a23cb027287f16e6ae5b847",
+          "bytes": 1468
+        },
+        {
+          "path": "data/6_100/20.10.4.vmax_ij.txt",
+          "sha256": "5b9fbb70bbef7c248a2eb9cd6b49fce2272b99f16bbbec1f8e970c62c05e39a1",
+          "bytes": 6398
+        },
+        {
+          "path": "data/6_100/20.10.4.theta_ijl.txt",
+          "sha256": "86942e1cf13ba7cdba94f3cb0e11224ed39d11bfe79ff6fb0b014ef70dc0ae5f",
+          "bytes": 61641
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "20.20.1",
+      "customers": 20,
+      "trucks": 2,
+      "drones": 2,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/20.20.1.txt",
+          "sha256": "77ce5614495bc5084251e796c2bba42b6cf885716d53751bc82498d97cc8e2d6",
+          "bytes": 1470
+        },
+        {
+          "path": "data/6_100/20.20.1.vmax_ij.txt",
+          "sha256": "dc535b22caf64b82f29e4b7de594949e36f6f79ca9fe81178f5f6d06ae5d4e4f",
+          "bytes": 6398
+        },
+        {
+          "path": "data/6_100/20.20.1.theta_ijl.txt",
+          "sha256": "a7eb3a70d299fc2706598ee17a23d189942d58b89281ae016517c3de1d1b19ef",
+          "bytes": 61641
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "20.20.2",
+      "customers": 20,
+      "trucks": 2,
+      "drones": 2,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/20.20.2.txt",
+          "sha256": "1745b0c30a770b9b3db0dcffa05ee236edf9266f6385b31ecec2feb8f18ecd16",
+          "bytes": 1465
+        },
+        {
+          "path": "data/6_100/20.20.2.vmax_ij.txt",
+          "sha256": "99c460b4852f9d5fd3bfb7ea50930f09e86a8943bd61cdbdf8535f2c656df690",
+          "bytes": 6398
+        },
+        {
+          "path": "data/6_100/20.20.2.theta_ijl.txt",
+          "sha256": "0192cefd328912aa8b75082ebfb13108d89a6871ee778595d864d55a2c08fac9",
+          "bytes": 61641
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "20.20.3",
+      "customers": 20,
+      "trucks": 2,
+      "drones": 2,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/20.20.3.txt",
+          "sha256": "004478117f9688ecb76203b26f0e705026ad2a5cb69cad374e3a23890a525798",
+          "bytes": 1475
+        },
+        {
+          "path": "data/6_100/20.20.3.vmax_ij.txt",
+          "sha256": "fb88c7cef8af8fcad8fb31224338582096eca957dced7441d919528a5e2d33e0",
+          "bytes": 6398
+        },
+        {
+          "path": "data/6_100/20.20.3.theta_ijl.txt",
+          "sha256": "14ba4c86949e9cf78d99098645af7a57e07efb05ec7c78a74b1de22ff86e81c7",
+          "bytes": 61641
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "20.20.4",
+      "customers": 20,
+      "trucks": 2,
+      "drones": 2,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/20.20.4.txt",
+          "sha256": "e8d283f1a427ab7d6dcd92ded096f2ffb433d3f7d072c31729b42c9c97f8ba56",
+          "bytes": 1476
+        },
+        {
+          "path": "data/6_100/20.20.4.vmax_ij.txt",
+          "sha256": "233ab047e59cbe48904e95bf435f99e268edac0ea87e3441fc30bdc9b4818343",
+          "bytes": 6398
+        },
+        {
+          "path": "data/6_100/20.20.4.theta_ijl.txt",
+          "sha256": "eb1b68a25376a2ab483845a08de1dac4c0519d417472c70f68a751ddf79c6cf7",
+          "bytes": 61641
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "50.10.1",
+      "customers": 50,
+      "trucks": 3,
+      "drones": 3,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/50.10.1.txt",
+          "sha256": "7391e114fb44400c2a4cff6802fdc19238873621bffa512815950bf9343039c0",
+          "bytes": 3437
+        },
+        {
+          "path": "data/6_100/50.10.1.vmax_ij.txt",
+          "sha256": "8c2f642df7df88a37a1c6ea156825c71f3c2712164b4730a939ca592c327d073",
+          "bytes": 39878
+        },
+        {
+          "path": "data/6_100/50.10.1.theta_ijl.txt",
+          "sha256": "cf045e4180fea980ecca806cfc9619bbf4806aacc6f2ed82555ebcbe6e3b1639",
+          "bytes": 390981
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "50.10.2",
+      "customers": 50,
+      "trucks": 3,
+      "drones": 3,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/50.10.2.txt",
+          "sha256": "a86744a203df25afc059d988e6cd2a1ee3674167f1f8bbdc7f0ac046b0de3515",
+          "bytes": 3435
+        },
+        {
+          "path": "data/6_100/50.10.2.vmax_ij.txt",
+          "sha256": "050e19394a79c831686d76f0b2da4e7948d2df5cbf83d64bb5df47aa015b02b9",
+          "bytes": 39878
+        },
+        {
+          "path": "data/6_100/50.10.2.theta_ijl.txt",
+          "sha256": "deca4975cfa72cc3862310235b54b92906b2eb8d62ee91a7993185692787a22d",
+          "bytes": 390981
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "50.10.3",
+      "customers": 50,
+      "trucks": 3,
+      "drones": 3,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/50.10.3.txt",
+          "sha256": "362522bc0f083e6d64e4663aad3ca146e4cb398c74d93359ce5fb5064c8c6eb7",
+          "bytes": 3438
+        },
+        {
+          "path": "data/6_100/50.10.3.vmax_ij.txt",
+          "sha256": "6b929c12b4f16661cff3d665b302b3802575482ad040158ea2fdd65e7b47d57f",
+          "bytes": 39878
+        },
+        {
+          "path": "data/6_100/50.10.3.theta_ijl.txt",
+          "sha256": "70f7633a7619aec9fb5959b2c6fa3965037ac0cf44e5a32a9b1cebefdb2c631a",
+          "bytes": 390981
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "50.10.4",
+      "customers": 50,
+      "trucks": 3,
+      "drones": 3,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/50.10.4.txt",
+          "sha256": "a206ddc3d11e39583c4ffd969ef14905d875954891e9c569baed28ee2448690d",
+          "bytes": 3428
+        },
+        {
+          "path": "data/6_100/50.10.4.vmax_ij.txt",
+          "sha256": "837e31af18933223cc216902131c571edc89fdd1f6698929aba49e49fab4803a",
+          "bytes": 39878
+        },
+        {
+          "path": "data/6_100/50.10.4.theta_ijl.txt",
+          "sha256": "3df02e3eaa59f3f437f2c0d4ce0890f93bd082c33c4daf6d3758409bafbc9b8d",
+          "bytes": 390981
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "50.20.1",
+      "customers": 50,
+      "trucks": 3,
+      "drones": 3,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/50.20.1.txt",
+          "sha256": "e7e2b882b9c76bd47c7c6e7d1ce6e4e86f5605d8e0090a667d34b02f76d15aca",
+          "bytes": 3429
+        },
+        {
+          "path": "data/6_100/50.20.1.vmax_ij.txt",
+          "sha256": "c6870808e6177f7ab4f203963f6134d1a22c58f614066b28eadcda3f66dc3b36",
+          "bytes": 39878
+        },
+        {
+          "path": "data/6_100/50.20.1.theta_ijl.txt",
+          "sha256": "dff8f9e452406c1d50f631cc1d83d5a9f29d7ffa572d29e13dec7cf2e1f659be",
+          "bytes": 390981
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "50.20.2",
+      "customers": 50,
+      "trucks": 3,
+      "drones": 3,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/50.20.2.txt",
+          "sha256": "14c1d01f037c995f84f601f4b9b3c03b8d735566bac887f8d2bf9ab20dcd2fe2",
+          "bytes": 3428
+        },
+        {
+          "path": "data/6_100/50.20.2.vmax_ij.txt",
+          "sha256": "5311b61f1a678b3d29b3ada78fe9bededc35d81fa57e37f3d8bc754480c24b94",
+          "bytes": 39878
+        },
+        {
+          "path": "data/6_100/50.20.2.theta_ijl.txt",
+          "sha256": "7198f50dc606e39d942047b0391edbea39ebab62a9edf41d3c75d4befeb35335",
+          "bytes": 390981
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "50.20.3",
+      "customers": 50,
+      "trucks": 3,
+      "drones": 3,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/50.20.3.txt",
+          "sha256": "2aa82cec873eeb7040bec7ff8d1bc73fe1dc7aa8bd16fa9ec802e4bae0ea091e",
+          "bytes": 3428
+        },
+        {
+          "path": "data/6_100/50.20.3.vmax_ij.txt",
+          "sha256": "7d15297945e556743f839dcb14ff890ce1ebb561f0c3ceb8211b3e355cf5c739",
+          "bytes": 39878
+        },
+        {
+          "path": "data/6_100/50.20.3.theta_ijl.txt",
+          "sha256": "4bac426812dbb9f7791be8693795ca5e93425622eb1a879813bacaad38fd20ae",
+          "bytes": 390981
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "50.20.4",
+      "customers": 50,
+      "trucks": 3,
+      "drones": 3,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/50.20.4.txt",
+          "sha256": "ec5092ed1602a5298ea394c43344efbb4a385089e7f6bab5b90964eeb387980e",
+          "bytes": 3436
+        },
+        {
+          "path": "data/6_100/50.20.4.vmax_ij.txt",
+          "sha256": "936000d704db14c3343c119604b90c876b7eded6220c1437f3b4a79b18fed0aa",
+          "bytes": 39878
+        },
+        {
+          "path": "data/6_100/50.20.4.theta_ijl.txt",
+          "sha256": "a725b8420cbd5190c83a455a06a19ff8e16aaa90686079bf68dbb22c99870e22",
+          "bytes": 390981
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "50.30.1",
+      "customers": 50,
+      "trucks": 3,
+      "drones": 3,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/50.30.1.txt",
+          "sha256": "fd681467897f80ac872c6d1e707c7eced6d051fcb652cedc759ead34c4e7e58d",
+          "bytes": 3425
+        },
+        {
+          "path": "data/6_100/50.30.1.vmax_ij.txt",
+          "sha256": "2d14d9bf70218bfee595d030d20573299bba225867fdcb4145067655084ca2f0",
+          "bytes": 39878
+        },
+        {
+          "path": "data/6_100/50.30.1.theta_ijl.txt",
+          "sha256": "a461929d9db14b6d9bacfcd5c5bfdff409d6db71c73cac12aff9e87fbf593d85",
+          "bytes": 390981
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "50.30.2",
+      "customers": 50,
+      "trucks": 3,
+      "drones": 3,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/50.30.2.txt",
+          "sha256": "c7f710f4271222238994e3023c293f6117792ba96171afa9eef9f057be107ba9",
+          "bytes": 3439
+        },
+        {
+          "path": "data/6_100/50.30.2.vmax_ij.txt",
+          "sha256": "6755acbdae14646fcaedfe511130cb9b3408a4703f5e4472ad1a20d75136cab5",
+          "bytes": 39878
+        },
+        {
+          "path": "data/6_100/50.30.2.theta_ijl.txt",
+          "sha256": "e3a0e1e74d2cc8afe288ed1f70dbf87a9059086aab52cc0be25a05471fb689c8",
+          "bytes": 390981
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "50.30.3",
+      "customers": 50,
+      "trucks": 3,
+      "drones": 3,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/50.30.3.txt",
+          "sha256": "fa285646218d2dd76f8980f40b3120cdc34b582a3e3b1ec198373ef6301a452b",
+          "bytes": 3438
+        },
+        {
+          "path": "data/6_100/50.30.3.vmax_ij.txt",
+          "sha256": "fd4c4c89eea8fa5cfe0f1b1707505051a22c6dff3c6f87cab89a50160b4d7f23",
+          "bytes": 39878
+        },
+        {
+          "path": "data/6_100/50.30.3.theta_ijl.txt",
+          "sha256": "2492689d1aa48fc52ef25b0b8edef4c8e12cdc11d0a647d5a5aa9d701e69241e",
+          "bytes": 390981
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "50.30.4",
+      "customers": 50,
+      "trucks": 3,
+      "drones": 3,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/50.30.4.txt",
+          "sha256": "c84c4dd1a3e049224980b8257f75b3f98302afb22fd6b9b70ec60cc99f136aae",
+          "bytes": 3432
+        },
+        {
+          "path": "data/6_100/50.30.4.vmax_ij.txt",
+          "sha256": "0bc31281c3d5e7ee587f6082cb14c460bb2d6f0bf9320e56c16969f03d7e35e8",
+          "bytes": 39878
+        },
+        {
+          "path": "data/6_100/50.30.4.theta_ijl.txt",
+          "sha256": "17386fc07256b352c48e32c6ed4e91929a5579beeb1779eb516002b0122782f1",
+          "bytes": 390981
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "50.40.1",
+      "customers": 50,
+      "trucks": 3,
+      "drones": 3,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/50.40.1.txt",
+          "sha256": "75a5ccabcec7c6fe3c7f756a479c941d300c6fed6293f6f24cf80c28218e6e53",
+          "bytes": 3439
+        },
+        {
+          "path": "data/6_100/50.40.1.vmax_ij.txt",
+          "sha256": "278ebd288ecbafe11e3ce2942549723fb5d0fb63c047a194c1243589e54923fe",
+          "bytes": 39878
+        },
+        {
+          "path": "data/6_100/50.40.1.theta_ijl.txt",
+          "sha256": "2cdf51ed4093d2e48cdd6a03489a8952f637730763a28ef4580d3f3d90b8db77",
+          "bytes": 390981
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "50.40.2",
+      "customers": 50,
+      "trucks": 3,
+      "drones": 3,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/50.40.2.txt",
+          "sha256": "5347cb1591f7d3b6b4584e5463870d23b1bd27fffa6cb828389c59e9f4397dce",
+          "bytes": 3440
+        },
+        {
+          "path": "data/6_100/50.40.2.vmax_ij.txt",
+          "sha256": "6c23816cb72b6003c49c7284575d5b85c11e54e58b1d3bb8fb23a8151981326c",
+          "bytes": 39878
+        },
+        {
+          "path": "data/6_100/50.40.2.theta_ijl.txt",
+          "sha256": "e9e05443bf8fddf796b77984c95a9644783cc27fe7ecd0376a2f90c7bbac34f4",
+          "bytes": 390981
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "50.40.3",
+      "customers": 50,
+      "trucks": 3,
+      "drones": 3,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/50.40.3.txt",
+          "sha256": "39fa720dd08a7d6f591d0d554c7ff962d0931688e464131eaba06c55b1cf926f",
+          "bytes": 3432
+        },
+        {
+          "path": "data/6_100/50.40.3.vmax_ij.txt",
+          "sha256": "10de3daca7bf5d13c746e8708fd33b4b6b0c0929a1b2f87835fbacc72e6e565d",
+          "bytes": 39878
+        },
+        {
+          "path": "data/6_100/50.40.3.theta_ijl.txt",
+          "sha256": "8a76d2f43fff9387707c734d04e29a3d292bc7b7ab209b0ed6f57580466010c2",
+          "bytes": 390981
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "50.40.4",
+      "customers": 50,
+      "trucks": 3,
+      "drones": 3,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/50.40.4.txt",
+          "sha256": "0e3157e8ef2bf4495c395171d00d0a565382528658169b777c4e625bda59ee79",
+          "bytes": 3431
+        },
+        {
+          "path": "data/6_100/50.40.4.vmax_ij.txt",
+          "sha256": "da7c42e9c08827013c5e7c849552b023e0d4ae47e97a8133cddd433687b2f2c1",
+          "bytes": 39878
+        },
+        {
+          "path": "data/6_100/50.40.4.theta_ijl.txt",
+          "sha256": "07baad49ae3c37a64338cf86103e1e701673a2460221df93478145d1aef0c5b2",
+          "bytes": 390981
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "100.10.1",
+      "customers": 100,
+      "trucks": 4,
+      "drones": 4,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/100.10.1.txt",
+          "sha256": "be84e9c87c71203d40341e09574b75ad699f2005d955304cb7a06780780e5024",
+          "bytes": 6720
+        },
+        {
+          "path": "data/6_100/100.10.1.vmax_ij.txt",
+          "sha256": "8792b16811ab48de1e0bee5d31602237181caf56df74bdbd1bb35f4914ccc645",
+          "bytes": 159878
+        },
+        {
+          "path": "data/6_100/100.10.1.theta_ijl.txt",
+          "sha256": "38463ed652d4670bf899029cd72172f73ca6fd6458f3d596ad05c947b45aed92",
+          "bytes": 1574281
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "100.10.2",
+      "customers": 100,
+      "trucks": 4,
+      "drones": 4,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/100.10.2.txt",
+          "sha256": "31a09f88a665b525d7491f49c187304e17e43499d1af98380c872679d1b4b8bc",
+          "bytes": 6720
+        },
+        {
+          "path": "data/6_100/100.10.2.vmax_ij.txt",
+          "sha256": "af52dda2df916490c1a5682b59a73c0f30a5e78679e440a787b96d9b74a2a7c2",
+          "bytes": 159878
+        },
+        {
+          "path": "data/6_100/100.10.2.theta_ijl.txt",
+          "sha256": "410c4e79e6dc1ceedd7dfbd6fce66f542511805a602643e2b915f96466514a95",
+          "bytes": 1574281
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "100.10.3",
+      "customers": 100,
+      "trucks": 4,
+      "drones": 4,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/100.10.3.txt",
+          "sha256": "5aadaab982bf6c6d7e6971d19af7e1bea6b8b33fb518bbda3cbccc3b50b05ae5",
+          "bytes": 6716
+        },
+        {
+          "path": "data/6_100/100.10.3.vmax_ij.txt",
+          "sha256": "35b64771c25b66a49270759eec6f43d2fcdd894c9478f4991e6733f02109b458",
+          "bytes": 159878
+        },
+        {
+          "path": "data/6_100/100.10.3.theta_ijl.txt",
+          "sha256": "9233949f512442d6400706788c02eb70816c7721f90aeeec82f390a05a127d25",
+          "bytes": 1574281
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "100.10.4",
+      "customers": 100,
+      "trucks": 4,
+      "drones": 4,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/100.10.4.txt",
+          "sha256": "1c37c787e8f0664133a16e0605ae2e1c572133d06cee462ea18fb7cacfa4147d",
+          "bytes": 6703
+        },
+        {
+          "path": "data/6_100/100.10.4.vmax_ij.txt",
+          "sha256": "a47704f4d2ee682b1adf552fb8508b3f8729ae4875448a87881620ea2460420a",
+          "bytes": 159878
+        },
+        {
+          "path": "data/6_100/100.10.4.theta_ijl.txt",
+          "sha256": "8319452a0737410fbea8d25740f3389724ee00c1205b60a1a26e2fc96f631af2",
+          "bytes": 1574281
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "100.20.1",
+      "customers": 100,
+      "trucks": 4,
+      "drones": 4,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/100.20.1.txt",
+          "sha256": "36a21ee8187e866a7ac9c1b6792bf162303358f21e66531dbedb97f09cd77c8b",
+          "bytes": 6734
+        },
+        {
+          "path": "data/6_100/100.20.1.vmax_ij.txt",
+          "sha256": "0fe73df3ebe0261e6f647b155111537edaf934c92d1bb3d34e40d1d76837497e",
+          "bytes": 159878
+        },
+        {
+          "path": "data/6_100/100.20.1.theta_ijl.txt",
+          "sha256": "967050f2324038d6bf827a8173081db60147d9ea315c0d99590e0b98719a804c",
+          "bytes": 1574281
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "100.20.2",
+      "customers": 100,
+      "trucks": 4,
+      "drones": 4,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/100.20.2.txt",
+          "sha256": "8630297c1f22a5979dcb705ca3f486e6f9d0096cf93cb70946340d735d6818e6",
+          "bytes": 6731
+        },
+        {
+          "path": "data/6_100/100.20.2.vmax_ij.txt",
+          "sha256": "41589b458a53bd3e7177101ae02405db7514a508b74d04f3c06bdffaac66249a",
+          "bytes": 159878
+        },
+        {
+          "path": "data/6_100/100.20.2.theta_ijl.txt",
+          "sha256": "fcb4bf1ce0633c506383b623e91f7a81b0e5477de01f70f792d89c30863d7d8a",
+          "bytes": 1574281
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "100.20.3",
+      "customers": 100,
+      "trucks": 4,
+      "drones": 4,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/100.20.3.txt",
+          "sha256": "ad9bb43f486c5925f8806f1a294cf3fbb2fac5c105f251ab2488f9e13b8261e5",
+          "bytes": 6704
+        },
+        {
+          "path": "data/6_100/100.20.3.vmax_ij.txt",
+          "sha256": "6692668ce21eeb3ab155f4c0c616603630ac8e78198448266eb97a357686af22",
+          "bytes": 159878
+        },
+        {
+          "path": "data/6_100/100.20.3.theta_ijl.txt",
+          "sha256": "2ba3e372456d9cccb703aa7e73c436c3c4f9c63466f2e6d34d0cdb21ffdfb71d",
+          "bytes": 1574281
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "100.20.4",
+      "customers": 100,
+      "trucks": 4,
+      "drones": 4,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/100.20.4.txt",
+          "sha256": "dd3a85a57a1dee8130be3b2815749e379f9e3a2314702e0d1bd35dacc0cd4a37",
+          "bytes": 6688
+        },
+        {
+          "path": "data/6_100/100.20.4.vmax_ij.txt",
+          "sha256": "16dfe770e0b33cba04aeb8150db0b67739a1b7588f4e6857346c699c700b3fb5",
+          "bytes": 159878
+        },
+        {
+          "path": "data/6_100/100.20.4.theta_ijl.txt",
+          "sha256": "39ad5aee416b7c2eb3f73abd6e79e7679bc1374cfc6c6d304e82e05c42531d5a",
+          "bytes": 1574281
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "100.30.1",
+      "customers": 100,
+      "trucks": 4,
+      "drones": 4,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/100.30.1.txt",
+          "sha256": "00662a61d0f35c61755cb3810dca4fc7c237bf25b0b31877a90d6ba873b33ee6",
+          "bytes": 6727
+        },
+        {
+          "path": "data/6_100/100.30.1.vmax_ij.txt",
+          "sha256": "c18bd6f51b93fc663a9619680b578539b2a72f1e7a303d90c1b92cc5be17793b",
+          "bytes": 159878
+        },
+        {
+          "path": "data/6_100/100.30.1.theta_ijl.txt",
+          "sha256": "5a043d90d93158ea072787a4472b1011df99b49eb2557af815616720488aae57",
+          "bytes": 1574281
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "100.30.2",
+      "customers": 100,
+      "trucks": 4,
+      "drones": 4,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/100.30.2.txt",
+          "sha256": "5d1494bf0c51b32bc49c323a0f38e5a364885d0f8702969bc4d9aa6a578873cb",
+          "bytes": 6727
+        },
+        {
+          "path": "data/6_100/100.30.2.vmax_ij.txt",
+          "sha256": "60c6ffe7c6cdbd417d19cb69c2c5ebe5b56572884a71bb27da9ea08265f14758",
+          "bytes": 159878
+        },
+        {
+          "path": "data/6_100/100.30.2.theta_ijl.txt",
+          "sha256": "1aa425d80cdfe26e89b10864c230ec335c1ab10169c605a9596efd08cb139fc2",
+          "bytes": 1574281
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "100.30.3",
+      "customers": 100,
+      "trucks": 4,
+      "drones": 4,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/100.30.3.txt",
+          "sha256": "60dcc07c62e11a33417c2d3ecb943433791c9a545904da279f13599a02cb6f9d",
+          "bytes": 6716
+        },
+        {
+          "path": "data/6_100/100.30.3.vmax_ij.txt",
+          "sha256": "0b58d73ed9b100b30066f5b5d515b7f46f236d7c018d321b28221d08cb72f205",
+          "bytes": 159878
+        },
+        {
+          "path": "data/6_100/100.30.3.theta_ijl.txt",
+          "sha256": "e3ff0705302f234fe8622808b5de5295b393e76d764280b0ec1634d5377d0199",
+          "bytes": 1574281
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "100.30.4",
+      "customers": 100,
+      "trucks": 4,
+      "drones": 4,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/100.30.4.txt",
+          "sha256": "b4515cc1167d7982c2d0a9000159cc5ae1b03b9bdb30de35bc0089c32d40155b",
+          "bytes": 6717
+        },
+        {
+          "path": "data/6_100/100.30.4.vmax_ij.txt",
+          "sha256": "3a744e3e2f15fe30050f197c2ea0f60cbc37ad8c0ba23fecdefc085ca2674fd6",
+          "bytes": 159878
+        },
+        {
+          "path": "data/6_100/100.30.4.theta_ijl.txt",
+          "sha256": "94d282f2ee8f878c27a5e10357a428e9142d4685201687e34ee3c82b0e872b3f",
+          "bytes": 1574281
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "100.40.1",
+      "customers": 100,
+      "trucks": 4,
+      "drones": 4,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/100.40.1.txt",
+          "sha256": "1d7fbbb7524de393eeaa962369402c5a0b29f426886cabf38b62cda30afb9327",
+          "bytes": 6712
+        },
+        {
+          "path": "data/6_100/100.40.1.vmax_ij.txt",
+          "sha256": "a0994f20b079b0734b2649b9145405b5804b7b7712c346471a86156271da2255",
+          "bytes": 159878
+        },
+        {
+          "path": "data/6_100/100.40.1.theta_ijl.txt",
+          "sha256": "a8ece15763a9d12684ec92197ff560cabf4d170c5a057918ea5ccbf65c39f7ef",
+          "bytes": 1574281
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "100.40.2",
+      "customers": 100,
+      "trucks": 4,
+      "drones": 4,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/100.40.2.txt",
+          "sha256": "2add02375b35febe74d4315edaf998285899ef6ce3429da1953d87489072beca",
+          "bytes": 6696
+        },
+        {
+          "path": "data/6_100/100.40.2.vmax_ij.txt",
+          "sha256": "735372455b79ccd4676fc5d8eabfde1afaf3819dc640434a1bd9fa718d087198",
+          "bytes": 159878
+        },
+        {
+          "path": "data/6_100/100.40.2.theta_ijl.txt",
+          "sha256": "b32181eb1f37e8847037421deab830c4ab9d4d934973c6e835427fe7e6d62990",
+          "bytes": 1574281
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "100.40.3",
+      "customers": 100,
+      "trucks": 4,
+      "drones": 4,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/100.40.3.txt",
+          "sha256": "eb9201be1daccf2bdc7f301bfd583b60c52e57ca848a4b630fda699b7c566c4c",
+          "bytes": 6730
+        },
+        {
+          "path": "data/6_100/100.40.3.vmax_ij.txt",
+          "sha256": "2d80002bca765a82e56ce4f0e3abde2cc324c8c0206f0a28b20b5f6b30745daa",
+          "bytes": 159878
+        },
+        {
+          "path": "data/6_100/100.40.3.theta_ijl.txt",
+          "sha256": "08c6408222e20f99b8694111c5d5e42c35a582f4c1a0cce60b778f28b5112dab",
+          "bytes": 1574281
+        }
+      ]
+    },
+    {
+      "dataset": "6_100",
+      "instance": "100.40.4",
+      "customers": 100,
+      "trucks": 4,
+      "drones": 4,
+      "source_directory": "instance_time_dependent/6_100_customers",
+      "files": [
+        {
+          "path": "data/6_100/100.40.4.txt",
+          "sha256": "1a9b632fffbed4aacf76e19231a4d28cfcc4fad892b76ac9888447c7e1cb115e",
+          "bytes": 6703
+        },
+        {
+          "path": "data/6_100/100.40.4.vmax_ij.txt",
+          "sha256": "44d5d8d8a36f990bdab6198d3782d438eb556597d4fabfaff21418fa489fa537",
+          "bytes": 159878
+        },
+        {
+          "path": "data/6_100/100.40.4.theta_ijl.txt",
+          "sha256": "56d44f579b5ad3db9162aa0bf661387e81b2aa82b681b7cac836e46bfe262c2e",
+          "bytes": 1574281
+        }
+      ]
+    },
+    {
+      "dataset": "200",
+      "instance": "200.10.1",
+      "customers": 200,
+      "trucks": 5,
+      "drones": 5,
+      "source_directory": "instance_time_dependent/big_instance/normal",
+      "files": [
+        {
+          "path": "data/200/200.10.1.txt",
+          "sha256": "5cb7484aa606d8199bc22393fbb16139f161ebbbdc5b6d03c8d16f29973ad535",
+          "bytes": 13182
+        },
+        {
+          "path": "data/200/200.10.1.vmax_ij.txt",
+          "sha256": "820188f76262effbe04e473e9f19bde8b79f825dd1e988139fd0a67b9daa7290",
+          "bytes": 679678
+        },
+        {
+          "path": "data/200/200.10.1.theta_ijl.txt",
+          "sha256": "c8d14332ab5996a169f1c128ea2cced37387d0dc5cb815f63979a9b011084c00",
+          "bytes": 6788481
+        }
+      ]
+    },
+    {
+      "dataset": "200",
+      "instance": "200.10.2",
+      "customers": 200,
+      "trucks": 5,
+      "drones": 5,
+      "source_directory": "instance_time_dependent/big_instance/normal",
+      "files": [
+        {
+          "path": "data/200/200.10.2.txt",
+          "sha256": "21f9dc63f586c75168edcd421093bbe52a97d0a9676d9dd11b61cdb6e48a8f9b",
+          "bytes": 13193
+        },
+        {
+          "path": "data/200/200.10.2.vmax_ij.txt",
+          "sha256": "d621e4044f91c234f9103d9e4d14f9f31e0f2202286b19e17b7794ff9ea77fe7",
+          "bytes": 679678
+        },
+        {
+          "path": "data/200/200.10.2.theta_ijl.txt",
+          "sha256": "64e7bf32958a5a30203d20b2772be4fb961dd0c776b27dd7e3cf0f88748c5e9d",
+          "bytes": 6788481
+        }
+      ]
+    },
+    {
+      "dataset": "200",
+      "instance": "200.10.3",
+      "customers": 200,
+      "trucks": 5,
+      "drones": 5,
+      "source_directory": "instance_time_dependent/big_instance/normal",
+      "files": [
+        {
+          "path": "data/200/200.10.3.txt",
+          "sha256": "fb0d7af57983708b60c06cf09268698df8cc5753ac3f904d34fc9935e1714cc9",
+          "bytes": 13200
+        },
+        {
+          "path": "data/200/200.10.3.vmax_ij.txt",
+          "sha256": "22e95183375de0b91d1285f35154df13bd71b6751e4b3f0d9ed254de4e54de17",
+          "bytes": 679678
+        },
+        {
+          "path": "data/200/200.10.3.theta_ijl.txt",
+          "sha256": "ff6acb09ce9a34a42b1be727144effae5b7f4546ecfb86415e194ee3cc7a7c13",
+          "bytes": 6788481
+        }
+      ]
+    },
+    {
+      "dataset": "200",
+      "instance": "200.10.4",
+      "customers": 200,
+      "trucks": 5,
+      "drones": 5,
+      "source_directory": "instance_time_dependent/big_instance/normal",
+      "files": [
+        {
+          "path": "data/200/200.10.4.txt",
+          "sha256": "f13536cffa7ee7c7796839aa15fa214c14cd32f925b891cc3b5c670cd8473fab",
+          "bytes": 13175
+        },
+        {
+          "path": "data/200/200.10.4.vmax_ij.txt",
+          "sha256": "9cb11266057dafe9fc5b56157a9d83e6fb8aca8407388c2f283e933c680939ae",
+          "bytes": 679678
+        },
+        {
+          "path": "data/200/200.10.4.theta_ijl.txt",
+          "sha256": "e163231d81712192354dcfae322925480816911824d84318f89f5b5e9b70672e",
+          "bytes": 6788481
+        }
+      ]
+    },
+    {
+      "dataset": "200",
+      "instance": "200.20.1",
+      "customers": 200,
+      "trucks": 5,
+      "drones": 5,
+      "source_directory": "instance_time_dependent/big_instance/normal",
+      "files": [
+        {
+          "path": "data/200/200.20.1.txt",
+          "sha256": "6a049ad5aa22790643475cb9366535c9dfc65a1362282eb37375df837e2af4ef",
+          "bytes": 13171
+        },
+        {
+          "path": "data/200/200.20.1.vmax_ij.txt",
+          "sha256": "7cdcc36df328d05cc05157569c21f424a171465852534ec775f5cfd023a4d639",
+          "bytes": 679678
+        },
+        {
+          "path": "data/200/200.20.1.theta_ijl.txt",
+          "sha256": "662f7ed1b8a551ae1acfa2259df8cc3d10748861b52806d5730f7dcb82652caa",
+          "bytes": 6788481
+        }
+      ]
+    },
+    {
+      "dataset": "200",
+      "instance": "200.20.2",
+      "customers": 200,
+      "trucks": 5,
+      "drones": 5,
+      "source_directory": "instance_time_dependent/big_instance/normal",
+      "files": [
+        {
+          "path": "data/200/200.20.2.txt",
+          "sha256": "f3c4e680f0c9cbd6aef110d484ae80087946823904df9b3137d967d65fefaa2c",
+          "bytes": 13198
+        },
+        {
+          "path": "data/200/200.20.2.vmax_ij.txt",
+          "sha256": "23a83ab92fd6288477a98415c6089084c0229a92595e1fbd34e291d738f05d17",
+          "bytes": 679678
+        },
+        {
+          "path": "data/200/200.20.2.theta_ijl.txt",
+          "sha256": "9b7d5f6410572fb261d69b60cba77dcd211ab6340ca8a042ceafe25aa2c2c0a8",
+          "bytes": 6788481
+        }
+      ]
+    },
+    {
+      "dataset": "200",
+      "instance": "200.20.3",
+      "customers": 200,
+      "trucks": 5,
+      "drones": 5,
+      "source_directory": "instance_time_dependent/big_instance/normal",
+      "files": [
+        {
+          "path": "data/200/200.20.3.txt",
+          "sha256": "c5c5ca953fa3a64bc77802a74965c2993a7f55d1767e05a90da2ecbe1abaf9dc",
+          "bytes": 13181
+        },
+        {
+          "path": "data/200/200.20.3.vmax_ij.txt",
+          "sha256": "07cce6d383410493271a3bef6ee83374af211d202bc8754ec1ce3d04b70ee50c",
+          "bytes": 679678
+        },
+        {
+          "path": "data/200/200.20.3.theta_ijl.txt",
+          "sha256": "e66fed8e99deca18263b3270838c1e3a1bb3d4500407f2f696dc1612cdac18aa",
+          "bytes": 6788481
+        }
+      ]
+    },
+    {
+      "dataset": "200",
+      "instance": "200.20.4",
+      "customers": 200,
+      "trucks": 5,
+      "drones": 5,
+      "source_directory": "instance_time_dependent/big_instance/normal",
+      "files": [
+        {
+          "path": "data/200/200.20.4.txt",
+          "sha256": "a9793bec12c029b9770234f503d6aedb7b5938927fd9c418a2df26488ae2d3e9",
+          "bytes": 13170
+        },
+        {
+          "path": "data/200/200.20.4.vmax_ij.txt",
+          "sha256": "214bc9d481a133975c8bf055189d933a093f68b1a43574efd001a18f88a050ae",
+          "bytes": 679678
+        },
+        {
+          "path": "data/200/200.20.4.theta_ijl.txt",
+          "sha256": "34e2b616e33682f4253936266c439234766c5bb2e76af3bbf255cefde9d118f1",
+          "bytes": 6788481
+        }
+      ]
+    },
+    {
+      "dataset": "200",
+      "instance": "200.30.1",
+      "customers": 200,
+      "trucks": 5,
+      "drones": 5,
+      "source_directory": "instance_time_dependent/big_instance/normal",
+      "files": [
+        {
+          "path": "data/200/200.30.1.txt",
+          "sha256": "56035b5883908a34b77574dab792a9a4399fac1e0b9f45a5be90ec906d87a560",
+          "bytes": 13177
+        },
+        {
+          "path": "data/200/200.30.1.vmax_ij.txt",
+          "sha256": "5ca0fb718afb11183b7d5b6b4152b96f52c7798d7eaa3fdd739809a8a7464ec0",
+          "bytes": 679678
+        },
+        {
+          "path": "data/200/200.30.1.theta_ijl.txt",
+          "sha256": "423bce3ade1b52a1f9b1f7847276f96a82a2406ca48170f5f5944dc12f2b985b",
+          "bytes": 6788481
+        }
+      ]
+    },
+    {
+      "dataset": "200",
+      "instance": "200.30.2",
+      "customers": 200,
+      "trucks": 5,
+      "drones": 5,
+      "source_directory": "instance_time_dependent/big_instance/normal",
+      "files": [
+        {
+          "path": "data/200/200.30.2.txt",
+          "sha256": "3ca75adfea2a177de38f78997dbf187a1eab6f216a53486c3032d84acd4d8c26",
+          "bytes": 13190
+        },
+        {
+          "path": "data/200/200.30.2.vmax_ij.txt",
+          "sha256": "853d79e14e0cf2431fde294b50b23e5b34217efe38252779518da4135cef2717",
+          "bytes": 679678
+        },
+        {
+          "path": "data/200/200.30.2.theta_ijl.txt",
+          "sha256": "5d09af3c0de59945f632fa7116be204b5fa942dfda6f44bd0ebe6c3f8ee48926",
+          "bytes": 6788481
+        }
+      ]
+    },
+    {
+      "dataset": "200",
+      "instance": "200.30.3",
+      "customers": 200,
+      "trucks": 5,
+      "drones": 5,
+      "source_directory": "instance_time_dependent/big_instance/normal",
+      "files": [
+        {
+          "path": "data/200/200.30.3.txt",
+          "sha256": "922a8c34f792248ab9bc5af68b1a285e3aeb2f6fa4bdc0a307f9ce59f90e0ae0",
+          "bytes": 13179
+        },
+        {
+          "path": "data/200/200.30.3.vmax_ij.txt",
+          "sha256": "9080dcda78f6d61961c639af408289b2cee802f754214b82668aa391b9124f8b",
+          "bytes": 679678
+        },
+        {
+          "path": "data/200/200.30.3.theta_ijl.txt",
+          "sha256": "1825fafebf1d1d9e9f43082ba96b3c5c2ccd3f142a41a7546301abd9a6ec8e9f",
+          "bytes": 6788481
+        }
+      ]
+    },
+    {
+      "dataset": "200",
+      "instance": "200.30.4",
+      "customers": 200,
+      "trucks": 5,
+      "drones": 5,
+      "source_directory": "instance_time_dependent/big_instance/normal",
+      "files": [
+        {
+          "path": "data/200/200.30.4.txt",
+          "sha256": "90b914df88f9be17b3ea68c51d20fa40711e89fed4cbfd6db967e4336fe1fbf9",
+          "bytes": 13198
+        },
+        {
+          "path": "data/200/200.30.4.vmax_ij.txt",
+          "sha256": "a1f0ae1243cc5c48ea8b653ec7127027f228e1da1a2c45634b2142c63cb944e4",
+          "bytes": 679678
+        },
+        {
+          "path": "data/200/200.30.4.theta_ijl.txt",
+          "sha256": "39553ee6e6f922035f8cffda75425258b172d97ee98f35a8a02f5dc8faa8d60a",
+          "bytes": 6788481
+        }
+      ]
+    },
+    {
+      "dataset": "200",
+      "instance": "200.40.1",
+      "customers": 200,
+      "trucks": 5,
+      "drones": 5,
+      "source_directory": "instance_time_dependent/big_instance/normal",
+      "files": [
+        {
+          "path": "data/200/200.40.1.txt",
+          "sha256": "77baa89ad96b9f34d5438dc07d97d031b5400b86d5dc532d1721c7a46edb930b",
+          "bytes": 13181
+        },
+        {
+          "path": "data/200/200.40.1.vmax_ij.txt",
+          "sha256": "d185e61b1dc8247466a2a15a16d07ba5d175b25c32dd18e474b6436acba72979",
+          "bytes": 679678
+        },
+        {
+          "path": "data/200/200.40.1.theta_ijl.txt",
+          "sha256": "2973d13ad9d32689c6d3f8ab308ad2b3e0291f6fd841b4d2738a47f6d2344492",
+          "bytes": 6788481
+        }
+      ]
+    },
+    {
+      "dataset": "200",
+      "instance": "200.40.2",
+      "customers": 200,
+      "trucks": 5,
+      "drones": 5,
+      "source_directory": "instance_time_dependent/big_instance/normal",
+      "files": [
+        {
+          "path": "data/200/200.40.2.txt",
+          "sha256": "72ab376b276008cea0327fc75ba441a7caae20597e5befabd0efea025c6e7ed3",
+          "bytes": 13183
+        },
+        {
+          "path": "data/200/200.40.2.vmax_ij.txt",
+          "sha256": "782aba2721b98ff77f459c03c43a60a62b22f7429ebea454a43a8390fa728d19",
+          "bytes": 679678
+        },
+        {
+          "path": "data/200/200.40.2.theta_ijl.txt",
+          "sha256": "44544f9ff0834ecff6acf6f9c788a0a5df9448e9f49ff68d97ab352aa810575a",
+          "bytes": 6788481
+        }
+      ]
+    },
+    {
+      "dataset": "200",
+      "instance": "200.40.3",
+      "customers": 200,
+      "trucks": 5,
+      "drones": 5,
+      "source_directory": "instance_time_dependent/big_instance/normal",
+      "files": [
+        {
+          "path": "data/200/200.40.3.txt",
+          "sha256": "3e1b1d4c63262f20a7822e43643b04be477c83906409d1752ae9f6626bd1a940",
+          "bytes": 13151
+        },
+        {
+          "path": "data/200/200.40.3.vmax_ij.txt",
+          "sha256": "b42b8daa88036f2121250afe489dfed2db6363e4cf93972891f653ff77156a21",
+          "bytes": 679678
+        },
+        {
+          "path": "data/200/200.40.3.theta_ijl.txt",
+          "sha256": "aef28b7fe2bcbda27506eafba2c5b19650549fd077b722366b217ac02677c50d",
+          "bytes": 6788481
+        }
+      ]
+    },
+    {
+      "dataset": "200",
+      "instance": "200.40.4",
+      "customers": 200,
+      "trucks": 5,
+      "drones": 5,
+      "source_directory": "instance_time_dependent/big_instance/normal",
+      "files": [
+        {
+          "path": "data/200/200.40.4.txt",
+          "sha256": "6c6227f8317c7625762b4d305b910315767ed767a343e1e0a43aea88d92a497e",
+          "bytes": 13159
+        },
+        {
+          "path": "data/200/200.40.4.vmax_ij.txt",
+          "sha256": "655a395e61ad3c4c727ae0dea9b11ff41582c048bcf056d185f78f5e8cafba67",
+          "bytes": 679678
+        },
+        {
+          "path": "data/200/200.40.4.theta_ijl.txt",
+          "sha256": "08032ece7d86ccf9d48a7a18e3a8326289f30c3bffc6d09990cdccb72d608f25",
+          "bytes": 6788481
+        }
+      ]
+    }
+  ],
+  "zip_sha256": "f3c1f87396f9b4ae91172443e065b28675d60923c917d7a811da89aa8979d19a",
+  "seeds": [
+    42,
+    43,
+    44,
+    45,
+    46
+  ],
+  "K": 9,
+  "truck_capacity_kg": 40,
+  "drone_capacity_kg": 2.27,
+  "stop_rule": "exhaust N=n*K*ceil(sqrt(n)); doubled variant uses 2N; no time limit"
+}

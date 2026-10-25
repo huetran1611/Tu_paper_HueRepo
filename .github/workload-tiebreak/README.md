@@ -27,3 +27,5 @@ The setup workflow compiles both executables and semantic tests with g++, verifi
 Artifacts retain per-run objective, L2 workload, feasibility, actual iteration counts, seed/configuration, routes, iteration history and compressed stdout/stderr. Each batch validates exact coverage and exports all_runs.csv and summary.csv. Missing/failed tasks are disclosed separately from infeasible returned solutions. Rerunning failed jobs is supported.
 
 Launch on branch `codex/workload-tiebreak-5seeds` by pushing the setup trigger, then filling the successful setup run ID into the four batch callers and pushing `.github/triggers/workload-tiebreak-batches`. Trigger files are intentionally separate so batch optimization cannot begin before compilation and validation succeed.
+
+Validated Linux setup run: https://github.com/huetran1611/Tu_paper_HueRepo/actions/runs/40244314213 . Batch report artifacts include routes, iteration CSVs and compressed logs under records/<task_key>/, in addition to the metrics and coverage tables.

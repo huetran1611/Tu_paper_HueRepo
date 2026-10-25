@@ -97,6 +97,18 @@ jobs:
           python "$RUNNER_TEMP/workload-experiment/workload_tiebreak_experiment.py" aggregate \
             --bundle "$RUNNER_TEMP/workload-experiment" --batch "$BATCH" \
             --input collected --output report
+          python - <<'PYFILES'
+          import json, shutil
+          from pathlib import Path
+          for result in Path('collected').glob('**/result.json'):
+              key = json.loads(result.read_text())['task']['key']
+              target = Path('report/records') / key
+              target.mkdir(parents=True, exist_ok=True)
+              for name in ['output_solution_best.txt', 'output_mode_0.txt', 'stdout.log.gz', 'stderr.log.gz', 'command.json']:
+                  source = result.parent / name
+                  if source.exists():
+                      shutil.copy2(source, target / name)
+          PYFILES
           cat report/coverage.json >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         if: always()

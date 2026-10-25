@@ -1,0 +1,19 @@
+name: Workload tie-breaking - batch 1 - 250 independent processes
+run-name: Workload ablation 1/4 - 250 jobs - 5 seeds - capacities 40 and 2.27
+on:
+  push:
+    branches: [codex/workload-tiebreak-5seeds]
+    paths: [.github/triggers/workload-tiebreak-batches]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: workload-tiebreak-batch-1-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  batch:
+    uses: ./.github/workflows/workload-tiebreak-single-batch.yml
+    with:
+      setup_run_id: '40244314213'
+      batch: 1

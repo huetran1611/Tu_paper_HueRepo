@@ -119,7 +119,17 @@ static int CFG_MAX_SEGMENT = MAX_SEGMENT;
 static int CFG_MAX_NO_IMPROVE = MAX_NO_IMPROVE;
 static int CFG_MAX_ITER_PER_SEGMENT = MAX_ITER_PER_SEGMENT;
 static int CFG_MAX_ITERATIONS = MAX_ITERATIONS;
-static double CFG_TIME_LIMIT_SEC = 0.0; // 0 = unlimited
+static double CFG_TIME_LIMIT_SEC = 7200.0; // process cap before the 1x/2x multiplier; 0 = unlimited
+static optional<chrono::steady_clock::time_point> WORKLOAD_PROCESS_DEADLINE;
+struct WorkloadTimeLimitReached {};
+
+static bool workload_time_limit_reached() {
+    return WORKLOAD_PROCESS_DEADLINE && chrono::steady_clock::now() >= *WORKLOAD_PROCESS_DEADLINE;
+}
+
+static void check_workload_time_limit() {
+    if (workload_time_limit_reached()) throw WorkloadTimeLimitReached{};
+}
 static string CFG_TRUCK_VMAX_FILE; // optional file: i j vmax_ij
 static string CFG_TRUCK_THETA_FILE; // optional file: i j l theta_ijl, l is 0-based segment index
 static double CFG_SEGMENT_LENGTH_SEC = 3600.0; // time-dependent segment length in seconds
@@ -1037,6 +1047,7 @@ static double solution_score_from_cached_metrics(const Solution& sol, double (*s
 }
 
 static double score_recalculated_candidate(Solution& candidate, double (*solution_cost)(const Solution&)) {
+    check_workload_time_limit();
     candidate = recalculate_solution(candidate);
     return solution_score_from_cached_metrics(candidate, solution_cost);
 }
@@ -1181,6 +1192,7 @@ struct SolutionEvaluationContext {
     }
 
     double score_candidate(Solution& candidate, const vector<ChangedVehicle>& changed, double (*solution_cost)(const Solution&)) const {
+        check_workload_time_limit();
         double new_capacity_excess = capacity_excess;
         double new_energy_excess = energy_excess;
         double new_deadline_excess = deadline_excess;
@@ -2016,6 +2028,7 @@ void commit_pending_tabu_attributes(int current_iter) {
 }
 
 Solution local_search(const Solution& initial_solution, int neighbor_id, int current_iter, double best_cost, double (*solution_cost)(const Solution&), double reference_workload) {
+    check_workload_time_limit();
     Solution best_neighbor = initial_solution;
     double best_neighbor_cost = 1e10;
     SolutionEvaluationContext score_context(initial_solution);
@@ -3792,7 +3805,7 @@ Solution tabu_search(const Solution& initial_solution, int num_initial_sol,
                      vector<double>& iter_current, vector<double>& iter_best,
                      vector<bool>& iter_feasible) {
     (void)num_initial_sol;
-    const auto started = chrono::steady_clock::now();
+    bool time_limit_hit = false;
     reset_penalty_coefficients();
     // Each attempt is an independent run. Do not inherit tabu expirations from
     // a prior attempt whose iteration budget may differ between the variants.
@@ -3827,8 +3840,7 @@ Solution tabu_search(const Solution& initial_solution, int num_initial_sol,
          << "; budget_multiplier=" << WORKLOAD_ABLATION_BUDGET_MULTIPLIER
          << "; max_iters=" << total_iters << " ===\n";
     for (int iter = 0; iter < total_iters; ++iter) {
-        if (CFG_TIME_LIMIT_SEC > 0.0 &&
-            chrono::duration<double>(chrono::steady_clock::now() - started).count() >= CFG_TIME_LIMIT_SEC) break;
+        if (workload_time_limit_reached()) { time_limit_hit = true; break; }
         iter_current.push_back(current.total_makespan);
         iter_best.push_back(have_feasible ? best_feasible.total_makespan : fallback.total_makespan);
         iter_feasible.push_back(is_feasible_solution(current));
@@ -3841,8 +3853,16 @@ Solution tabu_search(const Solution& initial_solution, int num_initial_sol,
             if (draw < cumulative) { neighborhood = k; break; }
         }
         ++uses[neighborhood];
-        Solution candidate = local_search(current, neighborhood, iter, score(segment_best),
-                                          solution_score_makespan, workload_l2(segment_best));
+        Solution candidate;
+        try {
+            candidate = local_search(current, neighborhood, iter, score(segment_best),
+                                     solution_score_makespan, workload_l2(segment_best));
+        } catch (const WorkloadTimeLimitReached&) {
+            clear_pending_tabu_attributes();
+            iter_current.pop_back(); iter_best.pop_back(); iter_feasible.pop_back();
+            time_limit_hit = true;
+            break;
+        }
         candidate = recalculate_solution(candidate);
         if (!check_solution_integrity(candidate))
             throw runtime_error("Neighborhood returned an invalid customer assignment");
@@ -3886,6 +3906,9 @@ Solution tabu_search(const Solution& initial_solution, int num_initial_sol,
     }
     cout << "Workload neighborhood tie wins: " << WORKLOAD_NEIGHBOR_TIE_WINS << "\n"
          << "Accepted workload-only improvements: " << WORKLOAD_ACCEPTED_TIES << "\n";
+    cout << "Search termination: reason=" << (time_limit_hit ? "time_limit" : "iteration_limit")
+         << ", completed_iterations=" << iter_current.size()
+         << ", max_iterations=" << total_iters << "\n";
     return have_feasible ? best_feasible : fallback;
 }
 
@@ -3955,6 +3978,7 @@ static bool write_output_file(const std::string& out_path, const Solution& sol, 
 }
 
 int main(int argc, char* argv[]) {
+        const auto process_started = chrono::steady_clock::now();
 	    if (argc < 2) {
 	        cerr << "Usage: " << argv[0]
 	             << " input_file [--print-distance-matrix]"
@@ -4061,6 +4085,12 @@ int main(int argc, char* argv[]) {
         }
         CFG_MAX_ITERATIONS *= WORKLOAD_ABLATION_BUDGET_MULTIPLIER;
         if (CFG_TIME_LIMIT_SEC > 0.0) CFG_TIME_LIMIT_SEC *= WORKLOAD_ABLATION_BUDGET_MULTIPLIER;
+        if (CFG_TIME_LIMIT_SEC > 0.0) {
+            WORKLOAD_PROCESS_DEADLINE = process_started + chrono::duration_cast<chrono::steady_clock::duration>(
+                chrono::duration<double>(CFG_TIME_LIMIT_SEC));
+        } else {
+            WORKLOAD_PROCESS_DEADLINE.reset();
+        }
 	    CFG_MAX_SEGMENT = compute_segment_count(CFG_MAX_ITERATIONS, CFG_MAX_ITER_PER_SEGMENT);
 	    cout << "Search config: total_iters=" << CFG_MAX_ITERATIONS
 	         << " (segments=" << CFG_MAX_SEGMENT
@@ -4099,6 +4129,7 @@ int main(int argc, char* argv[]) {
     auto start_time = std::chrono::high_resolution_clock::now();
     int ablation_seed = CFG_RANDOM_SEED;
     for (int attempt = 0; attempt < CFG_NUM_INITIAL; ++attempt) {
+        if (attempt > 0 && workload_time_limit_reached()) break;
         // Matched initial construction even when the preceding attempt used 2N steps.
         srand(static_cast<unsigned int>(ablation_seed) + static_cast<unsigned int>(attempt));
         reset_penalty_coefficients();

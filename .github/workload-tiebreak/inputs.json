@@ -2412,5 +2412,5 @@
   "K": 9,
   "truck_capacity_kg": 40,
   "drone_capacity_kg": 2.27,
-  "stop_rule": "exhaust N=n*K*ceil(sqrt(n)); doubled variant uses 2N; no time limit"
+  "stop_rule": "stop at N=n*K*ceil(sqrt(n)) or 7200 process seconds; double uses 2N or 14400 seconds"
 }

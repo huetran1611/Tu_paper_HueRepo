@@ -6,6 +6,14 @@
 #include <cassert>
 
 int main() {
+    assert(CFG_TIME_LIMIT_SEC == 7200.0);
+    WORKLOAD_PROCESS_DEADLINE = chrono::steady_clock::now() - chrono::milliseconds(1);
+    bool caught_deadline = false;
+    try { check_workload_time_limit(); }
+    catch (const WorkloadTimeLimitReached&) { caught_deadline = true; }
+    assert(caught_deadline);
+    WORKLOAD_PROCESS_DEADLINE.reset();
+    check_workload_time_limit();
     CFG_WORKLOAD_TIE_BREAK = true;
     // Primary makespan always wins, regardless of the secondary workload.
     assert(better_lexicographic(9.0, 10000.0, 10.0, 1.0));

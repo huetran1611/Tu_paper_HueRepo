@@ -4,7 +4,8 @@ on:
     inputs:
       setup_run_id:
         type: string
-        required: true
+        required: false
+        default: latest
       batch:
         type: number
         required: true
@@ -14,22 +15,51 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
   PYTHONDONTWRITEBYTECODE: '1'
+  BASE_TIME_LIMIT_SECONDS: '7200'
 jobs:
   prepare:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
+      setup_run_id: ${{ steps.setup.outputs.run_id }}
     steps:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Resolve the successful setup run
+        id: setup
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_SETUP_RUN: ${{ inputs.setup_run_id }}
+        run: |
+          SETUP_RUN_ID="$REQUESTED_SETUP_RUN"
+          if [[ "$SETUP_RUN_ID" == "latest" ]]; then
+            SETUP_RUN_ID=$(gh api --method GET \
+              "repos/$GITHUB_REPOSITORY/actions/workflows/workload-tiebreak-setup.yml/runs" \
+              -f branch="$GITHUB_REF_NAME" -f status=success -f per_page=1 \
+              --jq '.workflow_runs[0].id // empty')
+          fi
+          [[ "$SETUP_RUN_ID" =~ ^[1-9][0-9]*$ ]] || { echo "Run setup successfully first"; exit 1; }
+          echo "run_id=$SETUP_RUN_ID" >> "$GITHUB_OUTPUT"
       - uses: actions/download-artifact@v4
         with:
           name: workload-tiebreak-experiment
-          run-id: ${{ inputs.setup_run_id }}
+          run-id: ${{ steps.setup.outputs.run_id }}
           github-token: ${{ github.token }}
           path: ${{ runner.temp }}/workload-experiment
+      - name: Require the new two-hour and four-hour protocol
+        run: |
+          python - <<'PYLIMITS'
+          import json, os
+          from pathlib import Path
+          manifest = json.loads((Path(os.environ['RUNNER_TEMP']) / 'workload-experiment/task_manifest.json').read_text())
+          assert manifest.get('protocol_version') == 2, 'Old unlimited bundle: run the updated setup first'
+          assert manifest['base_time_limit_sec'] == int(os.environ['BASE_TIME_LIMIT_SECONDS'])
+          assert manifest['attempts_per_task'] == 1
+          for task in manifest['tasks']:
+              assert task['expected_time_limit_sec'] == 7200 * task['budget_multiplier']
+          PYLIMITS
       - id: matrix
         env:
           BATCH: ${{ inputs.batch }}
@@ -40,7 +70,7 @@ jobs:
     needs: prepare
     name: ${{ matrix.key }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 360
+    timeout-minutes: 360 # Six hours, including setup and artifact export; solver cap is at most four hours.
     strategy:
       fail-fast: false
       max-parallel: 250
@@ -52,10 +82,10 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: workload-tiebreak-experiment
-          run-id: ${{ inputs.setup_run_id }}
+          run-id: ${{ needs.prepare.outputs.setup_run_id }}
           github-token: ${{ github.token }}
           path: ${{ runner.temp }}/workload-experiment
-      - name: One process - run until the full iteration budget is exhausted
+      - name: One process - stop at the iteration limit or two-hour/four-hour time limit
         env:
           TASK_KEY: ${{ matrix.key }}
         run: |
@@ -83,14 +113,14 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: workload-tiebreak-experiment
-          run-id: ${{ inputs.setup_run_id }}
+          run-id: ${{ needs.prepare.outputs.setup_run_id }}
           github-token: ${{ github.token }}
           path: ${{ runner.temp }}/workload-experiment
       - uses: actions/download-artifact@v4
         with:
           pattern: workload-b${{ inputs.batch }}-*
           path: collected
-      - name: Validate all iteration counts and batch coverage
+      - name: Validate iteration-limited and time-limited results and batch coverage
         env:
           BATCH: ${{ inputs.batch }}
         run: |

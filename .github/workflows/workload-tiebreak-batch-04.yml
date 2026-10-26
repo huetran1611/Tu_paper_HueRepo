@@ -5,6 +5,11 @@ on:
     branches: [codex/workload-tiebreak-5seeds]
     paths: [.github/triggers/workload-tiebreak-batches]
   workflow_dispatch:
+    inputs:
+      setup_run_id:
+        description: Successful updated setup run ID, or latest
+        type: string
+        default: latest
 permissions:
   contents: read
   actions: read
@@ -15,5 +20,5 @@ jobs:
   batch:
     uses: ./.github/workflows/workload-tiebreak-single-batch.yml
     with:
-      setup_run_id: '40244314213'
+      setup_run_id: ${{ inputs.setup_run_id || 'latest' }}
       batch: 4

@@ -12,6 +12,7 @@ concurrency:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
   PYTHONDONTWRITEBYTECODE: '1'
+  BASE_TIME_LIMIT_SECONDS: '7200'
 jobs:
   prepare:
     runs-on: ubuntu-24.04
@@ -25,6 +26,7 @@ jobs:
             /.github/workload-tiebreak/
             /scripts/workload_tiebreak_experiment.py
             /scripts/test_workload_tiebreak.cpp
+            /scripts/test_workload_tiebreak_experiment.py
             /src_v2/tabubu_TimeDependent_v2.cpp
             /src_v2/tabubu_TimeDependent_workload_tiebreak_impl.hpp
             /src_v2/tabubu_TimeDependent_v2_makespan_workload_tiebreak.cpp
@@ -40,8 +42,12 @@ jobs:
           g++ -O3 -std=c++20 src_v2/tabubu_TimeDependent_v2_makespan_workload_tiebreak_double_budget.cpp -o bundle/bin/tabubu_TimeDependent_v2_makespan_workload_tiebreak_double_budget
           g++ -O2 -std=c++20 scripts/test_workload_tiebreak.cpp -o bundle/bin/test_workload_tiebreak
           bundle/bin/test_workload_tiebreak
+      - name: Test time-capped result validation
+        run: python -m unittest discover -s scripts -p test_workload_tiebreak_experiment.py -v
       - name: Freeze the 96 input instances and 960 independent tasks
-        run: python scripts/workload_tiebreak_experiment.py prepare --bundle bundle --commit "$GITHUB_SHA"
+        run: |
+          python scripts/workload_tiebreak_experiment.py prepare --bundle bundle --commit "$GITHUB_SHA" \
+            --base-time-limit-sec "$BASE_TIME_LIMIT_SECONDS"
       - name: Real time-dependent smoke runs - exhaust 162 and 324 iterations
         run: |
           python bundle/workload_tiebreak_experiment.py smoke --bundle bundle

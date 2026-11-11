@@ -23,22 +23,26 @@ jobs:
   solve:
     name: batch-${{ inputs.batch }}-task-${{ matrix.slot }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 150 # Solver <=120 minutes; leave time for download and upload.
+    timeout-minutes: 240 # Solver <=120 minutes; allow API-limit waits before it starts.
     strategy:
       fail-fast: false
-      # No max-parallel: GitHub schedules up to the account/organization quota.
+      max-parallel: 20
       matrix:
         slot: ${{ fromJSON(inputs.slots) }}
     steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: /scripts/download_paper_bundle.py
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - uses: actions/download-artifact@v4
-        with:
-          name: paper-t678-bundle
-          run-id: ${{ inputs.setup_run_id }}
-          github-token: ${{ github.token }}
-          path: bundle
+      - name: Download frozen bundle with rate-limit backoff
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SETUP_RUN_ID: ${{ inputs.setup_run_id }}
+        run: python -u scripts/download_paper_bundle.py --repo "$GITHUB_REPOSITORY" --setup-run-id "$SETUP_RUN_ID"
       - id: run
         name: Run exactly one independent solver process
         env:

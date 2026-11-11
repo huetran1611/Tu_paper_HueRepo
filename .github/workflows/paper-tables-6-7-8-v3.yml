@@ -1,4 +1,4 @@
-name: Paper Tables 6-7-8 - setup or resume 39 workflows
+name: Paper Tables 6-7-8 - setup or resume automatic batches
 run-name: T678 setup or resume - fixed Table 5
 on:
   workflow_dispatch:
@@ -8,14 +8,14 @@ on:
         type: string
         default: ''
       launch_batches:
-        description: 'Dispatch the 39 batch workflows (only missing tasks on resume)'
+        description: 'Start the automatic batch chain (only missing tasks on resume)'
         type: boolean
         default: true
 permissions:
   contents: read
   actions: write # workflow_dispatch for the independent batch workflows.
 concurrency:
-  group: paper-t678-setup-${{ github.ref }}
+  group: paper-t678-dispatch
   cancel-in-progress: false
 env:
   PYTHONDONTWRITEBYTECODE: '1'
@@ -33,6 +33,7 @@ jobs:
             /src_v3/paper_neighborhoods.hpp
             /scripts/paper_tables_678.py
             /scripts/paper_tables_678_actions.py
+            /scripts/download_paper_bundle.py
             /scripts/test_paper_tables_678.py
             /scripts/test_paper_tables_678_actions.py
             /scripts/generate_paper_tables_678_workflows.py
@@ -48,12 +49,10 @@ jobs:
           python -m unittest discover -s scripts -p test_paper_tables_678_actions.py -v
       - name: Restore the original frozen bundle when resuming
         if: ${{ inputs.setup_run_id != '' }}
-        uses: actions/download-artifact@v4
-        with:
-          name: paper-t678-bundle
-          run-id: ${{ inputs.setup_run_id }}
-          github-token: ${{ github.token }}
-          path: bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SETUP_RUN_ID: ${{ inputs.setup_run_id }}
+        run: python -u scripts/download_paper_bundle.py --repo "$GITHUB_REPOSITORY" --setup-run-id "$SETUP_RUN_ID"
       - name: Build isolated solver and freeze 9600 single-process tasks
         if: ${{ inputs.setup_run_id == '' }}
         run: python scripts/paper_tables_678.py prepare --bundle bundle --commit "$GITHUB_SHA"

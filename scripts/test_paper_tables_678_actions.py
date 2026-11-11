@@ -11,6 +11,10 @@ from zipfile import ZipFile
 import generate_paper_tables_678_workflows as generator
 import paper_tables_678 as runner
 import paper_tables_678_actions as actions
+import download_paper_bundle as downloader
+import urllib.request
+import urllib.error
+from unittest.mock import MagicMock
 
 
 def manifest():
@@ -32,7 +36,7 @@ class WorkflowTests(unittest.TestCase):
             self.assertNotRegex(text,r"(?m)^\s*max-parallel:")
         self.assertEqual(total,9600)
         worker=(generator.ROOT/".github/workflows/paper-tables-678-worker.yml").read_text()
-        self.assertNotRegex(worker,r"(?m)^\s*max-parallel:")
+        self.assertRegex(worker,r"(?m)^\s*max-parallel: 20$")
         self.assertIn(' task --bundle bundle --batch "$BATCH" --slot "$SLOT"',worker)
         self.assertEqual(re.findall(r"^  [a-zA-Z_]+:",worker.split("\njobs:\n")[1],re.M),["  solve:"])
 
@@ -83,11 +87,46 @@ class WorkflowTests(unittest.TestCase):
             args=argparse.Namespace(bundle=Path(raw),repo="owner/repo",setup_run_id="123",output=Path(raw)/"plan",dispatch=True,ref="main")
             with patch.object(runner,"load",return_value=m),patch.object(actions,"inventory",return_value=found),patch.object(actions,"gh_json") as gh:
                 actions.plan(args)
-            self.assertEqual(gh.call_count,37)
+            self.assertEqual(gh.call_count,0) # An active batch blocks the entire campaign.
+            found['active']=set()
+            with patch.object(runner,"load",return_value=m),patch.object(actions,"inventory",return_value=found),patch.object(actions,"gh_json") as gh:
+                actions.plan(args)
+            self.assertEqual(gh.call_count,1)
             first=gh.call_args_list[0].args
-            self.assertIn("batch-03.yml",first[0])
+            self.assertIn("batch-02.yml",first[0])
             self.assertEqual(json.loads(first[1]["inputs"]["slots"]),list(range(250)))
-            self.assertEqual(len(json.loads(gh.call_args_list[-1].args[1]["inputs"]["slots"])),100)
+    def test_coordinator_resumes_only_missing_and_guards_against_loops(self):
+        done={(1,i):{} for i in range(249)}
+        found=dict(completed=done,active=set(),runs=[])
+        args=argparse.Namespace(repo='owner/repo',setup_run_id='123',ref='main')
+        with patch.object(actions,'inventory',return_value=found),patch.object(actions,'gh_json') as gh:
+            actions.coordinate(args)
+            self.assertEqual(json.loads(gh.call_args.args[1]['inputs']['slots']),[249])
+            gh.reset_mock();found['active']={3}
+            actions.coordinate(args);gh.assert_not_called()
+            found['active']=set();found['runs']=[dict(batch=1)]*5
+            actions.coordinate(args);gh.assert_not_called()
+
+    def test_download_wait_honors_headers_and_redirect_strips_token(self):
+        self.assertGreaterEqual(downloader.delay({'Retry-After':'120'},0,now=1000),120)
+        self.assertGreaterEqual(downloader.delay({'X-RateLimit-Remaining':'0','X-RateLimit-Reset':'4600'},0,now=1000),3600)
+        self.assertGreaterEqual(downloader.delay({'Retry-After':'Thu, 01 Jan 1970 00:20:00 GMT'},0,now=1000),200)
+        self.assertLess(downloader.delay({},0,now=1000),81)
+        request=urllib.request.Request('https://api.github.com/archive',headers={'Authorization':'Bearer secret'})
+        redirected=downloader.SafeRedirect().redirect_request(request,None,302,'Found',{},'https://storage.example/archive')
+        self.assertFalse(redirected.has_header('Authorization'))
+
+    def test_download_retries_rate_limit_but_not_missing_artifact(self):
+        opener=MagicMock();response=MagicMock()
+        response.__enter__.return_value.read.return_value=b'archive'
+        opener.open.side_effect=[urllib.error.HTTPError('url',403,'limited',{'Retry-After':'120'},None),response]
+        with patch.object(downloader.urllib.request,'build_opener',return_value=opener),patch.object(downloader.time,'sleep') as sleep:
+            self.assertEqual(downloader.get('https://api.github.com/test','secret'),b'archive')
+            self.assertGreaterEqual(sleep.call_args.args[0],120)
+            sleep.reset_mock()
+            opener.open.side_effect=urllib.error.HTTPError('url',404,'missing',{},None)
+            with self.assertRaises(urllib.error.HTTPError): downloader.get('https://api.github.com/test','secret')
+            sleep.assert_not_called()
 
     def test_collect_validates_task_and_protocol(self):
         m=manifest();task=runner.task_at(m,1,0)

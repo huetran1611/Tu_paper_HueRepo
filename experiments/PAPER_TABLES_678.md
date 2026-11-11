@@ -1,3 +1,5 @@
+> C?p nh?t 2026-11-12: ch?nh s?ch ch?y ??ng th?i b?n d??i ?? ???c thay b?ng **m?t batch ho?t ??ng, t?i ?a 20 job song song, t? ??ng chuy?n batch**. Xem [h??ng d?n ?i?u ph?i hi?n t?i](PAPER_TABLES_678_AUTOMATION.md). Timeout job hi?n l? 240 ph?t ?? ch? API; solver v?n t?i ?a 120 ph?t.
+
 # Tái hiện thiết kế Bảng 6, 7, 8 bằng v3 và tham số Bảng 5
 
 Thiết kế cập nhật: **38 workflow × 250 job + 1 workflow × 100 job = 9.600 job**. Mỗi job chạy đúng một solver process. Setup và report là hai workflow riêng, không chiếm job phụ trong 39 workflow thực nghiệm. Các file không tự chạy khi push; không chạy thêm solver trên máy Windows đang tuning irace.

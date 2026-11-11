@@ -11,6 +11,7 @@ from pathlib import Path
 import re
 import subprocess
 import tempfile
+import time
 import zlib
 from zipfile import ZipFile
 import paper_tables_678 as batch
@@ -19,8 +20,14 @@ import paper_tables_678 as batch
 def gh_json(endpoint, data=None):
     command=["gh","api",endpoint]
     if data is not None: command += ["--method","POST","--input","-"]
-    result=subprocess.run(command,input=json.dumps(data) if data is not None else None,
-                          capture_output=True,text=True,check=True,timeout=120)
+    # Retry reads only: retrying an ambiguous POST could dispatch a duplicate run.
+    for attempt in range(6):
+        result=subprocess.run(command,input=json.dumps(data) if data is not None else None,
+                              capture_output=True,text=True,timeout=120)
+        if result.returncode == 0: break
+        if data is not None or attempt == 5: result.check_returncode()
+        print('GitHub read failed; backing off', flush=True)
+        time.sleep(min(60 * 2**attempt, 900))
     return json.loads(result.stdout) if result.stdout.strip() else None
 
 
@@ -44,7 +51,7 @@ def inventory(repo,setup_id):
         match=re.search(r"paper-tables-678-batch-(\d\d)\.yml(?:@.*)?$",run.get("path",""))
         if not match or not run.get("display_title","").endswith(f"setup-{setup_id}"): continue
         number=int(match[1]);matched.append(run["id"])
-        runs.append(dict(id=run["id"],attempts=run.get("run_attempt",1),status=run["status"]))
+        runs.append(dict(id=run["id"],batch=number,attempts=run.get("run_attempt",1),status=run["status"]))
         if run["status"]!="completed": active.add(number)
         for artifact in pages(f"repos/{repo}/actions/runs/{run['id']}/artifacts","artifacts"):
             key=re.fullmatch(r"paper-t678-b(\d\d)-t(\d{3})-ok",artifact["name"])
@@ -74,11 +81,13 @@ def plan(args):
     args.output.mkdir(parents=True,exist_ok=True)
     batch.save(args.output/"launch_plan.json",report)
     for item in pending:
+        if found['active']: break # Never start another batch while any campaign batch is active.
         if args.dispatch and item["slots"] and not item["active"]:
             gh_json(f"repos/{args.repo}/actions/workflows/{item['workflow']}/dispatches",
                     dict(ref=args.ref,inputs=dict(setup_run_id=str(args.setup_run_id),slots=json.dumps(item["slots"],separators=(",",":")))))
             report["dispatched"].append(item["batch"])
             batch.save(args.output/"launch_plan.json",report)
+            break # The completion event advances the chain, not this loop.
     lines=["# Tables 6–8: independent workflow plan", "",f"Setup run: {args.setup_run_id}",
            f"Completed artifacts: {report['completed']}/{report['total']}",f"Dispatched batches: {report['dispatched']}",
            f"Batches already active (not dispatched again): {sorted(found['active'])}","",
@@ -86,6 +95,28 @@ def plan(args):
     lines += [f"| {p['batch']:02d} | {len(p['slots'])} | {p['workflow']} |" for p in pending]
     (args.output/"PLAN.md").write_text("\n".join(lines)+"\n",encoding="utf-8")
     print(f"Completed {report['completed']}/{report['total']}; dispatched {len(report['dispatched'])} batches")
+
+
+def coordinate(args):
+    """Short, idempotent controller. Never waits for a solver or downloads its bundle."""
+    found=inventory(args.repo,args.setup_run_id)
+    manifest=dict(version=2,batch_count=39,tasks=[dict(batch=i//250+1,slot=i%250) for i in range(9600)])
+    pending=plans(manifest,found['completed'],found['active'])
+    message=f"Completed {len(found['completed'])}/9600. "
+    if found['active']:
+        message+=f"Waiting for active batches {sorted(found['active'])}; no dispatch."
+    else:
+        item=next((p for p in pending if p['slots']),None)
+        if item is None: message+='Campaign complete.'
+        elif sum(r.get('batch')==item['batch'] for r in found['runs']) >= 5:
+            message+=f"Paused: batch {item['batch']} reached five runs; inspect errors before manual resume."
+        else:
+            gh_json(f"repos/{args.repo}/actions/workflows/{item['workflow']}/dispatches",
+                    dict(ref=args.ref,inputs=dict(setup_run_id=str(args.setup_run_id),slots=json.dumps(item['slots'],separators=(',',':')))))
+            message+=f"Dispatched batch {item['batch']} with {len(item['slots'])} missing slots."
+    print(message)
+    if os.environ.get('GITHUB_STEP_SUMMARY'):
+        with open(os.environ['GITHUB_STEP_SUMMARY'],'a',encoding='utf-8') as stream: stream.write(message+'\n')
 
 
 def collect(args):
@@ -151,8 +182,14 @@ def main():
         q=s.add_parser(command);q.add_argument("--bundle",type=Path,required=True);q.add_argument("--setup-run-id",required=True)
         q.add_argument("--repo",default=os.environ.get("GITHUB_REPOSITORY"));q.add_argument("--output",type=Path,required=True)
         if command=="plan": q.add_argument("--dispatch",action="store_true");q.add_argument("--ref",default=os.environ.get("GITHUB_REF_NAME"))
+    q=s.add_parser('coordinate');q.add_argument('--setup-run-id',required=True)
+    q.add_argument('--repo',default=os.environ.get('GITHUB_REPOSITORY'))
+    q.add_argument('--ref',default=os.environ.get('GITHUB_REF_NAME'))
     args=p.parse_args()
-    if args.command=="plan":
+    if args.command=='coordinate':
+        if not args.ref: raise ValueError('A ref is required')
+        coordinate(args)
+    elif args.command=="plan":
         if args.dispatch and not args.ref: raise ValueError("A ref is required to dispatch batches")
         plan(args)
     else: collect(args)

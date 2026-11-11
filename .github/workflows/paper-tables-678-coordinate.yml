@@ -1,0 +1,97 @@
+name: Paper T678 automatic coordinator
+run-name: T678 automatic coordinator
+on:
+  workflow_dispatch:
+    inputs:
+      setup_run_id:
+        description: 'Original frozen setup ID'
+        type: string
+        default: '43077064461'
+  workflow_run:
+    workflows:
+      - Paper T678 batch 01 - 250 processes
+      - Paper T678 batch 02 - 250 processes
+      - Paper T678 batch 03 - 250 processes
+      - Paper T678 batch 04 - 250 processes
+      - Paper T678 batch 05 - 250 processes
+      - Paper T678 batch 06 - 250 processes
+      - Paper T678 batch 07 - 250 processes
+      - Paper T678 batch 08 - 250 processes
+      - Paper T678 batch 09 - 250 processes
+      - Paper T678 batch 10 - 250 processes
+      - Paper T678 batch 11 - 250 processes
+      - Paper T678 batch 12 - 250 processes
+      - Paper T678 batch 13 - 250 processes
+      - Paper T678 batch 14 - 250 processes
+      - Paper T678 batch 15 - 250 processes
+      - Paper T678 batch 16 - 250 processes
+      - Paper T678 batch 17 - 250 processes
+      - Paper T678 batch 18 - 250 processes
+      - Paper T678 batch 19 - 250 processes
+      - Paper T678 batch 20 - 250 processes
+      - Paper T678 batch 21 - 250 processes
+      - Paper T678 batch 22 - 250 processes
+      - Paper T678 batch 23 - 250 processes
+      - Paper T678 batch 24 - 250 processes
+      - Paper T678 batch 25 - 250 processes
+      - Paper T678 batch 26 - 250 processes
+      - Paper T678 batch 27 - 250 processes
+      - Paper T678 batch 28 - 250 processes
+      - Paper T678 batch 29 - 250 processes
+      - Paper T678 batch 30 - 250 processes
+      - Paper T678 batch 31 - 250 processes
+      - Paper T678 batch 32 - 250 processes
+      - Paper T678 batch 33 - 250 processes
+      - Paper T678 batch 34 - 250 processes
+      - Paper T678 batch 35 - 250 processes
+      - Paper T678 batch 36 - 250 processes
+      - Paper T678 batch 37 - 250 processes
+      - Paper T678 batch 38 - 250 processes
+      - Paper T678 batch 39 - 100 processes
+    types: [completed]
+    branches: [main_huett]
+  schedule:
+    - cron: '7,27,47 * * * *'
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: paper-t678-dispatch
+  cancel-in-progress: false
+jobs:
+  advance:
+    if: ${{ vars.PAPER_T678_AUTORUN != 'false' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main_huett
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /scripts/paper_tables_678.py
+            /scripts/paper_tables_678_actions.py
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Resolve campaign and advance one batch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_SETUP: ${{ inputs.setup_run_id }}
+          DEFAULT_SETUP: ${{ vars.PAPER_T678_SETUP_ID || '43077064461' }}
+        run: |
+          python - <<'PY'
+          import json, os, re, subprocess
+          event=json.load(open(os.environ['GITHUB_EVENT_PATH']))
+          setup=os.environ['INPUT_SETUP'] or os.environ['DEFAULT_SETUP']
+          if os.environ['GITHUB_EVENT_NAME']=='workflow_run':
+              run=event['workflow_run']
+              match=re.fullmatch(r'T678 batch \d\d setup-([1-9][0-9]*)',run['display_title'])
+              if not match or run['head_repository']['full_name']!=os.environ['GITHUB_REPOSITORY']:
+                  raise SystemExit('Ignoring unrelated completion')
+              setup=match[1]
+          subprocess.run(['python','-u','scripts/paper_tables_678_actions.py','coordinate',
+                          '--setup-run-id',setup,'--repo',os.environ['GITHUB_REPOSITORY'],
+                          '--ref','main_huett'],check=True)
+          PY

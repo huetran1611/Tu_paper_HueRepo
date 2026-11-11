@@ -1,0 +1,97 @@
+name: Paper Tables 6-7-8 - setup or resume 39 workflows
+run-name: T678 setup or resume - fixed Table 5
+on:
+  workflow_dispatch:
+    inputs:
+      setup_run_id:
+        description: 'Leave empty for NEW setup; enter original setup ID to resume missing tasks'
+        type: string
+        default: ''
+      launch_batches:
+        description: 'Dispatch the 39 batch workflows (only missing tasks on resume)'
+        type: boolean
+        default: true
+permissions:
+  contents: read
+  actions: write # workflow_dispatch for the independent batch workflows.
+concurrency:
+  group: paper-t678-setup-${{ github.ref }}
+  cancel-in-progress: false
+env:
+  PYTHONDONTWRITEBYTECODE: '1'
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /src_v3/tabubu_TimeDependent_v3.cpp
+            /src_v3/paper_neighborhoods.hpp
+            /scripts/paper_tables_678.py
+            /scripts/paper_tables_678_actions.py
+            /scripts/test_paper_tables_678.py
+            /scripts/test_paper_tables_678_actions.py
+            /scripts/generate_paper_tables_678_workflows.py
+            /.github/workflows/paper-tables-678-*.yml
+            /.github/workload-tiebreak/inputs.zip
+            /.github/workload-tiebreak/inputs.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate workflow layouts and resume planning
+        run: |
+          python scripts/generate_paper_tables_678_workflows.py --check
+          python -m unittest discover -s scripts -p test_paper_tables_678_actions.py -v
+      - name: Restore the original frozen bundle when resuming
+        if: ${{ inputs.setup_run_id != '' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: paper-t678-bundle
+          run-id: ${{ inputs.setup_run_id }}
+          github-token: ${{ github.token }}
+          path: bundle
+      - name: Build isolated solver and freeze 9600 single-process tasks
+        if: ${{ inputs.setup_run_id == '' }}
+        run: python scripts/paper_tables_678.py prepare --bundle bundle --commit "$GITHUB_SHA"
+      - name: Test flags, Table-5 values, budgets and tie-breaking
+        if: ${{ inputs.setup_run_id == '' }}
+        run: |
+          chmod +x bundle/solver
+          python scripts/test_paper_tables_678.py --bundle bundle
+      - name: Publish the frozen experiment bundle
+        if: ${{ inputs.setup_run_id == '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: paper-t678-bundle
+          path: bundle/
+          if-no-files-found: error
+          retention-days: 90
+      - id: setup
+        name: Resolve the original setup ID
+        env:
+          ORIGINAL_SETUP_ID: ${{ inputs.setup_run_id }}
+        run: |
+          SETUP_ID="${ORIGINAL_SETUP_ID:-$GITHUB_RUN_ID}"
+          [[ "$SETUP_ID" =~ ^[1-9][0-9]*$ ]] || exit 1
+          echo "id=$SETUP_ID" >> "$GITHUB_OUTPUT"
+      - name: Plan missing tasks and optionally launch independent batch workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SETUP_RUN_ID: ${{ steps.setup.outputs.id }}
+          LAUNCH_BATCHES: ${{ inputs.launch_batches }}
+        run: |
+          FLAGS=()
+          if [[ "$LAUNCH_BATCHES" == true ]]; then FLAGS+=(--dispatch); fi
+          python scripts/paper_tables_678_actions.py plan --bundle bundle --setup-run-id "$SETUP_RUN_ID" --output plan "${FLAGS[@]}"
+          cat plan/PLAN.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: paper-t678-launch-plan
+          path: plan/
+          if-no-files-found: warn
+          retention-days: 90

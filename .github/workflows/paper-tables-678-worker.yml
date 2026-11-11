@@ -1,0 +1,84 @@
+name: Paper Tables 6-7-8 reusable worker - one solver per job
+on:
+  workflow_call:
+    inputs:
+      setup_run_id:
+        type: string
+        required: true
+      batch:
+        type: number
+        required: true
+      slots:
+        type: string
+        required: true
+permissions:
+  contents: read
+  actions: read
+env:
+  PYTHONDONTWRITEBYTECODE: '1'
+  OMP_NUM_THREADS: '1'
+  OPENBLAS_NUM_THREADS: '1'
+  MKL_NUM_THREADS: '1'
+jobs:
+  solve:
+    name: batch-${{ inputs.batch }}-task-${{ matrix.slot }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150 # Solver <=120 minutes; leave time for download and upload.
+    strategy:
+      fail-fast: false
+      # No max-parallel: GitHub schedules up to the account/organization quota.
+      matrix:
+        slot: ${{ fromJSON(inputs.slots) }}
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          name: paper-t678-bundle
+          run-id: ${{ inputs.setup_run_id }}
+          github-token: ${{ github.token }}
+          path: bundle
+      - id: run
+        name: Run exactly one independent solver process
+        env:
+          BATCH: ${{ inputs.batch }}
+          SLOT: ${{ matrix.slot }}
+        run: |
+          mkdir -p results
+          chmod +x bundle/solver
+          python -u bundle/paper_tables_678.py task --bundle bundle --batch "$BATCH" --slot "$SLOT" --output results
+      - id: artifact
+        if: always()
+        env:
+          BATCH: ${{ inputs.batch }}
+          SLOT: ${{ matrix.slot }}
+          RUN_OUTCOME: ${{ steps.run.outcome }}
+        run: |
+          STATUS=partial
+          if [[ "$RUN_OUTCOME" == success ]]; then STATUS=ok; fi
+          printf -v NAME 'paper-t678-b%02d-t%03d-%s' "$BATCH" "$SLOT" "$STATUS"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+      - id: upload
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ steps.artifact.outputs.name }}
+          path: results/
+          overwrite: true
+          retention-days: 90
+          if-no-files-found: warn
+      - name: Export successful completion into workflow logs for efficient reporting
+        if: ${{ steps.run.outcome == 'success' && steps.upload.outcome == 'success' }}
+        env:
+          ARTIFACT_ID: ${{ steps.upload.outputs.artifact-id }}
+        run: |
+          python - <<'PY'
+          import base64, json, os, zlib
+          from pathlib import Path
+          paths=list(Path('results').rglob('completed.json'))
+          assert len(paths)==1
+          payload={'artifact_id':int(os.environ['ARTIFACT_ID']), 'record':json.loads(paths[0].read_text())}
+          packed=zlib.compress(json.dumps(payload,separators=(',', ':')).encode())
+          print('PAPER_T678_COMPLETION:'+base64.b64encode(packed).decode())
+          PY

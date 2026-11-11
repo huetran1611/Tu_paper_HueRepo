@@ -1,0 +1,53 @@
+name: Paper Tables 6-7-8 - collect 39 workflows
+run-name: T678 report setup-${{ inputs.setup_run_id }}
+on:
+  workflow_dispatch:
+    inputs:
+      setup_run_id:
+        description: 'Original version-2 setup run ID'
+        type: string
+        required: true
+permissions:
+  contents: read
+  actions: read
+jobs:
+  report:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /scripts/paper_tables_678_actions.py
+            /scripts/paper_tables_678.py
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          name: paper-t678-bundle
+          run-id: ${{ inputs.setup_run_id }}
+          github-token: ${{ github.token }}
+          path: bundle
+      - name: Collect successful task artifacts from all matching batch runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SETUP_RUN_ID: ${{ inputs.setup_run_id }}
+        run: python scripts/paper_tables_678_actions.py collect --bundle bundle --setup-run-id "$SETUP_RUN_ID" --output collected
+      - name: Aggregate per-instance gaps; require all 9600 full-budget runs
+        run: python bundle/paper_tables_678.py aggregate --bundle bundle --results collected --output report
+      - name: Add tables to the workflow summary
+        if: always()
+        run: |
+          if [[ -f report/REPORT.md ]]; then cat report/REPORT.md >> "$GITHUB_STEP_SUMMARY"; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: paper-t678-report
+          path: |
+            report/
+            collected/inventory.json
+          if-no-files-found: warn
+          retention-days: 90

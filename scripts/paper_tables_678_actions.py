@@ -4,6 +4,7 @@ Only called by explicitly dispatched workflows; uses GH_TOKEN from their environ
 """
 import argparse
 import base64
+import io
 from concurrent.futures import ThreadPoolExecutor
 import json
 import os
@@ -41,26 +42,66 @@ def pages(endpoint,key):
         page+=1
 
 
-def inventory(repo,setup_id):
+def inventory(repo,setup_id,with_jobs=False,cache_path=None):
     if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+",repo): raise ValueError("Invalid repository")
     if not re.fullmatch(r"[1-9][0-9]*",str(setup_id)): raise ValueError("Invalid setup run ID")
     setup=gh_json(f"repos/{repo}/actions/runs/{setup_id}")
-    completed={};active=set();matched=[];runs=[]
+    completed={};active=set();matched=[];runs=[];active_jobs=[];reserved=set();attempts={}
+    memo=json.loads(cache_path.read_text()) if cache_path and cache_path.exists() else {}
+    updated_memo={}
     # Setup-ID in run-name isolates campaigns, including their later resume runs.
     for run in pages(f"repos/{repo}/actions/runs?event=workflow_dispatch&created=%3E%3D{setup['created_at']}","workflow_runs"):
         match=re.search(r"paper-tables-678-batch-(\d\d)\.yml(?:@.*)?$",run.get("path",""))
-        if not match or not run.get("display_title","").endswith(f"setup-{setup_id}"): continue
+        title=re.fullmatch(r'T678 batch (\d\d) setup-([1-9][0-9]*)(?: slots-([0-9,]+))?',run.get('display_title',''))
+        if not match or not title or title[2]!=str(setup_id): continue
         number=int(match[1]);matched.append(run["id"])
+        if int(title[1])!=number: raise ValueError('Run title and workflow batch differ')
         runs.append(dict(id=run["id"],batch=number,attempts=run.get("run_attempt",1),status=run["status"]))
         if run["status"]!="completed": active.add(number)
-        for artifact in pages(f"repos/{repo}/actions/runs/{run['id']}/artifacts","artifacts"):
+        stamp=[run.get('run_attempt',1),run['status'],run.get('updated_at')]
+        cached=memo.get(str(run['id']),{})
+        reuse=(run['status']=='completed' and cached.get('stamp')==stamp
+               and time.time()-cached.get('fetched_unix',0)<21600)
+        artifacts=cached['artifacts'] if reuse else list(pages(f"repos/{repo}/actions/runs/{run['id']}/artifacts","artifacts"))
+        for artifact in artifacts:
             key=re.fullmatch(r"paper-t678-b(\d\d)-t(\d{3})-ok",artifact["name"])
             if not key or artifact.get("expired"): continue
+            if artifact.get('expires_at') and artifact['expires_at'] <= time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()): continue
             pair=tuple(map(int,key.groups()))
             if pair[0]!=number: raise ValueError("Artifact batch does not match workflow")
             artifact={**artifact,"source_run_id":run["id"],"source_status":run["status"]}
             if pair not in completed or artifact["id"]>completed[pair]["id"]: completed[pair]=artifact
-    return dict(setup=setup,completed=completed,active=active,run_ids=matched,runs=runs)
+        jobs=[]
+        if with_jobs:
+            jobs=cached['jobs'] if reuse and 'jobs' in cached else list(pages(f"repos/{repo}/actions/runs/{run['id']}/jobs","jobs"))
+            declared={(number,int(s)) for s in title[3].split(',')} if title[3] else set()
+            if any(s<0 or s>=(100 if number==39 else 250) for b,s in declared): raise ValueError('Invalid reserved slot')
+            listed=set()
+            for job in jobs:
+                key=re.search(r'batch-(\d+)-task-(\d+)\b',job['name'])
+                if not key: raise ValueError('Unknown solver job; refusing to guess available capacity')
+                pair=tuple(map(int,key.groups()))
+                if pair[0]!=number: raise ValueError('Job batch mismatch')
+                listed.add(pair)
+                attempts[pair]=attempts.get(pair,0)+job.get('run_attempt',run.get('run_attempt',1))
+                if job['status']!='completed':
+                    active_jobs.append(dict(pair=pair,id=job['id'],run_id=run['id']))
+                elif run['status']!='completed' and job.get('conclusion')=='success' and pair not in completed:
+                    reserved.add(pair) # Successful job whose artifact publication is not visible yet.
+            if not jobs and not declared:
+                # Legacy queued runs do not expose their input slots. Reserve the
+                # entire batch until its matrix is visible rather than overfill.
+                declared={(number,s) for s in range(100 if number==39 else 250)}
+            for pair in declared-listed:
+                attempts[pair]=attempts.get(pair,0)+run.get('run_attempt',1)
+                if run['status']!='completed' and pair not in completed: reserved.add(pair)
+        updated_memo[str(run['id'])]=dict(stamp=stamp,artifacts=artifacts,
+                fetched_unix=cached['fetched_unix'] if reuse else time.time(),**({'jobs':jobs} if with_jobs else {}))
+    if cache_path:
+        cache_path.parent.mkdir(parents=True,exist_ok=True)
+        batch.save(cache_path,updated_memo)
+    return dict(setup=setup,completed=completed,active=active,run_ids=matched,runs=runs,
+                active_jobs=active_jobs,reserved=reserved,attempts=attempts)
 
 
 def plans(manifest,completed,active):
@@ -80,14 +121,13 @@ def plan(args):
                 completed=len(found["completed"]),total=len(manifest["tasks"]),batches=pending,dispatched=[])
     args.output.mkdir(parents=True,exist_ok=True)
     batch.save(args.output/"launch_plan.json",report)
-    for item in pending:
-        if found['active']: break # Never start another batch while any campaign batch is active.
-        if args.dispatch and item["slots"] and not item["active"]:
-            gh_json(f"repos/{args.repo}/actions/workflows/{item['workflow']}/dispatches",
-                    dict(ref=args.ref,inputs=dict(setup_run_id=str(args.setup_run_id),slots=json.dumps(item["slots"],separators=(",",":")))))
-            report["dispatched"].append(item["batch"])
-            batch.save(args.output/"launch_plan.json",report)
-            break # The completion event advances the chain, not this loop.
+    if args.dispatch:
+        # Setup asks the SAME serialized coordinator to allocate capacity; it
+        # never bypasses reservations by directly sending a whole batch.
+        gh_json(f"repos/{args.repo}/actions/workflows/paper-tables-678-coordinate.yml/dispatches",
+                dict(ref=args.ref,inputs=dict(setup_run_id=str(args.setup_run_id))))
+        report['coordinator_requested']=True
+        batch.save(args.output/'launch_plan.json',report)
     lines=["# Tables 6–8: independent workflow plan", "",f"Setup run: {args.setup_run_id}",
            f"Completed artifacts: {report['completed']}/{report['total']}",f"Dispatched batches: {report['dispatched']}",
            f"Batches already active (not dispatched again): {sorted(found['active'])}","",
@@ -97,23 +137,90 @@ def plan(args):
     print(f"Completed {report['completed']}/{report['total']}; dispatched {len(report['dispatched'])} batches")
 
 
+LEASE_SECONDS=600
+MAX_OUTSTANDING=20
+
+
+def reservation_pairs(repo,setup_id,exclude_artifact_id=None):
+    """Leases are uploaded BEFORE dispatch, surviving crashes and API visibility lag."""
+    result=gh_json(f'repos/{repo}/actions/artifacts?name=paper-t678-reservations-setup-{setup_id}&per_page=100')
+    reserved=set()
+    for artifact in result['artifacts']:
+        if str(artifact['id'])==str(exclude_artifact_id): continue
+        # ISO UTC ordering is stable. Only very recent preparation records matter.
+        cutoff=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime(time.time()-LEASE_SECONDS))
+        if artifact.get('expired') or artifact['created_at']<cutoff: continue
+        raw=subprocess.run(['gh','api',f"repos/{repo}/actions/artifacts/{artifact['id']}/zip"],
+                           capture_output=True,check=True,timeout=120).stdout
+        with ZipFile(io.BytesIO(raw)) as archive:
+            if archive.namelist()!=['scheduler-plan.json']: raise ValueError('Unexpected reservation archive')
+            lease=json.loads(archive.read('scheduler-plan.json'))
+        if str(lease['setup_run_id'])!=str(setup_id): raise ValueError('Foreign reservation')
+        if time.time()-lease['created_unix']<LEASE_SECONDS:
+            for pair in lease['pairs']:
+                b,s=pair
+                if not (1<=b<=39 and 0<=s<(100 if b==39 else 250)): raise ValueError('Invalid reservation')
+                reserved.add((b,s))
+    return reserved
+
+
+def capacity_plan(found,leases,limit=MAX_OUTSTANDING):
+    completed=set(found['completed'])
+    active_jobs=found.get('active_jobs',[])
+    active_pairs={tuple(j['pair']) for j in active_jobs}
+    reserved=(set(found.get('reserved',set()))|set(leases))-completed
+    # Count duplicate real jobs separately, but don't double-count their leases.
+    occupied=len(active_jobs)+len(reserved-active_pairs)
+    free=max(0,limit-occupied)
+    pairs=[];paused=[]
+    for i in range(9600):
+        pair=(i//250+1,i%250)
+        if pair in completed or pair in active_pairs or pair in reserved: continue
+        if found.get('attempts',{}).get(pair,0)>=5:
+            paused.append(pair);continue
+        if len(pairs)<free: pairs.append(pair)
+    return dict(occupied=occupied,free=free,pairs=pairs,paused=paused)
+
+
 def coordinate(args):
-    """Short, idempotent controller. Never waits for a solver or downloads its bundle."""
-    found=inventory(args.repo,args.setup_run_id)
-    manifest=dict(version=2,batch_count=39,tasks=[dict(batch=i//250+1,slot=i%250) for i in range(9600)])
-    pending=plans(manifest,found['completed'],found['active'])
-    message=f"Completed {len(found['completed'])}/9600. "
-    if found['active']:
-        message+=f"Waiting for active batches {sorted(found['active'])}; no dispatch."
-    else:
-        item=next((p for p in pending if p['slots']),None)
-        if item is None: message+='Campaign complete.'
-        elif sum(r.get('batch')==item['batch'] for r in found['runs']) >= 5:
-            message+=f"Paused: batch {item['batch']} reached five runs; inspect errors before manual resume."
+    """Prepare a bounded wave, or apply an already uploaded reservation record."""
+    own_run=os.environ.get('GITHUB_RUN_ID')
+    if args.apply_plan:
+        if not args.lease_artifact_id: raise ValueError('Upload the reservation artifact before dispatching')
+        lease=gh_json(f'repos/{args.repo}/actions/artifacts/{args.lease_artifact_id}')
+        if (str(lease.get('workflow_run',{}).get('id'))!=str(own_run)
+                or lease['name']!=f'paper-t678-reservations-setup-{args.setup_run_id}' or lease.get('expired')):
+            raise ValueError('Reservation artifact does not belong to this controller')
+    found=inventory(args.repo,args.setup_run_id,with_jobs=True,cache_path=args.cache_file)
+    leases=reservation_pairs(args.repo,args.setup_run_id,
+                             exclude_artifact_id=args.lease_artifact_id if args.apply_plan else None)
+    allocation=capacity_plan(found,leases)
+    message=f"Completed {len(found['completed'])}/9600; outstanding {allocation['occupied']}/20. "
+    if args.apply_plan:
+        plan=json.loads(args.apply_plan.read_text())
+        if str(plan['setup_run_id'])!=str(args.setup_run_id) or plan['ref']!=args.ref or plan['repo']!=args.repo:
+            raise ValueError('Dispatch plan does not match campaign')
+        if str(plan['controller_run_id'])!=str(own_run): raise ValueError('Plan belongs to another controller run')
+        if time.time()-plan['created_unix']>=LEASE_SECONDS:
+            message+='Reservation expired before dispatch; next controller will replan.'
         else:
-            gh_json(f"repos/{args.repo}/actions/workflows/{item['workflow']}/dispatches",
-                    dict(ref=args.ref,inputs=dict(setup_run_id=str(args.setup_run_id),slots=json.dumps(item['slots'],separators=(',',':')))))
-            message+=f"Dispatched batch {item['batch']} with {len(item['slots'])} missing slots."
+            # Account for manual launches that appeared AFTER preparation.
+            allowed=set(allocation['pairs'])
+            selected=[tuple(p) for p in plan['pairs'] if tuple(p) in allowed][:allocation['free']]
+            groups={}
+            for b,s in selected: groups.setdefault(b,[]).append(s)
+            for b,slots in groups.items():
+                gh_json(f"repos/{args.repo}/actions/workflows/paper-tables-678-batch-{b:02d}.yml/dispatches",
+                        dict(ref=args.ref,inputs=dict(setup_run_id=str(args.setup_run_id),
+                             slots=json.dumps(slots,separators=(',',':')),reservation=','.join(map(str,slots)))))
+            message+=f"Dispatched {len(selected)} slots across batches {list(groups)}."
+    else:
+        plan=dict(version=1,setup_run_id=str(args.setup_run_id),repo=args.repo,ref=args.ref,
+                  controller_run_id=own_run,created_unix=time.time(),pairs=allocation['pairs'])
+        batch.save(args.output,plan)
+        message+=f"Prepared {len(plan['pairs'])} slots; {len(allocation['paused'])} slots paused after five attempts."
+        if os.environ.get('GITHUB_OUTPUT'):
+            with open(os.environ['GITHUB_OUTPUT'],'a') as stream: stream.write(f"count={len(plan['pairs'])}\n")
     print(message)
     if os.environ.get('GITHUB_STEP_SUMMARY'):
         with open(os.environ['GITHUB_STEP_SUMMARY'],'a',encoding='utf-8') as stream: stream.write(message+'\n')
@@ -185,6 +292,10 @@ def main():
     q=s.add_parser('coordinate');q.add_argument('--setup-run-id',required=True)
     q.add_argument('--repo',default=os.environ.get('GITHUB_REPOSITORY'))
     q.add_argument('--ref',default=os.environ.get('GITHUB_REF_NAME'))
+    q.add_argument('--cache-file',type=Path,default=Path('.scheduler-cache/inventory.json'))
+    q.add_argument('--output',type=Path,default=Path('scheduler-plan.json'))
+    q.add_argument('--apply-plan',type=Path)
+    q.add_argument('--lease-artifact-id',type=int)
     args=p.parse_args()
     if args.command=='coordinate':
         if not args.ref: raise ValueError('A ref is required')

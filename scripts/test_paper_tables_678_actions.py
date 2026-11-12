@@ -1,6 +1,8 @@
 import argparse
 import base64
 import json
+import io
+import time
 from pathlib import Path
 import re
 import tempfile
@@ -33,6 +35,8 @@ class WorkflowTests(unittest.TestCase):
             self.assertEqual(slots,list(range(expected)));total+=len(slots)
             self.assertEqual(re.findall(r"^  [a-zA-Z_]+:",text.split("\njobs:\n")[1],re.M),["  solve:"])
             self.assertIn(f"      batch: {number}\n",text)
+            self.assertNotIn("\nconcurrency:",text)
+            self.assertIn("inputs.reservation",text)
             self.assertNotRegex(text,r"(?m)^\s*max-parallel:")
         self.assertEqual(total,9600)
         worker=(generator.ROOT/".github/workflows/paper-tables-678-worker.yml").read_text()
@@ -80,32 +84,92 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(found["active"],{2})
         self.assertEqual(found["run_ids"],[1,2])
 
-    def test_dispatch_skips_complete_and_active_batches(self):
-        m=manifest();done={(1,i):{} for i in range(250)}
-        found=dict(completed=done,active={2},run_ids=[])
+    def test_setup_dispatches_coordinator_instead_of_bypassing_capacity(self):
+        m=manifest();found=dict(completed={},active={2},run_ids=[])
         with tempfile.TemporaryDirectory() as raw:
-            args=argparse.Namespace(bundle=Path(raw),repo="owner/repo",setup_run_id="123",output=Path(raw)/"plan",dispatch=True,ref="main")
-            with patch.object(runner,"load",return_value=m),patch.object(actions,"inventory",return_value=found),patch.object(actions,"gh_json") as gh:
+            args=argparse.Namespace(bundle=Path(raw),repo='owner/repo',setup_run_id='123',output=Path(raw)/'plan',dispatch=True,ref='main')
+            with patch.object(runner,'load',return_value=m),patch.object(actions,'inventory',return_value=found),patch.object(actions,'gh_json') as gh:
                 actions.plan(args)
-            self.assertEqual(gh.call_count,0) # An active batch blocks the entire campaign.
-            found['active']=set()
-            with patch.object(runner,"load",return_value=m),patch.object(actions,"inventory",return_value=found),patch.object(actions,"gh_json") as gh:
-                actions.plan(args)
-            self.assertEqual(gh.call_count,1)
-            first=gh.call_args_list[0].args
-            self.assertIn("batch-02.yml",first[0])
-            self.assertEqual(json.loads(first[1]["inputs"]["slots"]),list(range(250)))
-    def test_coordinator_resumes_only_missing_and_guards_against_loops(self):
-        done={(1,i):{} for i in range(249)}
-        found=dict(completed=done,active=set(),runs=[])
-        args=argparse.Namespace(repo='owner/repo',setup_run_id='123',ref='main')
-        with patch.object(actions,'inventory',return_value=found),patch.object(actions,'gh_json') as gh:
-            actions.coordinate(args)
-            self.assertEqual(json.loads(gh.call_args.args[1]['inputs']['slots']),[249])
-            gh.reset_mock();found['active']={3}
-            actions.coordinate(args);gh.assert_not_called()
-            found['active']=set();found['runs']=[dict(batch=1)]*5
-            actions.coordinate(args);gh.assert_not_called()
+            gh.assert_called_once()
+            self.assertIn('coordinate.yml/dispatches',gh.call_args.args[0])
+
+    def test_tail_is_filled_with_17_jobs_without_duplicating_active_slots(self):
+        found=dict(completed={},active_jobs=[dict(pair=(1,s)) for s in (0,1,2)],reserved=set(),attempts={})
+        result=actions.capacity_plan(found,set())
+        self.assertEqual(result['occupied'],3)
+        self.assertEqual(result['pairs'],[(1,s) for s in range(3,20)])
+        self.assertEqual(result['occupied']+len(result['pairs']),20)
+        # Pending jobs count as occupied just like running jobs.
+        found['reserved']={(1,s) for s in range(3,20)}
+        self.assertEqual(actions.capacity_plan(found,set())['pairs'],[])
+
+    def test_fill_can_cross_batch_boundaries_and_pause_only_failing_slots(self):
+        done={(1,s):{} for s in range(249)}
+        found=dict(completed=done,active_jobs=[],reserved=set(),attempts={(2,0):5})
+        result=actions.capacity_plan(found,set())
+        self.assertEqual(result['pairs'],[(1,249)]+[(2,s) for s in range(1,20)])
+        self.assertEqual(result['paused'],[(2,0)])
+        found['active_jobs']=[dict(pair=(38,s)) for s in range(40)]
+        self.assertEqual(actions.capacity_plan(found,set())['pairs'],[])
+
+    def test_leases_count_once_and_duplicate_real_jobs_count_twice(self):
+        found=dict(completed={(1,9):{}},active_jobs=[dict(pair=(1,0)),dict(pair=(1,0))],reserved={(1,1)},attempts={})
+        result=actions.capacity_plan(found,{(1,0),(1,1),(1,2),(1,9)})
+        self.assertEqual(result['occupied'],4)
+        self.assertEqual(len(result['pairs']),16)
+        self.assertNotIn((1,2),result['pairs'])
+        self.assertNotIn((1,9),result['pairs'])
+
+    def test_prepare_does_not_dispatch_and_apply_rechecks_manual_launches(self):
+        found=dict(completed={},active_jobs=[],reserved=set(),attempts={})
+        with tempfile.TemporaryDirectory() as raw:
+            args=argparse.Namespace(repo='owner/repo',setup_run_id='123',ref='main',cache_file=Path(raw)/'cache.json',output=Path(raw)/'scheduler-plan.json',apply_plan=None,lease_artifact_id=None)
+            with patch.dict(actions.os.environ,{'GITHUB_RUN_ID':'111'}),patch.object(actions,'inventory',return_value=found),patch.object(actions,'reservation_pairs',return_value=set()),patch.object(actions,'gh_json') as gh:
+                actions.coordinate(args);gh.assert_not_called()
+                plan=json.loads(args.output.read_text());self.assertEqual(len(plan['pairs']),20)
+                args.apply_plan=args.output;args.lease_artifact_id=55
+                found['active_jobs']=[dict(pair=(38,s)) for s in range(17)]
+                gh.return_value=dict(name='paper-t678-reservations-setup-123',workflow_run=dict(id=111),expired=False)
+                actions.coordinate(args)
+                calls=[c for c in gh.call_args_list if c.args[0].endswith('/dispatches')]
+                self.assertEqual(len(calls),1)
+                self.assertEqual(json.loads(calls[0].args[1]['inputs']['slots']),[0,1,2])
+                self.assertEqual(calls[0].args[1]['inputs']['reservation'],'0,1,2')
+                gh.reset_mock();plan['created_unix']-=601;args.output.write_text(json.dumps(plan))
+                actions.coordinate(args)
+                self.assertFalse(any(c.args[0].endswith('/dispatches') for c in gh.call_args_list))
+
+    def test_inventory_reserves_unexpanded_runs_and_invalidates_rerun_cache(self):
+        run=dict(id=1,path='.github/workflows/paper-tables-678-batch-01.yml',display_title='T678 batch 01 setup-123 slots-3,4',status='queued',run_attempt=1)
+        def pages(endpoint,key):
+            return iter([run] if key=='workflow_runs' else [])
+        with patch.object(actions,'gh_json',return_value=dict(created_at='2026-11-12T00:00:00Z')),patch.object(actions,'pages',side_effect=pages):
+            found=actions.inventory('owner/repo','123',with_jobs=True)
+        self.assertEqual(found['reserved'],{(1,3),(1,4)})
+        run['status']='completed'
+        with tempfile.TemporaryDirectory() as raw:
+            cache=Path(raw)/'cache.json'
+            with patch.object(actions,'gh_json',return_value=dict(created_at='2026-11-12T00:00:00Z')),patch.object(actions,'pages',side_effect=pages) as calls:
+                actions.inventory('owner/repo','123',with_jobs=True,cache_path=cache)
+                self.assertEqual(calls.call_count,3)
+                calls.reset_mock();actions.inventory('owner/repo','123',with_jobs=True,cache_path=cache)
+                self.assertEqual(calls.call_count,1) # Completed artifacts/jobs reused.
+                run['run_attempt']=2
+                calls.reset_mock();actions.inventory('owner/repo','123',with_jobs=True,cache_path=cache)
+                self.assertEqual(calls.call_count,3)
+
+    def test_recent_published_lease_blocks_slots_but_expired_lease_does_not(self):
+        lease=dict(setup_run_id='123',created_unix=time.time(),pairs=[[1,7],[1,8]])
+        raw=io.BytesIO()
+        with ZipFile(raw,'w') as archive: archive.writestr('scheduler-plan.json',json.dumps(lease))
+        artifacts=[dict(id=55,created_at=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),expired=False),
+                   dict(id=56,created_at='2000-01-01T00:00:00Z',expired=False)]
+        with patch.object(actions,'gh_json',return_value=dict(artifacts=artifacts)),patch.object(actions.subprocess,'run',return_value=MagicMock(stdout=raw.getvalue())) as download:
+            self.assertEqual(actions.reservation_pairs('owner/repo','123'),{(1,7),(1,8)})
+            self.assertEqual(download.call_count,1)
+            download.reset_mock()
+            self.assertEqual(actions.reservation_pairs('owner/repo','123',exclude_artifact_id=55),set())
+            download.assert_not_called()
 
     def test_download_wait_honors_headers_and_redirect_strips_token(self):
         self.assertGreaterEqual(downloader.delay({'Retry-After':'120'},0,now=1000),120)

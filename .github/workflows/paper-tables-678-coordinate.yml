@@ -51,7 +51,7 @@ on:
     types: [completed]
     branches: [main_huett]
   schedule:
-    - cron: '7,27,47 * * * *'
+    - cron: '2-59/5 * * * *'
 permissions:
   contents: read
   actions: write
@@ -75,23 +75,51 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Resolve campaign and advance one batch
+      - id: campaign
+        name: Resolve campaign
         env:
-          GH_TOKEN: ${{ github.token }}
           INPUT_SETUP: ${{ inputs.setup_run_id }}
           DEFAULT_SETUP: ${{ vars.PAPER_T678_SETUP_ID || '43077064461' }}
         run: |
           python - <<'PY'
-          import json, os, re, subprocess
+          import json, os, re
           event=json.load(open(os.environ['GITHUB_EVENT_PATH']))
           setup=os.environ['INPUT_SETUP'] or os.environ['DEFAULT_SETUP']
           if os.environ['GITHUB_EVENT_NAME']=='workflow_run':
               run=event['workflow_run']
-              match=re.fullmatch(r'T678 batch \d\d setup-([1-9][0-9]*)',run['display_title'])
+              match=re.fullmatch(r'T678 batch \d\d setup-([1-9][0-9]*)(?: slots-[0-9,]+)?',run['display_title'])
               if not match or run['head_repository']['full_name']!=os.environ['GITHUB_REPOSITORY']:
                   raise SystemExit('Ignoring unrelated completion')
               setup=match[1]
-          subprocess.run(['python','-u','scripts/paper_tables_678_actions.py','coordinate',
-                          '--setup-run-id',setup,'--repo',os.environ['GITHUB_REPOSITORY'],
-                          '--ref','main_huett'],check=True)
+          if not re.fullmatch(r'[1-9][0-9]*',setup): raise SystemExit('Invalid setup')
+          with open(os.environ['GITHUB_OUTPUT'],'a') as stream: stream.write('id='+setup+'\n')
           PY
+      - uses: actions/cache@v4
+        with:
+          path: .scheduler-cache/inventory.json
+          key: t678-inventory-v2-${{ steps.campaign.outputs.id }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: t678-inventory-v2-${{ steps.campaign.outputs.id }}-
+      - id: plan
+        name: Count running and queued jobs and reserve free capacity
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SETUP_ID: ${{ steps.campaign.outputs.id }}
+        run: |
+          python -u scripts/paper_tables_678_actions.py coordinate --setup-run-id "$SETUP_ID" --repo "$GITHUB_REPOSITORY" --ref main_huett --output scheduler-plan.json
+      - id: lease
+        name: Publish reservations before any dispatch
+        if: ${{ steps.plan.outputs.count != '0' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: paper-t678-reservations-setup-${{ steps.campaign.outputs.id }}
+          path: scheduler-plan.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Recheck capacity and dispatch only reserved missing slots
+        if: ${{ steps.plan.outputs.count != '0' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SETUP_ID: ${{ steps.campaign.outputs.id }}
+          LEASE_ID: ${{ steps.lease.outputs.artifact-id }}
+        run: |
+          python -u scripts/paper_tables_678_actions.py coordinate --setup-run-id "$SETUP_ID" --repo "$GITHUB_REPOSITORY" --ref main_huett --apply-plan scheduler-plan.json --lease-artifact-id "$LEASE_ID"

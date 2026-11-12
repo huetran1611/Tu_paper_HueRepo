@@ -1,47 +1,62 @@
-# Automatic continuation of Tables 6–8
+# Tables 6?8: refill free solver capacity
 
-This supersedes the original simultaneous launch policy in PAPER_TABLES_678.md.
-The frozen dataset, solver, seeds, Table-5 parameters and 9600 task mappings stay unchanged.
+Current policy supersedes whole-batch serialization. The dataset, frozen solver,
+Table-5 parameters, seeds and 9600 task mappings remain unchanged.
 
-- One active batch per campaign, with `max-parallel: 20` in the reusable worker.
-- Setup/resume dispatches only the first missing batch. The coordinator advances
-  the chain on a batch `workflow_run: completed` event. It does not wait for solvers.
-- A scheduled watchdog checks every 20 minutes, providing recovery if an event is
-  missed. GitHub may delay scheduled runs; this is not a precise timing guarantee.
-- Setup/resume and all coordinator invocations share `paper-t678-dispatch`
-  concurrency. An active campaign batch blocks further dispatches.
-- Only unexpired `-ok` task artifacts count as finished. Missing slots are resumed
-  in a NEW batch run, avoiding the old startup_failure rerun problem. Solver jobs
-  without a saved completion artifact restart from the beginning.
-- Five runs of the same batch pause automatic retries to avoid an endless loop.
-  Inspect its errors; setup/resume can explicitly restart the chain afterward.
-- Frozen-bundle requests retry six times after the initial attempt, respecting
-  Retry-After / X-RateLimit-Reset, plus exponential delay and random jitter.
-  Permanent errors such as 404 fail immediately. Redirects strip the API token.
-- Job timeout is now 240 minutes to accommodate API waits. The solver's existing
-  7200-second wall limit is unchanged; download waits happen before solver launch.
+- The coordinator aims for at most **20 outstanding solver jobs per campaign**,
+  counting running, queued/waiting and reserved-but-not-yet-visible jobs.
+- If a batch has three jobs left and nothing else is pending, it prepares up to
+  17 missing slots. Those slots may belong to another batch or to another wave
+  of the same batch. Each workflow still contains at most 250 jobs and each job
+  runs exactly one solver; automatically dispatched waves contain at most 20.
+- Per-batch workflow concurrency is removed so a slow job cannot block a new wave.
+  Coordinator and setup share the `paper-t678-dispatch` concurrency lock.
+- Completed `-ok` artifacts and running/pending slots are excluded. Successful
+  jobs whose artifact publication is temporarily invisible are also reserved.
+- A reservation plan is uploaded BEFORE dispatch. Its ten-minute lease protects
+  against controller crashes and GitHub run-list visibility delays. New run names
+  carry their selected slots so queued runs reserve capacity before matrix jobs
+  appear. Unknown legacy runs reserve the entire batch until jobs are visible.
+- Dispatch rechecks capacity after uploading the lease. A stale plan is not sent;
+  ambiguous POST requests are not retried. A failed slot is paused after five
+  attempts, without blocking other slots in its batch.
+- The controller runs on batch completion and on a five-minute scheduled watchdog.
+  It exits after checking/refilling; it does not hold a runner waiting for solvers.
+  GitHub can delay events and scheduled runs, so instantaneous refill is not guaranteed.
+- Inventory caches completed-run artifact/job metadata for up to six hours.
+  Rerun attempt/status changes invalidate the cache. Active runs are refreshed on
+  every check. This reduces REST quota consumption compared with rescanning all
+  completed jobs every five minutes.
+- Setup/resume only requests the coordinator; it cannot bypass the global budget
+  by launching a whole batch directly.
 
-## Current campaign
+## Existing manual runs
 
-Start **Paper T678 automatic coordinator** once with `setup_run_id=43077064461`.
-It inventories existing results and dispatches only missing slots. Do not manually
-dispatch all 39 batches. Existing active batches are allowed to finish first.
-The computer used to start the action can be turned off.
+Manually launched/rerun jobs are counted. If a legacy manual run already has more
+than 20 jobs queued/running, the coordinator waits until that backlog falls below
+20. It does not cancel user jobs. New manual runs can exceed the managed limit;
+they are external to the coordinator's reservation lock.
+
+## Operation
+
+Start **Paper T678 automatic coordinator** with original setup ID `43077064461`.
+It keeps valid results and fills missing slots only. The local computer can be off.
 
 Repository Actions variables:
 
-- `PAPER_T678_SETUP_ID`: campaign used by the watchdog (default: 43077064461).
-  Change this for a future newly prepared campaign. Completion events carry their
-  own original setup ID.
-- `PAPER_T678_AUTORUN=false`: pause the coordinator, including scheduled/manual
-  invocations. This does not cancel already running solver jobs. Remove it or set
-  it to true to resume. Disable the coordinator workflow after all results have
-  been collected to stop scheduled inventory checks.
+- `PAPER_T678_SETUP_ID`: campaign used by the scheduled watchdog (default 43077064461).
+- `PAPER_T678_AUTORUN=false`: pause coordinator invocations without cancelling solvers.
 
-The 20-job limit applies to automatically managed solver batches. Unrelated
-workflows, local irace, manually launched batches and other campaigns have their
-own execution limits. Report collection remains a separate manual workflow.
+Disable the coordinator workflow after collecting the complete campaign to stop
+periodic inventory checks. Report collection remains a separate manual workflow;
+it aggregates multiple waves/reruns using the latest valid completion artifact
+for each `(batch, slot)`. Reservation artifacts are not solver results.
 
-Validation: local unit tests exercise serialization, missing-slot continuation,
-retry-loop protection, header-based backoff, token stripping and API error retries.
-Generated batch workflows retain 250/100 jobs and their original task mappings.
+Bundle downloads retain header-aware rate-limit backoff and token stripping on
+redirects. Solver wall limit remains 7200 seconds, while job timeout allows up to
+240 minutes including API waits. No local irace artifact is changed by this work.
+
+Validation: 15 local tests cover 9600-task mapping, one solver per job, tail refill,
+queue/lease accounting, overlapping batches, real duplicate job counts, rerun cache
+invalidation, publish-before-dispatch, stale plans, manual launches during planning,
+per-slot retry limits and existing bundle-download/report behavior.

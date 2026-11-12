@@ -56,7 +56,9 @@ Bundle downloads retain header-aware rate-limit backoff and token stripping on
 redirects. Solver wall limit remains 7200 seconds, while job timeout allows up to
 240 minutes including API waits. No local irace artifact is changed by this work.
 
-Validation: 15 local tests cover 9600-task mapping, one solver per job, tail refill,
+Validation: 16 local tests cover 9600-task mapping, one solver per job, tail refill,
 queue/lease accounting, overlapping batches, real duplicate job counts, rerun cache
 invalidation, publish-before-dispatch, stale plans, manual launches during planning,
 per-slot retry limits and existing bundle-download/report behavior.
+
+GitHub occasionally returns a stale job status after completion. A final conclusion plus completed_at is treated as terminal, even if status still says in_progress. Such jobs do not reserve solver capacity.

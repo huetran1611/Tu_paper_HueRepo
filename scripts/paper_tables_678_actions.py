@@ -42,6 +42,12 @@ def pages(endpoint,key):
         page+=1
 
 
+def job_finished(job):
+    # GitHub can return stale status='in_progress' after finalizing a job.
+    # A terminal conclusion together with completed_at is independent evidence.
+    return job['status']=='completed' or bool(job.get('completed_at') and job.get('conclusion'))
+
+
 def inventory(repo,setup_id,with_jobs=False,cache_path=None):
     if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+",repo): raise ValueError("Invalid repository")
     if not re.fullmatch(r"[1-9][0-9]*",str(setup_id)): raise ValueError("Invalid setup run ID")
@@ -84,7 +90,7 @@ def inventory(repo,setup_id,with_jobs=False,cache_path=None):
                 if pair[0]!=number: raise ValueError('Job batch mismatch')
                 listed.add(pair)
                 attempts[pair]=attempts.get(pair,0)+job.get('run_attempt',run.get('run_attempt',1))
-                if job['status']!='completed':
+                if not job_finished(job):
                     active_jobs.append(dict(pair=pair,id=job['id'],run_id=run['id']))
                 elif run['status']!='completed' and job.get('conclusion')=='success' and pair not in completed:
                     reserved.add(pair) # Successful job whose artifact publication is not visible yet.

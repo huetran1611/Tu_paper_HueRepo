@@ -103,6 +103,19 @@ class WorkflowTests(unittest.TestCase):
         found['reserved']={(1,s) for s in range(3,20)}
         self.assertEqual(actions.capacity_plan(found,set())['pairs'],[])
 
+    def test_terminal_conclusion_and_completed_timestamp_override_stale_status(self):
+        job=dict(id=99,name='solve / batch-8-task-247',status='in_progress',conclusion='success',
+                 completed_at='2026-11-11T21:01:24Z')
+        self.assertTrue(actions.job_finished(job))
+        self.assertFalse(actions.job_finished(dict(job,completed_at=None)))
+        self.assertFalse(actions.job_finished(dict(job,conclusion=None)))
+        run=dict(id=1,path='.github/workflows/paper-tables-678-batch-08.yml',display_title='T678 batch 08 setup-123',status='completed')
+        def pages(endpoint,key):
+            return iter([run] if key=='workflow_runs' else [job] if key=='jobs' else [])
+        with patch.object(actions,'gh_json',return_value=dict(created_at='2026-11-12T00:00:00Z')),patch.object(actions,'pages',side_effect=pages):
+            found=actions.inventory('owner/repo','123',with_jobs=True)
+        self.assertEqual(found['active_jobs'],[])
+
     def test_fill_can_cross_batch_boundaries_and_pause_only_failing_slots(self):
         done={(1,s):{} for s in range(249)}
         found=dict(completed=done,active_jobs=[],reserved=set(),attempts={(2,0):5})

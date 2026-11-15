@@ -1,17 +1,18 @@
-name: V3 reset temperature after DR - 100 customers
-run-name: V3 RESET after DR - 100 customers - resume - 20 solvers
+name: V3 reset temperature on mode change or DR - 100 customers
+run-name: V3 RESET mode OR DR - 100 customers - 10 seeds - 20 solvers
 on:
   workflow_dispatch:
     inputs:
       slots:
         description: JSON array of unfinished slots to run
         type: string
-        required: true
+        required: false
+        default: '[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159]'
 permissions:
   contents: read
   actions: read
 concurrency:
-  group: v3-reset-100-${{ github.ref }}
+  group: v3-mode-or-dr-100-${{ github.ref }}
   cancel-in-progress: false
 env:
   PYTHONDONTWRITEBYTECODE: '1'
@@ -32,29 +33,17 @@ jobs:
           sparse-checkout: |
             /scripts/download_paper_bundle.py
             /scripts/v3_reset_experiment.py
-            /experiments/v3_reset_100_expected.json
+            /experiments/v3_reset_mode_or_dr_100_expected.json
+            /scripts/v3_reset_mode_or_dr_experiment.py
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Reuse the validated, frozen reset bundle
-        uses: actions/download-artifact@v4
-        with:
-          name: v3-reset-100-bundle
-          path: bundle
-          github-token: ${{ github.token }}
-          run-id: 43730749202
-      - name: Verify reused reset code
-        run: |
-          python - <<'PYCODE'
-          import json,hashlib
-          from pathlib import Path
-          m=json.loads(Path('bundle/manifest.json').read_text())
-          e=json.loads(Path('experiments/v3_reset_100_expected.json').read_text())
-          assert hashlib.sha256(Path('bundle/source/solver.cpp').read_bytes()).hexdigest()==e['reset_source_sha256']
-          assert m['temperature_policy']['reset_after_completed_dr']
-          assert len(m['tasks'])==160
-          assert json.loads(Path('bundle/control_validation.json').read_text())['matched_github_objective_and_routes']
-          PYCODE
+      - name: Download original frozen T678 bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python -u scripts/download_paper_bundle.py --repo "$GITHUB_REPOSITORY" --setup-run-id 43077064461
+      - name: Verify original control and prepare mode-or-DR reset solver
+        run: python -u scripts/v3_reset_mode_or_dr_experiment.py prepare --bundle bundle --expected experiments/v3_reset_mode_or_dr_100_expected.json
       - id: matrix
         env:
           REQUESTED_SLOTS: ${{ inputs.slots }}
@@ -68,14 +57,14 @@ jobs:
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: v3-reset-100-bundle
+          name: v3-mode-or-dr-100-bundle
           path: bundle/
           retention-days: 30
           compression-level: 0
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: v3-reset-100-control
+          name: v3-mode-or-dr-100-control
           path: |
             control_validation.json
             control_results/**/completed.json
@@ -96,22 +85,24 @@ jobs:
         with:
           persist-credentials: false
           sparse-checkout-cone-mode: false
-          sparse-checkout: /scripts/v3_reset_experiment.py
+          sparse-checkout: |
+            /scripts/v3_reset_experiment.py
+            /scripts/v3_reset_mode_or_dr_experiment.py
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - uses: actions/download-artifact@v4
         with:
-          name: v3-reset-100-bundle
+          name: v3-mode-or-dr-100-bundle
           path: bundle
       - name: Run one 100-customer seed with DR and SA
         run: |
           chmod +x bundle/solver
-          python -u scripts/v3_reset_experiment.py task --bundle bundle --slot '${{ matrix.slot }}'
+          python -u scripts/v3_reset_mode_or_dr_experiment.py task --bundle bundle --slot '${{ matrix.slot }}'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: v3-reset-100-s${{ matrix.slot }}
+          name: v3-mode-or-dr-100-s${{ matrix.slot }}
           path: |
             results/**/completed.json
             results/**/request.json

@@ -1,7 +1,12 @@
 name: V3 reset temperature after DR - 100 customers
-run-name: V3 RESET after DR - 100 customers - 10 seeds - DR+SA
+run-name: V3 RESET after DR - 100 customers - resume - 20 solvers
 on:
   workflow_dispatch:
+    inputs:
+      slots:
+        description: JSON array of unfinished slots to run
+        type: string
+        required: true
 permissions:
   contents: read
   actions: read
@@ -31,18 +36,35 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Download original frozen T678 bundle
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: python -u scripts/download_paper_bundle.py --repo "$GITHUB_REPOSITORY" --setup-run-id 43077064461
-      - name: Verify original control against GitHub and prepare reset solver
-        run: python -u scripts/v3_reset_experiment.py prepare --bundle bundle --expected experiments/v3_reset_100_expected.json
+      - name: Reuse the validated, frozen reset bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: v3-reset-100-bundle
+          path: bundle
+          github-token: ${{ github.token }}
+          run-id: 43730749202
+      - name: Verify reused reset code
+        run: |
+          python - <<'PYCODE'
+          import json,hashlib
+          from pathlib import Path
+          m=json.loads(Path('bundle/manifest.json').read_text())
+          e=json.loads(Path('experiments/v3_reset_100_expected.json').read_text())
+          assert hashlib.sha256(Path('bundle/source/solver.cpp').read_bytes()).hexdigest()==e['reset_source_sha256']
+          assert m['temperature_policy']['reset_after_completed_dr']
+          assert len(m['tasks'])==160
+          assert json.loads(Path('bundle/control_validation.json').read_text())['matched_github_objective_and_routes']
+          PYCODE
       - id: matrix
+        env:
+          REQUESTED_SLOTS: ${{ inputs.slots }}
         run: |
           python - <<'PY'
           import json,os
+          slots=json.loads(os.environ['REQUESTED_SLOTS'])
+          assert slots and len(slots)==len(set(slots)) and all(type(s) is int and 0<=s<160 for s in slots)
           with open(os.environ['GITHUB_OUTPUT'],'a') as f:
-              f.write('slots='+json.dumps(list(range(160)),separators=(',',':'))+'\n')
+              f.write('slots='+json.dumps(slots,separators=(',',':'))+'\n')
           PY
       - uses: actions/upload-artifact@v4
         with:
@@ -66,7 +88,7 @@ jobs:
     timeout-minutes: 150
     strategy:
       fail-fast: false
-      max-parallel: 5
+      max-parallel: 20
       matrix:
         slot: ${{ fromJSON(needs.prepare.outputs.slots) }}
     steps:

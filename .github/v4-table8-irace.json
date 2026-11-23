@@ -1,0 +1,23 @@
+{
+  "parameters": {
+    "cseg": 1,
+    "T0": 0.02,
+    "alpha": 0.02,
+    "rho": 0.02,
+    "kappa": 1,
+    "tau_v": 0.005,
+    "r_destroy": 0.1,
+    "c_tabu": 2.5,
+    "h_mode": 1,
+    "gamma1": 1.0,
+    "gamma2": 0.45,
+    "gamma3": 0.4,
+    "gamma4": 0.35,
+    "eta": 1.0,
+    "h_div": 2
+  },
+  "vehicle_parameters": {
+    "truck_capacity": 70,
+    "drone_capacity": 2.27
+  }
+}

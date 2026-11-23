@@ -102,6 +102,8 @@ def prepare(args):
         raise ValueError("Frozen solver checksum mismatch")
     if not 0 <= args.batch < len(batches):
         raise ValueError("Batch outside published plan")
+    if not 1 <= args.parallel <= MAX_SOLVER_JOBS:
+        raise ValueError("Invalid solver concurrency for batch")
     batch = batches[args.batch]
     args.output.mkdir()
     (args.output / SOLVER).write_bytes((args.bundle / SOLVER).read_bytes())
@@ -116,6 +118,7 @@ def prepare(args):
     })
     with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as stream:
         print(f'matrix={json.dumps({"slot": list(range(len(batch["tasks"])))}, separators=(",", ":"))}', file=stream)
+        print(f"parallel={args.parallel}", file=stream)
 
 
 def validate_result(result, task):
@@ -386,7 +389,7 @@ def main():
     commands = parser.add_subparsers(dest="command", required=True)
     for action, options in [
         (build, ["bundle", "source_sha"]),
-        (prepare, ["bundle", "phase", "calibration", "batch", "source_sha", "output"]),
+        (prepare, ["bundle", "phase", "calibration", "batch", "source_sha", "parallel", "output"]),
         (solve, ["runtime", "slot", "output"]),
         (pack, ["runtime", "records", "output"]),
         (orchestrate, ["bundle", "phase", "calibration", "parallel_jobs", "output"]),
@@ -399,7 +402,7 @@ def main():
             if option == "phase":
                 sub.add_argument("--phase", choices=SCENARIOS, required=True)
             else:
-                types = {"source_sha": str, "batch": int, "slot": int, "parallel_jobs": int}
+                types = {"source_sha": str, "batch": int, "slot": int, "parallel": int, "parallel_jobs": int}
                 sub.add_argument("--" + option.replace("_", "-"), type=types.get(option, Path),
                                  required=option != "calibration" or action == report)
     args = parser.parse_args()

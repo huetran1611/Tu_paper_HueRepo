@@ -15,7 +15,7 @@ on:
         type: number
         required: true
       parallel:
-        type: number
+        type: string
         required: true
 
 permissions:
@@ -28,6 +28,7 @@ jobs:
     timeout-minutes: 15
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
+      parallel: ${{ steps.plan.outputs.parallel }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -51,9 +52,11 @@ jobs:
         env:
           PHASE: ${{ inputs.phase }}
           BATCH: ${{ inputs.batch }}
+          PARALLEL: ${{ inputs.parallel }}
         run: |
           python3 scripts/v4_table8_actions.py prepare --bundle bundle --phase "$PHASE" \
-            --batch "$BATCH" --calibration calibration --source-sha "$GITHUB_SHA" --output runtime
+            --batch "$BATCH" --calibration calibration --source-sha "$GITHUB_SHA" \
+            --parallel "$PARALLEL" --output runtime
           cp scripts/v4_table8_actions.py scripts/run_v4_table8.py runtime/
       - uses: actions/upload-artifact@v4
         with:
@@ -72,7 +75,7 @@ jobs:
     permissions: {}
     strategy:
       fail-fast: false
-      max-parallel: ${{ inputs.parallel }}
+      max-parallel: ${{ fromJSON(needs.prepare.outputs.parallel) }}
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     env:
       OMP_NUM_THREADS: '1'

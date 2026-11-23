@@ -25,15 +25,21 @@ SCENARIOS = {"A": "A", "BCD": "BCD"}
 MAX_SOLVER_JOBS = 248  # The prepare and pack jobs also count towards 250.
 POLL_SECONDS = 60
 SOLVER = "solver.exe" if os.name == "nt" else "solver"
+N200_TIME_LIMIT = 2 * 60 * 60
 
 
 def build(args):
     inputs = ROOT / ".github/workload-tiebreak"
     config = read_json(ROOT / ".github/v4-table8-irace.json")
-    instances = [item for item in read_json(inputs / "inputs.json")["instances"]
-                 if 6 <= item["customers"] <= 100]
-    if len(instances) != 80 or len({item["instance"] for item in instances}) != 80:
-        raise ValueError("Expected 80 distinct instances from 6 to 100 customers")
+    n200 = args.dataset == "n200"
+    all_instances = read_json(inputs / "inputs.json")["instances"]
+    instances = ([i for i in all_instances if i["customers"] == 200] if n200 else
+                 [i for i in all_instances if 6 <= i["customers"] <= 100])
+    expected = 16 if n200 else 80
+    if len(instances) != expected or len({item["instance"] for item in instances}) != expected:
+        raise ValueError(f"Expected {expected} distinct instances in {args.dataset}")
+    if not 1 <= args.parallel_jobs <= 500:
+        raise ValueError("parallel_jobs must be between 1 and 500")
     args.bundle.mkdir()
     subprocess.run(["g++", "-std=c++17", "-O2", str(ROOT / "src_v4/v4_table8.cpp"),
                     "-o", str(args.bundle / SOLVER)], check=True)
@@ -46,6 +52,8 @@ def build(args):
                 subset.writestr(member["path"], data)
     write_json(args.bundle / "manifest.json", {
         **config, "source_sha": args.source_sha, "seeds": list(range(42, 52)), "instances": instances,
+        "dataset": args.dataset, "parallel_jobs": args.parallel_jobs,
+        "max_solve_seconds": N200_TIME_LIMIT if n200 else None,
         "compiler": subprocess.check_output(["g++", "--version"], text=True).splitlines()[0],
         "solver_sha256": sha256(args.bundle / SOLVER),
     })
@@ -60,9 +68,13 @@ def batching(manifest, phase, budgets):
     instances = manifest["instances"]
     seeds = manifest["seeds"]
     per_instance = len(seeds) * len(scenarios)
-    max_instances = MAX_SOLVER_JOBS // per_instance
-    count = math.ceil(len(instances) / max_instances)
+    n200 = manifest.get("dataset") == "n200"
+    max_instances = (MAX_SOLVER_JOBS - int(n200)) // per_instance
+    # Keep the larger input ZIP small enough to transfer to every solver job.
+    count = 4 if n200 else math.ceil(len(instances) / max_instances)
     capacity = math.ceil(len(instances) / count)
+    if capacity > max_instances:
+        raise ValueError("Batch plan would exceed the solver-job limit")
     batches = [[] for _ in range(count)]
     weights = [0.] * count
 
@@ -79,7 +91,9 @@ def batching(manifest, phase, budgets):
         "tasks": [
             {"instance": inst["instance"], "n": inst["customers"], "seed": seed,
              "scenario": scenario, "iterations": iteration_budget(inst["customers"]),
-             "Ti_seconds": budgets[inst["instance"]] if budgets is not None else None}
+             "Ti_seconds": budgets[inst["instance"]] if budgets is not None else None,
+             **({"calibration_limit_seconds": manifest["max_solve_seconds"]}
+                if phase == "A" and manifest.get("max_solve_seconds") is not None else {})}
             for inst in bucket for seed in seeds for scenario in scenarios
         ],
     } for bucket in batches]
@@ -89,7 +103,9 @@ def load_batches(bundle, phase, calibration):
     manifest = read_json(bundle / "manifest.json")
     budgets = read_json(calibration / "timing.json") if phase == "BCD" else None
     if budgets is not None and (set(budgets) != {i["instance"] for i in manifest["instances"]}
-                                or any(not math.isfinite(t) or t <= 0 for t in budgets.values())):
+                                or any(not math.isfinite(t) or t <= 0 for t in budgets.values())
+                                or (manifest.get("max_solve_seconds") is not None and
+                                    max(budgets.values()) > manifest["max_solve_seconds"])):
         raise ValueError("BCD requires verified positive budgets for every instance")
     return manifest, batching(manifest, phase, budgets)
 
@@ -133,10 +149,14 @@ def validate_result(result, task):
     if not math.isfinite(result["elapsed_seconds"]) or result["elapsed_seconds"] <= 0:
         raise ValueError(f"Invalid solver elapsed time for {task}")
     if task["scenario"] == "A":
-        if (result["stop_reason"] != "iteration_budget" or not result["feasible"]
-                or result["completed_iterations"] != task["iterations"]
-                or result["process_time_limit_seconds"] != 0):
-            raise ValueError(f"A must finish its iteration budget with a feasible solution: {task}")
+        limit = task.get("calibration_limit_seconds")
+        complete = result["stop_reason"] == "iteration_budget" and result["completed_iterations"] == task["iterations"]
+        capped = (limit is not None and result["stop_reason"] == "process_time_limit"
+                  and result["completed_iterations"] < task["iterations"])
+        if (not (complete or capped) or result["iteration_budget"] != task["iterations"]
+                or result["process_time_limit_seconds"] != (limit or 0)
+                or (limit is None and not result["feasible"])):
+            raise ValueError(f"A must finish the iteration budget or reach the configured time cap: {task}")
     else:
         validate_timed(result, task["scenario"], task["seed"],
                        {"customers": task["n"], "Ti_seconds": task["Ti_seconds"]}, task)
@@ -165,6 +185,9 @@ def solve(args):
     timeout = None
     if task["scenario"] == "A":
         command.append(f"--iters={task['iterations']}")
+        if (limit := task.get("calibration_limit_seconds")) is not None:
+            command.append(f"--process-time-limit={limit}")
+            timeout = limit + 60
     else:
         command.append(f"--process-time-limit={task['Ti_seconds']}")
         timeout = task["Ti_seconds"] + 60
@@ -252,12 +275,21 @@ class GitHub:
         return json.loads(self.request(path, body))
 
     def collect(self, run, name):
+        artifact = self.packed_artifact(run, name)
+        if artifact is None:
+            raise ValueError(f"Expected packed artifact {name} in run {run}")
+        return self.read_packed(artifact)
+
+    def packed_artifact(self, run, name):
         query = urllib.parse.urlencode({"name": name})
         artifacts = self.json(f"/runs/{run}/artifacts?{query}")["artifacts"]
         available = [a for a in artifacts if a["name"] == name and not a["expired"]]
-        if len(available) != 1:
-            raise ValueError(f"Expected one packed artifact {name} in run {run}")
-        with ZipFile(io.BytesIO(self.request(f"/artifacts/{available[0]['id']}/zip"))) as archive:
+        if len(available) > 1:
+            raise ValueError(f"Multiple packed artifacts {name} in run {run}")
+        return available[0]["id"] if available else None
+
+    def read_packed(self, artifact):
+        with ZipFile(io.BytesIO(self.request(f"/artifacts/{artifact}/zip"))) as archive:
             return json.loads(archive.read("packed.json"))
 
 
@@ -342,19 +374,129 @@ def calibrate(args):
         raise ValueError("Incomplete A phase")
     offset = 0
     by_instance = defaultdict(list)
+    time_limited = defaultdict(int)
+    limit = manifest.get("max_solve_seconds")
     for batch in batches:
         end = offset + len(batch["tasks"])
         verify_batch(batch, records[offset:end], manifest)
         for record in records[offset:end]:
-            by_instance[record["task"]["instance"]].append(record["result"]["elapsed_seconds"])
+            name = record["task"]["instance"]
+            result = record["result"]
+            capped = result["stop_reason"] == "process_time_limit"
+            elapsed = result["elapsed_seconds"]
+            if limit is not None:
+                elapsed = limit if capped else min(elapsed, limit)
+            by_instance[name].append(elapsed)
+            time_limited[name] += capped
         offset = end
     budgets = {name: mean(samples) for name, samples in by_instance.items()}
     write_json(args.output / "timing.json", budgets)
     write_csv(args.output / "Ti.csv", [
         {"instance": name, "Ti_seconds": budget, "seeds": len(by_instance[name]),
-         "min_seconds": min(by_instance[name]), "max_seconds": max(by_instance[name])}
+         "min_seconds": min(by_instance[name]), "max_seconds": max(by_instance[name]),
+         "A_time_limited_runs": time_limited[name]}
         for name, budget in budgets.items()
     ])
+
+
+class N200Campaign:
+    """Advance short-lived controller runs when worker packs finish."""
+
+    def __init__(self, campaign, bundle):
+        self.api = GitHub()
+        self.campaign = campaign
+        self.manifest = read_json(bundle / "manifest.json")
+        if self.manifest["dataset"] != "n200" or self.manifest["max_solve_seconds"] != N200_TIME_LIMIT:
+            raise ValueError("Expected the capped N200 campaign bundle")
+        origin = self.api.json(f"/runs/{campaign}")
+        if (origin["head_sha"] != self.manifest["source_sha"]
+                or origin["display_title"] != f"V4 Table 8 n200 {campaign}"
+                or origin["path"].split("@")[0] != ".github/workflows/v4-table8-n200.yml"):
+            raise ValueError("Campaign ID does not match the frozen N200 controller")
+        self.worker = f"/workflows/{WORKER}"
+        self.filters = urllib.parse.urlencode(
+            {"created": f">={origin['created_at']}", "event": "workflow_dispatch", "per_page": 100}
+        )
+        self.runs = {}
+        prefix = f"V4T8 {campaign} "
+        for page in range(1, 11):
+            runs = self.api.json(f"{self.worker}/runs?{self.filters}&page={page}")["workflow_runs"]
+            for run in runs:
+                title = run["display_title"]
+                if not title.startswith(prefix):
+                    continue
+                phase, batch = title.removeprefix(prefix).split()
+                key = phase, int(batch)
+                if key in self.runs:
+                    raise ValueError(f"Duplicate worker runs for {title}")
+                self.runs[key] = run
+            if len(runs) < 100:
+                break
+        else:
+            raise ValueError("Too many workflow runs to inventory the N200 campaign")
+
+    def launch_missing(self, phase, batches, calibration_run=None):
+        parallel = math.ceil(self.manifest["parallel_jobs"] / len(batches))
+        for i in range(len(batches)):
+            if (phase, i) in self.runs:
+                continue
+            inputs = {"controller": str(self.campaign), "phase": phase, "batch": str(i),
+                      "parallel": str(parallel), "source_sha": self.manifest["source_sha"],
+                      "notify_n200": "yes"}
+            if calibration_run is not None:
+                inputs["calibration_run"] = str(calibration_run)
+            dispatched = self.api.json(f"{self.worker}/dispatches", {
+                "ref": os.environ["GITHUB_REF_NAME"], "inputs": inputs,
+            })
+            print(f"Dispatched {phase} batch {i}: {dispatched['html_url']}", flush=True)
+
+    def read_phase(self, phase, batches, output):
+        work = []
+        for i, batch in enumerate(batches):
+            run = self.runs.get((phase, i))
+            if not run:
+                return False
+            artifact = self.api.packed_artifact(run["id"], f"v4-table8-packed-{run['run_attempt']}")
+            if artifact is None:
+                if run["status"] == "completed" and run["conclusion"] != "success":
+                    raise RuntimeError(f"Re-run failed worker jobs and resume the campaign: {run['html_url']}")
+                return False
+            work.append((i, batch, run, artifact))
+        output.mkdir(parents=True)
+        records, provenance = [], []
+        for i, batch, run, artifact in work:
+            packed = self.api.read_packed(artifact)
+            verify_batch(batch, packed, self.manifest)
+            records.extend(packed)
+            provenance.append({"batch": i, "run_id": run["id"], "attempt": run["run_attempt"]})
+        write_json(output / "records.json", records)
+        write_json(output / "batch_runs.json", provenance)
+        return True
+
+
+def advance_n200(args):
+    campaign = N200Campaign(args.campaign, args.bundle)
+    _, a_batches = load_batches(args.bundle, "A", None)
+    campaign.launch_missing("A", a_batches)
+    calibration = args.output / "calibration"
+    if not campaign.read_phase("A", a_batches, calibration):
+        print("Waiting for the remaining A batches to publish their results.", flush=True)
+        return
+    calibrate(argparse.Namespace(bundle=args.bundle, output=calibration))
+    _, timed_batches = load_batches(args.bundle, "BCD", calibration)
+    timed = args.output / "timed"
+    completed = campaign.read_phase("BCD", timed_batches, timed)
+    if completed:
+        report(argparse.Namespace(calibration=calibration, timed=timed, output=args.output / "report"))
+    with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as stream:
+        print("calibrated=true", file=stream)
+        print(f"reported={'true' if completed else 'false'}", file=stream)
+
+
+def launch_n200_timed(args):
+    campaign = N200Campaign(args.campaign, args.bundle)
+    _, batches = load_batches(args.bundle, "BCD", args.calibration)
+    campaign.launch_missing("BCD", batches, calibration_run=os.environ["GITHUB_RUN_ID"])
 
 
 def report(args):
@@ -388,23 +530,30 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     for action, options in [
-        (build, ["bundle", "source_sha"]),
+        (build, ["bundle", "source_sha", "dataset", "parallel_jobs"]),
         (prepare, ["bundle", "phase", "calibration", "batch", "source_sha", "parallel", "output"]),
         (solve, ["runtime", "slot", "output"]),
         (pack, ["runtime", "records", "output"]),
         (orchestrate, ["bundle", "phase", "calibration", "parallel_jobs", "output"]),
         (calibrate, ["bundle", "output"]),
         (report, ["calibration", "timed", "output"]),
+        (advance_n200, ["bundle", "campaign", "output"]),
+        (launch_n200_timed, ["bundle", "campaign", "calibration"]),
     ]:
         sub = commands.add_parser(action.__name__)
         sub.set_defaults(action=action)
         for option in options:
             if option == "phase":
                 sub.add_argument("--phase", choices=SCENARIOS, required=True)
+            elif option == "dataset":
+                sub.add_argument("--dataset", choices=("n6-n100", "n200"), default="n6-n100")
+            elif option == "parallel_jobs" and action == build:
+                sub.add_argument("--parallel-jobs", type=int, default=20)
             else:
-                types = {"source_sha": str, "batch": int, "slot": int, "parallel": int, "parallel_jobs": int}
+                types = {"source_sha": str, "batch": int, "slot": int, "parallel": int,
+                         "parallel_jobs": int, "campaign": int}
                 sub.add_argument("--" + option.replace("_", "-"), type=types.get(option, Path),
-                                 required=option != "calibration" or action == report)
+                                 required=option != "calibration" or action in (report, launch_n200_timed))
     args = parser.parse_args()
     if getattr(args, "phase", None) == "BCD" and args.calibration is None:
         parser.error("--calibration is required for phase BCD")

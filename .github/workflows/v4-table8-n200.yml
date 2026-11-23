@@ -1,0 +1,122 @@
+name: V4 Table 8 (200 customers)
+run-name: V4 Table 8 n200 ${{ inputs.campaign || github.run_id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      parallel_jobs:
+        description: Target total solver concurrency for a new campaign
+        type: number
+        default: 20
+      campaign:
+        description: Original controller run ID to resume an existing campaign
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: v4-table8-n200-${{ inputs.campaign || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Freeze V4, irace parameters and the N200 inputs
+    if: inputs.campaign == ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - id: frozen
+        uses: actions/download-artifact@v4
+        if: github.run_attempt > 1
+        continue-on-error: true
+        with:
+          name: v4-table8-bundle
+          path: frozen-bundle
+      - uses: actions/checkout@v5
+        if: steps.frozen.outcome != 'success'
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/v4-table8-irace.json
+            /.github/workload-tiebreak/
+            /scripts/v4_table8_actions.py
+            /scripts/run_v4_table8.py
+            /src_v4/*.cpp
+            /src_v4/*.hpp
+      - if: steps.frozen.outcome != 'success'
+        env:
+          PARALLEL_JOBS: ${{ inputs.parallel_jobs }}
+        run: |
+          python3 scripts/v4_table8_actions.py build --dataset n200 --bundle bundle \
+            --source-sha "$GITHUB_SHA" --parallel-jobs "$PARALLEL_JOBS"
+      - uses: actions/upload-artifact@v4
+        if: steps.frozen.outcome != 'success'
+        with:
+          name: v4-table8-bundle
+          path: bundle/
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 30
+
+  advance:
+    name: Advance A, calibration, or B–D reporting
+    needs: build
+    if: ${{ !cancelled() && (needs.build.result == 'success' || (inputs.campaign != '' && needs.build.result == 'skipped')) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: write
+    env:
+      CAMPAIGN: ${{ inputs.campaign || github.run_id }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: v4-table8-bundle
+          run-id: ${{ env.CAMPAIGN }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/v4-table8-n200-bundle
+      - id: origin
+        run: |
+          SHA=$(jq -er '.source_sha' "$RUNNER_TEMP/v4-table8-n200-bundle/manifest.json")
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]]
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ steps.origin.outputs.sha }}
+          persist-credentials: false
+          sparse-checkout: scripts
+      - id: state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 -u scripts/v4_table8_actions.py advance_n200 \
+            --bundle "$RUNNER_TEMP/v4-table8-n200-bundle" --campaign "$CAMPAIGN" --output campaign
+      - uses: actions/upload-artifact@v4
+        if: steps.state.outputs.calibrated == 'true'
+        with:
+          name: v4-table8-calibration
+          path: campaign/calibration/
+          overwrite: true
+          if-no-files-found: error
+          retention-days: 30
+      - name: Dispatch B, C and D after publishing Ti
+        if: steps.state.outputs.calibrated == 'true' && steps.state.outputs.reported != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 -u scripts/v4_table8_actions.py launch_n200_timed \
+            --bundle "$RUNNER_TEMP/v4-table8-n200-bundle" --campaign "$CAMPAIGN" \
+            --calibration campaign/calibration
+      - uses: actions/upload-artifact@v4
+        if: steps.state.outputs.reported == 'true'
+        with:
+          name: v4-table8-n200-report
+          path: campaign/
+          overwrite: true
+          if-no-files-found: error
+          retention-days: 30

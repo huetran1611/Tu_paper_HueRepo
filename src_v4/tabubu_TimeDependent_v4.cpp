@@ -906,7 +906,7 @@ static void write_tuning_result(const string& reason) {
         << ",\n\"n\":" << n << ",\n\"seed\":" << CFG_RANDOM_SEED
         << ",\n\"iteration_budget\":";
 #ifdef V4_TABLE8_EXPERIMENT
-    if (process_deadline) out << "null"; else out << CFG_MAX_ITERATIONS;
+    if (process_deadline && !table8_calibration_iterations) out << "null"; else out << CFG_MAX_ITERATIONS;
 #else
     out << CFG_MAX_ITERATIONS;
 #endif
@@ -2196,7 +2196,7 @@ Solution tabu_search(const Solution& initial_solution, int num_initial_sol, vect
     int iter = 0;
     int total_iters = max(1, CFG_MAX_ITERATIONS);
 #ifdef V4_TABLE8_EXPERIMENT
-    if (process_deadline) total_iters = numeric_limits<int>::max();
+    if (process_deadline && !table8_calibration_iterations) total_iters = numeric_limits<int>::max();
 #endif
     CFG_MAX_SEGMENT = compute_segment_count(total_iters, CFG_MAX_ITER_PER_SEGMENT);
     int scoring_mode_iter = 0; // 0: makespan-oriented, 1: workload-oriented

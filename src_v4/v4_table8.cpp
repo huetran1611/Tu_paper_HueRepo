@@ -4,6 +4,7 @@
 #include <string>
 
 static char table8_scenario = 'A';
+static bool table8_calibration_iterations = false;
 static bool table8_tie_break() { return table8_scenario == 'E'; }
 static bool table8_switches_mode() { return table8_scenario == 'B' || table8_scenario == 'D'; }
 
@@ -55,6 +56,7 @@ int main(int argc, char* argv[]) {
                 deadline_given = true;
             }
             if (parse_kv_flag(arg, "--result-json", value)) result_given = !value.empty();
+            if (parse_kv_flag(arg, "--iters", value)) table8_calibration_iterations = true;
             if (arg == "--auto-tune" || arg == "--print-distance-matrix" ||
                 parse_kv_flag(arg, "--time-limit", value))
                 throw std::runtime_error("Table 8 uses a single solver run with an optional process deadline");
@@ -62,6 +64,7 @@ int main(int argc, char* argv[]) {
         }
         if (!scenario_given || !result_given || (!deadline_given && table8_scenario != 'A'))
             throw std::runtime_error("Required: --scenario, --result-json and a process time limit for B through E");
+        table8_calibration_iterations = table8_scenario == 'A' && table8_calibration_iterations;
         const int count = static_cast<int>(args.size());
         args.push_back(nullptr);
         return v4_table8_solver_main(count, args.data());

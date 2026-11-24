@@ -928,19 +928,19 @@ static void write_tuning_result(const string& reason) {
     else out << "null";
     out << ",\n\"reporting_tau\":";
     if (table8_reporting_tau) out << *table8_reporting_tau; else out << "null";
-    auto write_fleet_neighborhoods = [&](const char* key, bool workload) {
+    auto write_fleet_neighborhoods = [&](const char* key) {
         out << ",\n\"" << key << "\":[";
         bool first = true;
         for (int op = 0; op < NUM_NEIGHBORHOODS; ++op) {
-            if (op < 7 && !table8_fleet_scope(workload, op)) continue;
+            if (op < 7 && !table8_fleet_scope()) continue;
             if (!first) out << ',';
             out << op;
             first = false;
         }
         out << ']';
     };
-    write_fleet_neighborhoods("makespan_fleet_neighborhoods", false);
-    if (table8_switches_mode()) write_fleet_neighborhoods("workload_fleet_neighborhoods", true);
+    write_fleet_neighborhoods("makespan_fleet_neighborhoods");
+    if (table8_switches_mode()) write_fleet_neighborhoods("workload_fleet_neighborhoods");
     out << ",\n\"enabled_components\":{\"neighborhoods\":9,\"adaptive_selection\":true,"
            "\"tabu\":true,"
            "\"aspiration\":true,\"simulated_annealing\":false,\"adaptive_penalties\":true,"
@@ -2273,7 +2273,7 @@ Solution tabu_search(const Solution& initial_solution, int num_initial_sol, vect
         try {
 #ifdef V4_TABLE8_EXPERIMENT
             init_neighbor = paper_local_search(current_sol, selected_neighbor, iter, segment_reference_score,
-                                               cost, table8_fleet_scope(workload, selected_neighbor));
+                                               cost, table8_fleet_scope());
 #else
             if (scoring_mode_iter == 0) {
                 init_neighbor = local_search(current_sol, selected_neighbor, iter, segment_reference_score, solution_score_makespan);

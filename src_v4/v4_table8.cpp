@@ -9,8 +9,8 @@ static bool table8_tie_break() { return table8_scenario == 'E'; }
 static bool table8_switches_mode() { return table8_scenario == 'B' || table8_scenario == 'D'; }
 
 // N7/N8 already use fleet scope inside the V4 neighbourhood implementation.
-static bool table8_fleet_scope(bool workload, int op) {
-    return table8_scenario == 'C' || (table8_scenario == 'D' && workload && op == 0);
+static bool table8_fleet_scope() {
+    return table8_scenario == 'C';
 }
 
 static bool table8_improves(double primary, double secondary, double reference,

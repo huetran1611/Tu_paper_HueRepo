@@ -21,7 +21,7 @@ from run_v4_table8 import read_json, run_row, sha256, summarize, summarize_table
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKER = "v4-table8-batch.yml"
-SCENARIOS = {"A": "A", "BCD": "BCD"}
+SCENARIOS = {"A": "A", "BCD": "BCD", "DE": "DE"}
 MAX_SOLVER_JOBS = 248  # The prepare and pack jobs also count towards 250.
 POLL_SECONDS = 60
 SOLVER = "solver.exe" if os.name == "nt" else "solver"
@@ -33,14 +33,27 @@ def build(args):
     config = read_json(ROOT / ".github/v4-table8-irace.json")
     n200 = args.dataset == "n200"
     all_instances = read_json(inputs / "inputs.json")["instances"]
-    instances = ([i for i in all_instances if i["customers"] == 200] if n200 else
-                 [i for i in all_instances if 6 <= i["customers"] <= 100])
-    expected = 16 if n200 else 80
+    bounds = {"n200": (200, 200, 16), "n6-n100": (6, 100, 80), "de": (6, 200, 96)}
+    low, high, expected = bounds[args.dataset]
+    instances = [i for i in all_instances if low <= i["customers"] <= high]
     if len(instances) != expected or len({item["instance"] for item in instances}) != expected:
         raise ValueError(f"Expected {expected} distinct instances in {args.dataset}")
     if not 1 <= args.parallel_jobs <= 500:
         raise ValueError("parallel_jobs must be between 1 and 500")
     args.bundle.mkdir()
+    if args.dataset == "de":
+        baseline = read_json(ROOT / ".github/v4-table8-de-baseline.json")
+        refs = baseline["instances"]
+        if set(refs) != {i["instance"] for i in instances}:
+            raise ValueError("Frozen A baseline must cover all 96 instances")
+        for inst in instances:
+            row = refs[inst["instance"]]
+            if (row["customers"] != inst["customers"] or row["seeds"] != 10
+                    or any(not math.isfinite(row[key]) or row[key] <= 0
+                           for key in ("Ti_seconds", "best_makespan", "mean_makespan"))
+                    or row["Ti_seconds"] > N200_TIME_LIMIT):
+                raise ValueError(f"Invalid frozen A baseline: {inst['instance']}")
+        write_json(args.bundle / "baseline.json", baseline)
     subprocess.run(["g++", "-std=c++17", "-O2", str(ROOT / "src_v4/v4_table8.cpp"),
                     "-o", str(args.bundle / SOLVER)], check=True)
     with ZipFile(inputs / "inputs.zip") as source, ZipFile(args.bundle / "inputs.zip", "w", ZIP_DEFLATED) as subset:
@@ -69,9 +82,15 @@ def batching(manifest, phase, budgets):
     seeds = manifest["seeds"]
     per_instance = len(seeds) * len(scenarios)
     n200 = manifest.get("dataset") == "n200"
-    max_instances = (MAX_SOLVER_JOBS - int(n200)) // per_instance
+    de = phase == "DE"
+    max_instances = (MAX_SOLVER_JOBS - int(n200 or de)) // per_instance
     # Keep the larger input ZIP small enough to transfer to every solver job.
-    count = 4 if n200 else math.ceil(len(instances) / max_instances)
+    if n200:
+        count = 4
+    elif de:
+        count = 10
+    else:
+        count = math.ceil(len(instances) / max_instances)
     capacity = math.ceil(len(instances) / count)
     if capacity > max_instances:
         raise ValueError("Batch plan would exceed the solver-job limit")
@@ -92,6 +111,7 @@ def batching(manifest, phase, budgets):
             {"instance": inst["instance"], "n": inst["customers"], "seed": seed,
              "scenario": scenario, "iterations": iteration_budget(inst["customers"]),
              "Ti_seconds": budgets[inst["instance"]] if budgets is not None else None,
+             **({"corrected_d": True} if de and scenario == "D" else {}),
              **({"calibration_limit_seconds": manifest["max_solve_seconds"]}
                 if phase == "A" and manifest.get("max_solve_seconds") is not None else {})}
             for inst in bucket for seed in seeds for scenario in scenarios
@@ -101,12 +121,18 @@ def batching(manifest, phase, budgets):
 
 def load_batches(bundle, phase, calibration):
     manifest = read_json(bundle / "manifest.json")
-    budgets = read_json(calibration / "timing.json") if phase == "BCD" else None
+    if phase == "DE":
+        if manifest["dataset"] != "de":
+            raise ValueError("Phase DE requires a frozen DE bundle")
+        budgets = {name: row["Ti_seconds"] for name, row in
+                   read_json(bundle / "baseline.json")["instances"].items()}
+    else:
+        budgets = read_json(calibration / "timing.json") if phase == "BCD" else None
     if budgets is not None and (set(budgets) != {i["instance"] for i in manifest["instances"]}
                                 or any(not math.isfinite(t) or t <= 0 for t in budgets.values())
                                 or (manifest.get("max_solve_seconds") is not None and
                                     max(budgets.values()) > manifest["max_solve_seconds"])):
-        raise ValueError("BCD requires verified positive budgets for every instance")
+        raise ValueError("Timed phases require verified positive budgets for every instance")
     return manifest, batching(manifest, phase, budgets)
 
 
@@ -142,8 +168,12 @@ def validate_result(result, task):
         raise ValueError(f"Result identity differs from task {task}")
     flags = result["enabled_components"]
     if (flags["simulated_annealing"] or flags["destroy_repair"] or not flags["adaptive_selection"]
-            or flags["mode_switching"] != (task["scenario"] in "BD")):
+            or flags["mode_switching"] != (task["scenario"] in "BD")
+            or flags["workload_tie_break"] != (task["scenario"] == "E")):
         raise ValueError(f"Unexpected ablation flags for {task}")
+    if task.get("corrected_d") and (result["makespan_fleet_neighborhoods"] != [7, 8]
+                                    or result["workload_fleet_neighborhoods"] != [7, 8]):
+        raise ValueError(f"Corrected D must use fleet scope only on N7/N8 in both modes: {task}")
     if result["completed_iterations"] != result["makespan_iterations"] + result["workload_iterations"]:
         raise ValueError(f"Invalid iteration counters for {task}")
     if not math.isfinite(result["elapsed_seconds"]) or result["elapsed_seconds"] <= 0:
@@ -399,20 +429,22 @@ def calibrate(args):
     ])
 
 
-class N200Campaign:
+class EventCampaign:
     """Advance short-lived controller runs when worker packs finish."""
 
-    def __init__(self, campaign, bundle):
+    def __init__(self, campaign, bundle, dataset):
         self.api = GitHub()
         self.campaign = campaign
         self.manifest = read_json(bundle / "manifest.json")
-        if self.manifest["dataset"] != "n200" or self.manifest["max_solve_seconds"] != N200_TIME_LIMIT:
-            raise ValueError("Expected the capped N200 campaign bundle")
+        self.dataset = dataset
+        if (self.manifest["dataset"] != dataset
+                or (dataset == "n200" and self.manifest["max_solve_seconds"] != N200_TIME_LIMIT)):
+            raise ValueError(f"Expected the frozen {dataset} campaign bundle")
         origin = self.api.json(f"/runs/{campaign}")
         if (origin["head_sha"] != self.manifest["source_sha"]
-                or origin["display_title"] != f"V4 Table 8 n200 {campaign}"
-                or origin["path"].split("@")[0] != ".github/workflows/v4-table8-n200.yml"):
-            raise ValueError("Campaign ID does not match the frozen N200 controller")
+                or origin["display_title"] != f"V4 Table 8 {dataset} {campaign}"
+                or origin["path"].split("@")[0] != f".github/workflows/v4-table8-{dataset}.yml"):
+            raise ValueError("Campaign ID does not match the frozen controller")
         self.worker = f"/workflows/{WORKER}"
         self.filters = urllib.parse.urlencode(
             {"created": f">={origin['created_at']}", "event": "workflow_dispatch", "per_page": 100}
@@ -433,7 +465,7 @@ class N200Campaign:
             if len(runs) < 100:
                 break
         else:
-            raise ValueError("Too many workflow runs to inventory the N200 campaign")
+            raise ValueError("Too many workflow runs to inventory this campaign")
 
     def launch_missing(self, phase, batches, calibration_run=None):
         parallel = math.ceil(self.manifest["parallel_jobs"] / len(batches))
@@ -442,7 +474,7 @@ class N200Campaign:
                 continue
             inputs = {"controller": str(self.campaign), "phase": phase, "batch": str(i),
                       "parallel": str(parallel), "source_sha": self.manifest["source_sha"],
-                      "notify_n200": "yes"}
+                      f"notify_{self.dataset}": "yes"}
             if calibration_run is not None:
                 inputs["calibration_run"] = str(calibration_run)
             dispatched = self.api.json(f"{self.worker}/dispatches", {
@@ -475,7 +507,7 @@ class N200Campaign:
 
 
 def advance_n200(args):
-    campaign = N200Campaign(args.campaign, args.bundle)
+    campaign = EventCampaign(args.campaign, args.bundle, "n200")
     _, a_batches = load_batches(args.bundle, "A", None)
     campaign.launch_missing("A", a_batches)
     calibration = args.output / "calibration"
@@ -494,9 +526,53 @@ def advance_n200(args):
 
 
 def launch_n200_timed(args):
-    campaign = N200Campaign(args.campaign, args.bundle)
+    campaign = EventCampaign(args.campaign, args.bundle, "n200")
     _, batches = load_batches(args.bundle, "BCD", args.calibration)
     campaign.launch_missing("BCD", batches, calibration_run=os.environ["GITHUB_RUN_ID"])
+
+
+def advance_de(args):
+    campaign = EventCampaign(args.campaign, args.bundle, "de")
+    _, batches = load_batches(args.bundle, "DE", None)
+    campaign.launch_missing("DE", batches)
+    if not campaign.read_phase("DE", batches, args.output):
+        print("Waiting for the remaining D/E batches to publish their results.", flush=True)
+        return
+
+    baseline = read_json(args.bundle / "baseline.json")
+    write_json(args.output / "baseline.json", baseline)
+    groups = defaultdict(list)
+    for record in read_json(args.output / "records.json"):
+        task = record["task"]
+        name = task["instance"]
+        reference = baseline["instances"][name]
+        row = run_row(record["result"], {"instance": name, "customers": task["n"],
+                                        "Ti_seconds": reference["Ti_seconds"]}, "timed", "")
+        row.pop("result_json")
+        groups[name].append(row | {"cpu_model": record["cpu_model"], "image_version": record["image_version"]})
+
+    runs, summaries = [], []
+    for name in sorted(groups, key=lambda value: tuple(map(int, value.split(".")))):
+        group = sorted(groups[name], key=lambda row: (row["scenario"], row["seed"]))
+        runs.extend(group)
+        reference = baseline["instances"][name]
+        for row in summarize(group, "DE"):
+            if row["best_makespan"] is not None:
+                row["best_gap_vs_a_pct"] = 100 * (row["best_makespan"] / reference["best_makespan"] - 1)
+            if row["feasible_runs"] == row["runs"]:
+                row["mean_gap_vs_a_pct"] = 100 * (row["mean_makespan"] / reference["mean_makespan"] - 1)
+            summaries.append(row)
+    write_csv(args.output / "runs.csv", runs)
+    write_csv(args.output / "by_instance.csv", summaries)
+    scopes = {"all": summaries,
+              "6-100": [row for row in summaries if row["customers"] <= 100],
+              "N200": [row for row in summaries if row["customers"] == 200]}
+    write_csv(args.output / "table8_summary.csv", [
+        {"scope": scope, **row}
+        for scope, rows in scopes.items() for row in summarize_table(rows, "DE")
+    ])
+    with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as stream:
+        print("reported=true", file=stream)
 
 
 def report(args):
@@ -539,6 +615,7 @@ def main():
         (report, ["calibration", "timed", "output"]),
         (advance_n200, ["bundle", "campaign", "output"]),
         (launch_n200_timed, ["bundle", "campaign", "calibration"]),
+        (advance_de, ["bundle", "campaign", "output"]),
     ]:
         sub = commands.add_parser(action.__name__)
         sub.set_defaults(action=action)
@@ -546,7 +623,7 @@ def main():
             if option == "phase":
                 sub.add_argument("--phase", choices=SCENARIOS, required=True)
             elif option == "dataset":
-                sub.add_argument("--dataset", choices=("n6-n100", "n200"), default="n6-n100")
+                sub.add_argument("--dataset", choices=("n6-n100", "n200", "de"), default="n6-n100")
             elif option == "parallel_jobs" and action == build:
                 sub.add_argument("--parallel-jobs", type=int, default=20)
             else:

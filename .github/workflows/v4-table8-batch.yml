@@ -9,7 +9,7 @@ on:
         required: true
       phase:
         type: choice
-        options: [A, BCD]
+        options: [A, BCD, DE]
         required: true
       batch:
         type: number
@@ -22,6 +22,8 @@ on:
       calibration_run:
         type: string
       notify_n200:
+        type: string
+      notify_de:
         type: string
 
 permissions:
@@ -75,10 +77,10 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-  notify_n200:
-    name: Continue the N200 campaign
+  notify:
+    name: Continue the Table 8 campaign
     needs: pack
-    if: ${{ always() && !cancelled() && inputs.notify_n200 == 'yes' }}
+    if: ${{ always() && !cancelled() && (inputs.notify_n200 == 'yes' || inputs.notify_de == 'yes') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -87,11 +89,12 @@ jobs:
       - env:
           GH_TOKEN: ${{ github.token }}
           CAMPAIGN: ${{ inputs.controller }}
+          CONTROLLER: ${{ inputs.notify_de == 'yes' && 'v4-table8-de.yml' || 'v4-table8-n200.yml' }}
         run: |
           jq -n --arg ref "$GITHUB_REF_NAME" --arg campaign "$CAMPAIGN" \
             '{ref:$ref,inputs:{campaign:$campaign}}' |
             gh api --method POST -H 'X-GitHub-Api-Version: 2026-03-10' \
-              "repos/$GITHUB_REPOSITORY/actions/workflows/v4-table8-n200.yml/dispatches" --input -
+              "repos/$GITHUB_REPOSITORY/actions/workflows/$CONTROLLER/dispatches" --input -
 
   solve:
     name: Solve slot ${{ matrix.slot }}

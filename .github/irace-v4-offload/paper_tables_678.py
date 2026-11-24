@@ -326,6 +326,7 @@ def aggregate(args):
     if irace_v4:
         for row, result in zip(rows, records.values()):
             row["termination"] = result["termination"]
+            row["execution_host"] = result.get("execution_host", "local-windows")
     if rows:
         with (out/"runs.csv").open("w",newline="") as f:
             w=csv.DictWriter(f,fieldnames=list(rows[0]));w.writeheader();w.writerows(rows)
@@ -335,7 +336,8 @@ def aggregate(args):
             found=[r for r in rows if r["instance"]==inst["instance"] and r["variant"]==name]
             if {r["seed"] for r in found}==set(m["seeds"]):
                 groups[(inst["instance"],name)]={"best":min(r["makespan"] for r in found),
-                    "mean":statistics.mean(r["makespan"] for r in found),"time":statistics.mean(r["cpu_seconds"] for r in found)}
+                    "mean":statistics.mean(r["makespan"] for r in found),"time":statistics.mean(r["cpu_seconds"] for r in found),
+                    "execution_hosts": {r.get("execution_host", "local-windows") for r in found}}
     paper_v4 = m.get("algorithm_policy") in {"paper-v4", "irace-v4"}
     instance_count = len(m["instances"]) if paper_v4 else 96
     implementation = ("Paper (4) Table 5, v4 solver, Windows, and paired seeds 42–51."
@@ -354,6 +356,10 @@ def aggregate(args):
         capped = sum(row["termination"] == "time_limit" for row in rows)
         lines[3:3] = [f"Full iteration budget: {len(rows)-capped}. Feasible at the time limit: {capped}.",
                       f"Seeds: {', '.join(map(str, m['seeds']))}."]
+        if any(row["execution_host"] != "local-windows" for row in rows):
+            lines.append("CPU-time gaps use only paired instance groups measured in the same runner pool. "
+                         "Makespan results include both pools, with the same wall-clock caps.")
+            lines.append("")
     for number,(baseline,variants) in TABLES.items():
         lines += [f"## Table {number} — baseline {baseline}","",f"| Variant | Instances/{instance_count} | Best gap % | Mean gap % | CPU time gap % |","|---|---:|---:|---:|---:|"]
         table=[]
@@ -364,6 +370,10 @@ def aggregate(args):
             row = dict(variant=variant,paired_instances=len(paired),complete=len(paired)==instance_count,**gaps)
             if paper_v4:
                 cpu_pairs = [i for i in paired if groups[i,baseline]["time"] > 0 and groups[i,variant]["time"] > 0]
+                if irace_v4:
+                    cpu_pairs = [i for i in cpu_pairs
+                                 if len(groups[i, baseline]["execution_hosts"]) == 1
+                                 and groups[i, baseline]["execution_hosts"] == groups[i, variant]["execution_hosts"]]
                 row["cpu_paired_instances"] = len(cpu_pairs)
                 gaps["time"] = row["time"] = (
                     statistics.mean(100 * (groups[i,variant]["time"] / groups[i,baseline]["time"] - 1) for i in cpu_pairs)

@@ -27,7 +27,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Run one frozen v4 solver
+      - name: Verify frozen files and run one v4 solver
         shell: pwsh
         run: |
           Copy-Item -LiteralPath '.github/workload-tiebreak/inputs.zip' -Destination '.github/irace-v4-offload/bundle/inputs.zip'

@@ -1,0 +1,13 @@
+{
+  "source": "Paper revision (4), Table 5 selected values; not v4 tuning results",
+  "alpha_semantics": "terminal-to-initial temperature ratio",
+  "parameters": {
+    "cseg": 2.0, "c_tabu": 2.0, "h_mode": 1, "h_div": 4,
+    "gamma1": 1.0, "gamma2": 0.4, "gamma3": 0.1, "gamma4": 0.3,
+    "T0": 0.005, "alpha": 0.02, "rho": 0.1,
+    "kappa": 0.5, "tau_v": 0.05, "r_destroy": 0.2, "eta": 1.0
+  },
+  "synthetic_truck_capacity_kg": 70,
+  "hanoi_truck_capacity_kg": 40,
+  "eta_fixed_not_tuned": true
+}

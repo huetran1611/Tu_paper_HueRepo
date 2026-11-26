@@ -1,0 +1,470 @@
+{
+  "protocol_id": "2fab7e30f94de3cf9c5839d838967334706cda4477c24a919276786004fa20c7",
+  "kind": "doubled_retry",
+  "batches": [
+    [
+      {
+        "key": "200.20.3-mk_2x-s44",
+        "instance": "200.20.3",
+        "variant": "mk_2x",
+        "seed": 44,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 35,
+        "slot": 162
+      },
+      {
+        "key": "200.20.3-mk_tie_2x-s46",
+        "instance": "200.20.3",
+        "variant": "mk_tie_2x",
+        "seed": 46,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 35,
+        "slot": 154
+      },
+      {
+        "key": "200.20.3-mk_2x-s48",
+        "instance": "200.20.3",
+        "variant": "mk_2x",
+        "seed": 48,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 35,
+        "slot": 166
+      },
+      {
+        "key": "200.20.3-mk_tie_2x-s49",
+        "instance": "200.20.3",
+        "variant": "mk_tie_2x",
+        "seed": 49,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 35,
+        "slot": 157
+      },
+      {
+        "key": "200.20.3-mk_2x-s50",
+        "instance": "200.20.3",
+        "variant": "mk_2x",
+        "seed": 50,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 35,
+        "slot": 168
+      },
+      {
+        "key": "200.20.3-mk_2x-s51",
+        "instance": "200.20.3",
+        "variant": "mk_2x",
+        "seed": 51,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 35,
+        "slot": 169
+      },
+      {
+        "key": "200.20.4-mk_tie_2x-s44",
+        "instance": "200.20.4",
+        "variant": "mk_tie_2x",
+        "seed": 44,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 36,
+        "slot": 2
+      },
+      {
+        "key": "200.20.4-mk_2x-s45",
+        "instance": "200.20.4",
+        "variant": "mk_2x",
+        "seed": 45,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 36,
+        "slot": 13
+      },
+      {
+        "key": "200.20.4-mk_2x-s46",
+        "instance": "200.20.4",
+        "variant": "mk_2x",
+        "seed": 46,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 36,
+        "slot": 14
+      },
+      {
+        "key": "200.20.4-mk_tie_2x-s47",
+        "instance": "200.20.4",
+        "variant": "mk_tie_2x",
+        "seed": 47,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 36,
+        "slot": 5
+      },
+      {
+        "key": "200.20.4-mk_tie_2x-s50",
+        "instance": "200.20.4",
+        "variant": "mk_tie_2x",
+        "seed": 50,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 36,
+        "slot": 8
+      },
+      {
+        "key": "200.20.4-mk_2x-s51",
+        "instance": "200.20.4",
+        "variant": "mk_2x",
+        "seed": 51,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 36,
+        "slot": 19
+      },
+      {
+        "key": "200.30.1-mk_tie_2x-s42",
+        "instance": "200.30.1",
+        "variant": "mk_tie_2x",
+        "seed": 42,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 36,
+        "slot": 100
+      },
+      {
+        "key": "200.30.1-mk_2x-s44",
+        "instance": "200.30.1",
+        "variant": "mk_2x",
+        "seed": 44,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 36,
+        "slot": 112
+      },
+      {
+        "key": "200.30.1-mk_tie_2x-s45",
+        "instance": "200.30.1",
+        "variant": "mk_tie_2x",
+        "seed": 45,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 36,
+        "slot": 103
+      },
+      {
+        "key": "200.30.1-mk_2x-s46",
+        "instance": "200.30.1",
+        "variant": "mk_2x",
+        "seed": 46,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 36,
+        "slot": 114
+      },
+      {
+        "key": "200.30.1-mk_tie_2x-s48",
+        "instance": "200.30.1",
+        "variant": "mk_tie_2x",
+        "seed": 48,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 36,
+        "slot": 106
+      },
+      {
+        "key": "200.30.1-mk_2x-s49",
+        "instance": "200.30.1",
+        "variant": "mk_2x",
+        "seed": 49,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 36,
+        "slot": 117
+      },
+      {
+        "key": "200.30.1-mk_tie_2x-s51",
+        "instance": "200.30.1",
+        "variant": "mk_tie_2x",
+        "seed": 51,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 36,
+        "slot": 109
+      },
+      {
+        "key": "200.30.2-mk_tie_2x-s46",
+        "instance": "200.30.2",
+        "variant": "mk_tie_2x",
+        "seed": 46,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 36,
+        "slot": 204
+      },
+      {
+        "key": "200.30.2-mk_2x-s47",
+        "instance": "200.30.2",
+        "variant": "mk_2x",
+        "seed": 47,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 36,
+        "slot": 215
+      },
+      {
+        "key": "200.30.2-mk_2x-s48",
+        "instance": "200.30.2",
+        "variant": "mk_2x",
+        "seed": 48,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 36,
+        "slot": 216
+      },
+      {
+        "key": "200.30.2-mk_tie_2x-s49",
+        "instance": "200.30.2",
+        "variant": "mk_tie_2x",
+        "seed": 49,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 36,
+        "slot": 207
+      }
+    ],
+    [
+      {
+        "key": "200.30.3-mk_2x-s45",
+        "instance": "200.30.3",
+        "variant": "mk_2x",
+        "seed": 45,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 37,
+        "slot": 63
+      },
+      {
+        "key": "200.30.3-mk_tie_2x-s47",
+        "instance": "200.30.3",
+        "variant": "mk_tie_2x",
+        "seed": 47,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 37,
+        "slot": 55
+      },
+      {
+        "key": "200.30.3-mk_tie_2x-s50",
+        "instance": "200.30.3",
+        "variant": "mk_tie_2x",
+        "seed": 50,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 37,
+        "slot": 58
+      },
+      {
+        "key": "200.30.3-mk_2x-s51",
+        "instance": "200.30.3",
+        "variant": "mk_2x",
+        "seed": 51,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 37,
+        "slot": 69
+      },
+      {
+        "key": "200.30.4-mk_2x-s44",
+        "instance": "200.30.4",
+        "variant": "mk_2x",
+        "seed": 44,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 37,
+        "slot": 162
+      },
+      {
+        "key": "200.30.4-mk_2x-s46",
+        "instance": "200.30.4",
+        "variant": "mk_2x",
+        "seed": 46,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 37,
+        "slot": 164
+      },
+      {
+        "key": "200.30.4-mk_tie_2x-s48",
+        "instance": "200.30.4",
+        "variant": "mk_tie_2x",
+        "seed": 48,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 37,
+        "slot": 156
+      },
+      {
+        "key": "200.30.4-mk_2x-s50",
+        "instance": "200.30.4",
+        "variant": "mk_2x",
+        "seed": 50,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 37,
+        "slot": 168
+      },
+      {
+        "key": "200.30.4-mk_tie_2x-s51",
+        "instance": "200.30.4",
+        "variant": "mk_tie_2x",
+        "seed": 51,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 37,
+        "slot": 159
+      },
+      {
+        "key": "200.40.1-mk_2x-s42",
+        "instance": "200.40.1",
+        "variant": "mk_2x",
+        "seed": 42,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 38,
+        "slot": 10
+      },
+      {
+        "key": "200.40.1-mk_tie_2x-s43",
+        "instance": "200.40.1",
+        "variant": "mk_tie_2x",
+        "seed": 43,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 38,
+        "slot": 1
+      },
+      {
+        "key": "200.40.1-mk_2x-s47",
+        "instance": "200.40.1",
+        "variant": "mk_2x",
+        "seed": 47,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 38,
+        "slot": 15
+      },
+      {
+        "key": "200.40.1-mk_2x-s48",
+        "instance": "200.40.1",
+        "variant": "mk_2x",
+        "seed": 48,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 38,
+        "slot": 16
+      },
+      {
+        "key": "200.40.1-mk_tie_2x-s49",
+        "instance": "200.40.1",
+        "variant": "mk_tie_2x",
+        "seed": 49,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 38,
+        "slot": 7
+      },
+      {
+        "key": "200.40.1-mk_2x-s50",
+        "instance": "200.40.1",
+        "variant": "mk_2x",
+        "seed": 50,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 38,
+        "slot": 18
+      },
+      {
+        "key": "200.40.2-mk_2x-s42",
+        "instance": "200.40.2",
+        "variant": "mk_2x",
+        "seed": 42,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 38,
+        "slot": 110
+      },
+      {
+        "key": "200.40.2-mk_2x-s46",
+        "instance": "200.40.2",
+        "variant": "mk_2x",
+        "seed": 46,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 38,
+        "slot": 114
+      },
+      {
+        "key": "200.40.2-mk_tie_2x-s47",
+        "instance": "200.40.2",
+        "variant": "mk_tie_2x",
+        "seed": 47,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 38,
+        "slot": 105
+      },
+      {
+        "key": "200.40.2-mk_tie_2x-s50",
+        "instance": "200.40.2",
+        "variant": "mk_tie_2x",
+        "seed": 50,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 38,
+        "slot": 108
+      },
+      {
+        "key": "200.40.2-mk_2x-s51",
+        "instance": "200.40.2",
+        "variant": "mk_2x",
+        "seed": 51,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 38,
+        "slot": 119
+      },
+      {
+        "key": "200.40.3-mk_2x-s44",
+        "instance": "200.40.3",
+        "variant": "mk_2x",
+        "seed": 44,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 38,
+        "slot": 212
+      },
+      {
+        "key": "200.40.3-mk_tie_2x-s46",
+        "instance": "200.40.3",
+        "variant": "mk_tie_2x",
+        "seed": 46,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 38,
+        "slot": 204
+      },
+      {
+        "key": "200.40.3-mk_2x-s47",
+        "instance": "200.40.3",
+        "variant": "mk_2x",
+        "seed": 47,
+        "n": 200,
+        "iterations": 54000,
+        "batch": 38,
+        "slot": 215
+      }
+    ]
+  ]
+}

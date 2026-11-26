@@ -1,0 +1,89 @@
+{
+  "6": [
+    {
+      "variant": "random",
+      "paired_instances": 96,
+      "complete": true,
+      "best": 0.085531150689621,
+      "mean": 0.17247981928866762,
+      "time": 1.1390958845181793,
+      "cpu_paired_instances": 96
+    },
+    {
+      "variant": "adaptive_mk",
+      "paired_instances": 96,
+      "complete": true,
+      "best": 0.2981991937458177,
+      "mean": 0.306219303610334,
+      "time": 4.784234598326436,
+      "cpu_paired_instances": 96
+    }
+  ],
+  "7": [
+    {
+      "variant": "switch",
+      "paired_instances": 96,
+      "complete": true,
+      "best": -1.0441728442139582,
+      "mean": -2.301109471896039,
+      "time": 4.676023669861904,
+      "cpu_paired_instances": 96
+    },
+    {
+      "variant": "mk_tie",
+      "paired_instances": 96,
+      "complete": true,
+      "best": -0.3347930525977442,
+      "mean": -0.8077093123088697,
+      "time": 25.920467828270727,
+      "cpu_paired_instances": 96
+    },
+    {
+      "variant": "mk_tie_2x",
+      "paired_instances": 96,
+      "complete": true,
+      "best": -0.8870289462147701,
+      "mean": -1.6289815711369078,
+      "time": 119.04855340315292,
+      "cpu_paired_instances": 91
+    },
+    {
+      "variant": "mk_2x",
+      "paired_instances": 96,
+      "complete": true,
+      "best": -0.5603598045189142,
+      "mean": -0.7729608691024734,
+      "time": 62.98162628872732,
+      "cpu_paired_instances": 91
+    }
+  ],
+  "8": [
+    {
+      "variant": "switch_dr",
+      "paired_instances": 96,
+      "complete": true,
+      "best": -0.7525136527616008,
+      "mean": -1.6532582638132345,
+      "time": 27.823338202934675,
+      "cpu_paired_instances": 96
+    },
+    {
+      "variant": "switch_sa",
+      "paired_instances": 96,
+      "complete": true,
+      "best": -0.8856525426182653,
+      "mean": -1.7106766949373435,
+      "time": 3.082514547874242,
+      "cpu_paired_instances": 96
+    },
+    {
+      "variant": "switch_dr_sa",
+      "paired_instances": 96,
+      "complete": true,
+      "best": -1.1591793899541454,
+      "mean": -2.3242805251381333,
+      "time": 29.37897444944078,
+      "cpu_paired_instances": 95
+    }
+  ]
+}

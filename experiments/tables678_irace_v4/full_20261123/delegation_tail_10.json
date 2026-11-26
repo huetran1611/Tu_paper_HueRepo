@@ -1,0 +1,108 @@
+{
+  "protocol_id": "2fab7e30f94de3cf9c5839d838967334706cda4477c24a919276786004fa20c7",
+  "kind": "tail_transfer",
+  "batches": [
+    [
+      {
+        "key": "200.20.3-switch_dr_sa-s42",
+        "instance": "200.20.3",
+        "variant": "switch_dr_sa",
+        "seed": 42,
+        "n": 200,
+        "iterations": 27000,
+        "batch": 35,
+        "slot": 190
+      },
+      {
+        "key": "200.20.3-switch_dr_sa-s43",
+        "instance": "200.20.3",
+        "variant": "switch_dr_sa",
+        "seed": 43,
+        "n": 200,
+        "iterations": 27000,
+        "batch": 35,
+        "slot": 191
+      },
+      {
+        "key": "200.20.3-switch_dr_sa-s44",
+        "instance": "200.20.3",
+        "variant": "switch_dr_sa",
+        "seed": 44,
+        "n": 200,
+        "iterations": 27000,
+        "batch": 35,
+        "slot": 192
+      },
+      {
+        "key": "200.20.3-switch_dr_sa-s45",
+        "instance": "200.20.3",
+        "variant": "switch_dr_sa",
+        "seed": 45,
+        "n": 200,
+        "iterations": 27000,
+        "batch": 35,
+        "slot": 193
+      },
+      {
+        "key": "200.20.3-switch_dr_sa-s46",
+        "instance": "200.20.3",
+        "variant": "switch_dr_sa",
+        "seed": 46,
+        "n": 200,
+        "iterations": 27000,
+        "batch": 35,
+        "slot": 194
+      },
+      {
+        "key": "200.20.3-switch_dr_sa-s47",
+        "instance": "200.20.3",
+        "variant": "switch_dr_sa",
+        "seed": 47,
+        "n": 200,
+        "iterations": 27000,
+        "batch": 35,
+        "slot": 195
+      },
+      {
+        "key": "200.20.3-switch_dr_sa-s48",
+        "instance": "200.20.3",
+        "variant": "switch_dr_sa",
+        "seed": 48,
+        "n": 200,
+        "iterations": 27000,
+        "batch": 35,
+        "slot": 196
+      },
+      {
+        "key": "200.20.3-switch_dr_sa-s49",
+        "instance": "200.20.3",
+        "variant": "switch_dr_sa",
+        "seed": 49,
+        "n": 200,
+        "iterations": 27000,
+        "batch": 35,
+        "slot": 197
+      },
+      {
+        "key": "200.20.3-switch_dr_sa-s50",
+        "instance": "200.20.3",
+        "variant": "switch_dr_sa",
+        "seed": 50,
+        "n": 200,
+        "iterations": 27000,
+        "batch": 35,
+        "slot": 198
+      },
+      {
+        "key": "200.20.3-switch_dr_sa-s51",
+        "instance": "200.20.3",
+        "variant": "switch_dr_sa",
+        "seed": 51,
+        "n": 200,
+        "iterations": 27000,
+        "batch": 35,
+        "slot": 199
+      }
+    ]
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "based_on": "frozen v3 used by log15000_884_20261112",
+  "paper": "Paper_Tu_extended_D2D2_Parrallel (4).pdf",
+  "source_sha256": {
+    "tabubu_TimeDependent_v3.cpp": "2d70e589444be38b0bb71e40a226797fdf2dcd5d44d2161ffa3c30441c3481ce",
+    "paper_neighborhoods.hpp": "f44a725d93078ec8e31ce81d1b5154401f123d8851acca6c84317a938fd129bd"
+  },
+  "n7_exception": "all ordered distinct physical-vehicle triples, top3 insertion positions, no candidate dedup",
+  "defaults": "Paper (4) Table 5, not old v3 configuration #1987"
+}

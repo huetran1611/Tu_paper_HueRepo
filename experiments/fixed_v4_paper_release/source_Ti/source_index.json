@@ -1,0 +1,74 @@
+[
+  {
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "16645395114e4a4b6e1db379a596a9af5390ace7",
+    "path": "experiments/fixed_v4_paper_release/source_Ti/16645395114e4a4b6e1db379a596a9af5390ace7/src_v4/tabubu_TimeDependent_v4.cpp",
+    "sha256": "77b34fa96c687d0eb7324216182b1279574a9611eaec5da07010d48ba18dd8bf"
+  },
+  {
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "16645395114e4a4b6e1db379a596a9af5390ace7",
+    "path": "experiments/fixed_v4_paper_release/source_Ti/16645395114e4a4b6e1db379a596a9af5390ace7/src_v4/paper_neighborhoods.hpp",
+    "sha256": "5c1029376b027a53267350d1e2be576afa7dee0f03a23d22b87c7d3a9dffded1"
+  },
+  {
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "16645395114e4a4b6e1db379a596a9af5390ace7",
+    "path": "experiments/fixed_v4_paper_release/source_Ti/16645395114e4a4b6e1db379a596a9af5390ace7/src_v4/v4_table8.cpp",
+    "sha256": "7c3108bf49e3625ef23473d9089c77feb6319744e79cf89a274648079bf92877"
+  },
+  {
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "730f46ef0f528830a584f6cca3e3f6e1b91c2cfb",
+    "path": "experiments/fixed_v4_paper_release/source_Ti/730f46ef0f528830a584f6cca3e3f6e1b91c2cfb/src_v4/tabubu_TimeDependent_v4.cpp",
+    "sha256": "1173a2bb0eba8136d0dd1206461e9e0b30eacf545b747b3c28f6a1d9ebac9927"
+  },
+  {
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "730f46ef0f528830a584f6cca3e3f6e1b91c2cfb",
+    "path": "experiments/fixed_v4_paper_release/source_Ti/730f46ef0f528830a584f6cca3e3f6e1b91c2cfb/src_v4/paper_neighborhoods.hpp",
+    "sha256": "5c1029376b027a53267350d1e2be576afa7dee0f03a23d22b87c7d3a9dffded1"
+  },
+  {
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "730f46ef0f528830a584f6cca3e3f6e1b91c2cfb",
+    "path": "experiments/fixed_v4_paper_release/source_Ti/730f46ef0f528830a584f6cca3e3f6e1b91c2cfb/src_v4/v4_table8.cpp",
+    "sha256": "8679154e3cf059ed65656c5fef2c9d43d43b1a5d2e77b694c4e06a26db07206b"
+  },
+  {
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "2fb60590ab4af0d1efd8710701dd1a1b57d0c399",
+    "path": "experiments/fixed_v4_paper_release/source_Ti/2fb60590ab4af0d1efd8710701dd1a1b57d0c399/src_v4/tabubu_TimeDependent_v4.cpp",
+    "sha256": "6114bc8e65c66c8e4aceda7f1f55a2ac28a627fdfca4d2dbd10b45959ea35aee"
+  },
+  {
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "2fb60590ab4af0d1efd8710701dd1a1b57d0c399",
+    "path": "experiments/fixed_v4_paper_release/source_Ti/2fb60590ab4af0d1efd8710701dd1a1b57d0c399/src_v4/paper_neighborhoods.hpp",
+    "sha256": "5c1029376b027a53267350d1e2be576afa7dee0f03a23d22b87c7d3a9dffded1"
+  },
+  {
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "2fb60590ab4af0d1efd8710701dd1a1b57d0c399",
+    "path": "experiments/fixed_v4_paper_release/source_Ti/2fb60590ab4af0d1efd8710701dd1a1b57d0c399/src_v4/v4_table8.cpp",
+    "sha256": "6fc66334e55e1bec1eaa06bb2a05ba4031ee82314c70978478db90c3f0e80a01"
+  },
+  {
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "759fc33658c5dde4eff8fac728ec13e686e621de",
+    "path": "experiments/fixed_v4_paper_release/source_Ti/759fc33658c5dde4eff8fac728ec13e686e621de/src_v4/tabubu_TimeDependent_v4.cpp",
+    "sha256": "e240adc3ac6be68bf2048a88905054f8348b8ce83329ed6f861203f66ed80008"
+  },
+  {
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "759fc33658c5dde4eff8fac728ec13e686e621de",
+    "path": "experiments/fixed_v4_paper_release/source_Ti/759fc33658c5dde4eff8fac728ec13e686e621de/src_v4/paper_neighborhoods.hpp",
+    "sha256": "5c1029376b027a53267350d1e2be576afa7dee0f03a23d22b87c7d3a9dffded1"
+  },
+  {
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "759fc33658c5dde4eff8fac728ec13e686e621de",
+    "path": "experiments/fixed_v4_paper_release/source_Ti/759fc33658c5dde4eff8fac728ec13e686e621de/src_v4/v4_table8.cpp",
+    "sha256": "2c7053b6842bfcb8f588f10ac60b30d1f87016d70a6cc8db382a0c71117790c6"
+  }
+]

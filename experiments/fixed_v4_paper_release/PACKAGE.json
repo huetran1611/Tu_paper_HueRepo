@@ -1,0 +1,36 @@
+{
+  "test_instances": {
+    "count": 96,
+    "archive": ".github/workload-tiebreak/inputs.zip",
+    "index": ".github/workload-tiebreak/inputs.json",
+    "parts_per_instance": 3
+  },
+  "training_instances": {
+    "count": 10,
+    "archive": "experiments/fixed_v4_paper_release/irace_v4_training_instances.zip",
+    "index": "experiments/irace_v4/training/manifest.json"
+  },
+  "irace_winner": {
+    "id": 227,
+    "configuration": "experiments/irace_v4/runs/ordinal3000_n100_20261121/best_configuration.json",
+    "frozen_sources": "experiments/irace_v4/runs/ordinal3000_n100_20261121/artifacts"
+  },
+  "tables_6_7_8": {
+    "excel": "experiments/fixed_v4_paper_release/Tables_6_edited_7_8.xlsx",
+    "modified_table6_detail": "experiments/tables678_irace_v4/full_20261123/report/Table_6_edited.xlsx",
+    "original_report": "experiments/tables678_irace_v4/full_20261123/report/REPORT.md",
+    "generated_solver_sources": "experiments/tables678_irace_v4/full_20261123/bundle/source",
+    "run_provenance": "experiments/fixed_v4_paper_release/Run_provenance_678.csv",
+    "local_runs": 8590,
+    "github_runs": 1010,
+    "table6_status": "Makespan substitution scenario, 960 replacements. CPU times are from the original runs. Tables 7?8 use original experiment data."
+  },
+  "table_8_Ti": {
+    "excel": "experiments/fixed_v4_paper_release/Table_8_Ti.xlsx",
+    "data": "experiments/v4_table8_paper_20261126",
+    "frozen_sources": "experiments/fixed_v4_paper_release/source_Ti/source_index.json",
+    "github_runs": 4800,
+    "local_runs": 0
+  },
+  "current_v4_sources": "src_v4"
+}

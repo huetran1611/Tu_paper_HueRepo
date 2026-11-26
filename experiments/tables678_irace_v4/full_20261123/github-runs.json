@@ -1,0 +1,10 @@
+{
+  "repository": "huetran1611/Tu_paper_HueRepo",
+  "branch": "codex/irace-v4-offload-n200-20261124",
+  "commit": "36908a0b58546cf99447df51d2539d0ff450ab20",
+  "runs": {
+    "1": 45410874057,
+    "2": 45410874378,
+    "3": 45410874135
+  }
+}

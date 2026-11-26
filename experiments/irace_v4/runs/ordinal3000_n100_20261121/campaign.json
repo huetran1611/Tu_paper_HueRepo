@@ -1,0 +1,162 @@
+{
+  "schema_version": 1,
+  "budget": 3000,
+  "parallel": 20,
+  "irace_seed": 20261121,
+  "smoke": false,
+  "irace_version": "4.5",
+  "training_dir": "D:\\HueTT\\prepare for Phd\\Soict_2024_D2d2_extend\\Tu_paper_HueRepo\\experiments\\irace_v4\\training",
+  "training_manifest_sha256": "9749de0aee911682e236cb5ecd099fef77ba1c4ab601f12e5c738fb0ea0c597d",
+  "training_files": {
+    "100.10.train1.txt": "a2bb0431ce2626de8ca6bff0ec63a1227bf7da0b6e0e173cdaf60d8d9ca06782",
+    "100.10.train1.vmax_ij.txt": "4a700cbd19e84cd62b39edba7cc18f8cc909eb5190c0c35a7e21a0da3f70ac5c",
+    "100.10.train1.theta_ijl.txt": "791b9117b717a6e0f0984f172a9a58fc847671c08adba80b20465e91427f865b",
+    "100.10.train2.txt": "d4d56ad5e5e1cd474e9d6fb0d56fe8ea4df8e4931dd1789dfce6bc993232ccac",
+    "100.10.train2.vmax_ij.txt": "9a4becf7ce59ef3222350574265cbe3194e2b830217e8b5b9b39c684deca719e",
+    "100.10.train2.theta_ijl.txt": "f60ed6a64d5448c664774be374a1ccd1f8da4aa5133be775f2bbe94028ddbda1",
+    "100.20.train1.txt": "a7c2e217bb6d326e0e819037394c627eac5e0670d51930ad5482cc319361a2da",
+    "100.20.train1.vmax_ij.txt": "b9291516d81fe042cc89870e22db26da8ad5a5f683fec9613fe1544ae92d1b1c",
+    "100.20.train1.theta_ijl.txt": "764040bb04bd6a9e4997cb9fadf6a56ee02349f168b8efe65a800a88ea93d466",
+    "100.20.train2.txt": "81aa09c87c801d8cef811f0ad76c490e8187427fa622cf1417e32fa47c64aadd",
+    "100.20.train2.vmax_ij.txt": "6b77340131d2ee143f0c8f1811d6edb9b19ab807c1b0d55032d40e7186fdf76b",
+    "100.20.train2.theta_ijl.txt": "7079dfb4c62563b00aacd33070889961e1cdc90bd999155f5f98f98d273db774",
+    "100.30.train1.txt": "ef1eb72b9c498ca83b01559996406581e40e60dbfa74903ce5d3e2a13b75e6a9",
+    "100.30.train1.vmax_ij.txt": "4443bc76fbbdc0dd89868da124e006d119ca51aced58afa292516b034cb90ed9",
+    "100.30.train1.theta_ijl.txt": "c57f5a67a687a943ad06473b89c43192c1b4a3966d8cdbe10cde9ded546f2655",
+    "100.30.train2.txt": "3c3dbbd5cb22cec5c33971c4c0ea29e4e66414780a67888b595d6b6d935c722c",
+    "100.30.train2.vmax_ij.txt": "9382ced701fa5fe32c28fdc6836043c3370c82c08063666827888ef669ed519a",
+    "100.30.train2.theta_ijl.txt": "d541a8d77f1b4d38df3c087519d69390bed2f4539ea722e68ba135c887899cf0",
+    "100.40.train1.txt": "a2638f47bbb5eae1323d352655f711b95ea1b7ae763a498dca8feb5333cc6b49",
+    "100.40.train1.vmax_ij.txt": "e03725d085e6fcdd3d0524cdb40c3ed06643c5c6f554b33587d0e0de21935767",
+    "100.40.train1.theta_ijl.txt": "1b94135abf81c9593d2d4a0473fec2c7f8851f7b97fbdc1d756bc952bbba9507",
+    "100.40.train2.txt": "ffe557586db36e9bb2cfd20f56c0f2f0da144b4e08eb3da1d7117b7a75269ae6",
+    "100.40.train2.vmax_ij.txt": "a183f20b7e8726a4b3cb93977d18bce54beba105171e335183adfb096661c4f2",
+    "100.40.train2.theta_ijl.txt": "40fad9d57df2ebe354a5bd99cb7e32c0c35516f520440fe384e0213b666fa593",
+    "100.10.train3.txt": "1dfc83ade14631dac887bd7ac7338fa1022ba5477c08d7a6e617e23634ac5537",
+    "100.10.train3.vmax_ij.txt": "649f8d80168d46c4d9b6ed710c4ee936ba69239c4b32f5732a186a42ceef7efe",
+    "100.10.train3.theta_ijl.txt": "7213f6bd2003fe3c2f2b1165f39e4fa6d1cd0f079bab75bc77f067b9fe5692eb",
+    "100.20.train3.txt": "8d1d3821e4346e782e7ebf84563ff75ea0202807f7645ff0bf73b26b7626adda",
+    "100.20.train3.vmax_ij.txt": "52085296f949739a21dc6fca2b9b3971655d2577e8fdee18d4adfc890e1e73d3",
+    "100.20.train3.theta_ijl.txt": "f0b583e595104d5c791a5403aaa678a68d09efe2b5b39bb98a786d18da5bf8e3"
+  },
+  "selected_instance_names": [
+    "100.10.train1.txt",
+    "100.10.train2.txt",
+    "100.20.train1.txt",
+    "100.20.train2.txt",
+    "100.30.train1.txt",
+    "100.30.train2.txt",
+    "100.40.train1.txt",
+    "100.40.train2.txt",
+    "100.10.train3.txt",
+    "100.20.train3.txt"
+  ],
+  "selected_instance_count": 10,
+  "training_counts": {
+    "100": 10
+  },
+  "binary_name": "tabubu_TimeDependent_v4.exe",
+  "binary_sha256": "697b43f21aefba71d468d7bde3f3bdc86977d414a7ec7fac7809e51ac2fa6aa3",
+  "artifact_sha256": {
+    "domains.json": "5726498c6e207f0ca2b1a1548093c48dacddac2346e1bc89e791c77b5af71376",
+    "initial_configurations.txt": "f8214c5bb53114e9c302a64c4ffd2c2264f0c0a8fe8d437fff10499280b8291f",
+    "launch_irace.py": "0739f5285585dd3f966d8c8d981b529c543933507d839ab7dd4e504f0234745a",
+    "paper_neighborhoods.hpp": "baf8a3eb08f6bd40de3892862b53800054c1ecdf06f4522f37e7db4aadf2b646",
+    "parameters.txt": "1e515ee04187dc020352ee73e614b9feae0e30f35f85bca667fed8a7f4efe4c4",
+    "publish_checkpoint.py": "4020e9f4d5909a8d1909ac322a80f7289396a1de30000b246c3fd28f343fdd3d",
+    "run_irace.R": "bab3b40b2565a8ab2eab0a982ecc9f4a254e93e5af0d309b9dd98db9f9e8b986",
+    "tabubu_TimeDependent_v4.cpp": "a638a320324dbdb6e97f5940dfc965b15f88ef5dedf09e2a84f59d4e09bcb04b",
+    "tabubu_TimeDependent_v4.exe": "697b43f21aefba71d468d7bde3f3bdc86977d414a7ec7fac7809e51ac2fa6aa3",
+    "target_runner.py": "77687c8408bfad5333ccc5a883127b148b989705f136ee717b0eff676b2ee661",
+    "training_manifest.json": "9749de0aee911682e236cb5ecd099fef77ba1c4ab601f12e5c738fb0ea0c597d",
+    "train_instances.txt": "b253417212e56cd8865770288fddcc26374957a712d132fa691f3ab9730876a7"
+  },
+  "process_caps_seconds": {
+    "200": 7200,
+    "500": 10800
+  },
+  "all_components_enabled": true,
+  "sampling_policy": {
+    "tuned": {
+      "cseg": [
+        0.5,
+        1,
+        1.5,
+        2,
+        3,
+        4
+      ],
+      "h_gap": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "T0": [
+        0.0005,
+        0.001,
+        0.002,
+        0.005,
+        0.01,
+        0.02,
+        0.05
+      ],
+      "alpha": [
+        0.001,
+        0.002,
+        0.005,
+        0.01,
+        0.02,
+        0.05,
+        0.1
+      ],
+      "rho": [
+        0.01,
+        0.02,
+        0.03,
+        0.05,
+        0.1,
+        0.2,
+        0.3
+      ],
+      "kappa": [
+        0.1,
+        0.2,
+        0.3,
+        0.5,
+        0.7,
+        1,
+        1.5
+      ],
+      "tau_v": [
+        0.005,
+        0.01,
+        0.02,
+        0.05,
+        0.1,
+        0.2,
+        0.5
+      ],
+      "r_destroy": [
+        0.05,
+        0.1,
+        0.15,
+        0.2,
+        0.25,
+        0.3,
+        0.35,
+        0.4
+      ]
+    },
+    "fixed": {
+      "c_tabu": 2.5,
+      "h_mode": 1,
+      "gamma1": 1.0,
+      "gamma2": 0.45,
+      "gamma3": 0.4,
+      "gamma4": 0.35,
+      "eta": 1.0
+    }
+  },
+  "created_unix": 1795273432.0588243
+}

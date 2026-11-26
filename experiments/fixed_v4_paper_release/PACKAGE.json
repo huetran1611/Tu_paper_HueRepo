@@ -23,14 +23,17 @@
     "run_provenance": "experiments/fixed_v4_paper_release/Run_provenance_678.csv",
     "local_runs": 8590,
     "github_runs": 1010,
-    "table6_status": "Makespan substitution scenario, 960 replacements. CPU times are from the original runs. Tables 7?8 use original experiment data."
+    "table6_status": "Makespan substitution scenario, 960 replacements. CPU times are from the original runs. Tables 7?8 use original experiment data.",
+    "excel_with_table_8_Ti": "experiments/fixed_v4_paper_release/Tables_6_edited_7_8_with_Ti.xlsx"
   },
   "table_8_Ti": {
     "excel": "experiments/fixed_v4_paper_release/Table_8_Ti.xlsx",
     "data": "experiments/v4_table8_paper_20261126",
     "frozen_sources": "experiments/fixed_v4_paper_release/source_Ti/source_index.json",
     "github_runs": 4800,
-    "local_runs": 0
+    "local_runs": 0,
+    "solution_sheet": "Runs",
+    "combined_workbook_sheet": "Table 8 Ti runs"
   },
   "current_v4_sources": "src_v4"
 }

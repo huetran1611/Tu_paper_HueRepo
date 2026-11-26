@@ -1,0 +1,134 @@
+name: V4 Table 8 batch
+run-name: V4T8 ${{ inputs.controller }} ${{ inputs.phase }} ${{ inputs.batch }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      controller:
+        type: string
+        required: true
+      phase:
+        type: choice
+        options: [A, BCD]
+        required: true
+      batch:
+        type: number
+        required: true
+      parallel:
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      parallel: ${{ steps.plan.outputs.parallel }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts
+      - uses: actions/download-artifact@v4
+        with:
+          name: v4-table8-bundle
+          run-id: ${{ inputs.controller }}
+          github-token: ${{ github.token }}
+          path: bundle
+      - uses: actions/download-artifact@v4
+        if: inputs.phase == 'BCD'
+        with:
+          name: v4-table8-calibration
+          run-id: ${{ inputs.controller }}
+          github-token: ${{ github.token }}
+          path: calibration
+      - name: Prepare files and matrix for this batch
+        id: plan
+        env:
+          PHASE: ${{ inputs.phase }}
+          BATCH: ${{ inputs.batch }}
+          PARALLEL: ${{ inputs.parallel }}
+        run: |
+          python3 scripts/v4_table8_actions.py prepare --bundle bundle --phase "$PHASE" \
+            --batch "$BATCH" --calibration calibration --source-sha "$GITHUB_SHA" \
+            --parallel "$PARALLEL" --output runtime
+          cp scripts/v4_table8_actions.py scripts/run_v4_table8.py runtime/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v4-table8-runtime
+          path: runtime/
+          compression-level: 0
+          overwrite: true
+          if-no-files-found: error
+          retention-days: 30
+
+  solve:
+    name: Solve slot ${{ matrix.slot }}
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    permissions: {}
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJSON(needs.prepare.outputs.parallel) }}
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    env:
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: v4-table8-runtime
+          path: runtime
+      - name: Run exactly one solver process
+        env:
+          SLOT: ${{ matrix.slot }}
+        run: |
+          chmod +x runtime/solver
+          python3 runtime/v4_table8_actions.py solve --runtime runtime --slot "$SLOT" --output result
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v4-table8-slot-${{ matrix.slot }}
+          path: result/slot-${{ matrix.slot }}.json
+          overwrite: true
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: v4-table8-error-${{ matrix.slot }}-${{ github.run_attempt }}
+          path: |
+            result/stderr.log
+            result/result.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+  pack:
+    name: Publish one result artifact for this batch
+    needs: [prepare, solve]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions: {}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: v4-table8-runtime
+          path: runtime
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: v4-table8-slot-*
+          merge-multiple: true
+          path: records
+      - run: python3 runtime/v4_table8_actions.py pack --runtime runtime --records records --output packed.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v4-table8-packed-${{ github.run_attempt }}
+          path: packed.json
+          if-no-files-found: error
+          retention-days: 30

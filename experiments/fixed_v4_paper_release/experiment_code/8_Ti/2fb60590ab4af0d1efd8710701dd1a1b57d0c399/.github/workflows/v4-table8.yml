@@ -1,0 +1,127 @@
+name: V4 Table 8 (6–100 customers)
+run-name: V4 Table 8 campaign ${{ github.run_id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      parallel_jobs:
+        description: Target solver concurrency across worker batches, rounded up per batch
+        type: number
+        default: 20
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: v4-table8-n6-n100
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Freeze solver, parameters and data
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - id: frozen
+        uses: actions/download-artifact@v4
+        if: github.run_attempt > 1
+        continue-on-error: true
+        with:
+          name: v4-table8-bundle
+          path: frozen-bundle
+      - uses: actions/checkout@v5
+        if: steps.frozen.outcome != 'success'
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/v4-table8-irace.json
+            /.github/workload-tiebreak/
+            /scripts/v4_table8_actions.py
+            /scripts/run_v4_table8.py
+            /src_v4/*.cpp
+            /src_v4/*.hpp
+      - if: steps.frozen.outcome != 'success'
+        run: python3 scripts/v4_table8_actions.py build --bundle bundle --source-sha "$GITHUB_SHA"
+      - uses: actions/upload-artifact@v4
+        if: steps.frozen.outcome != 'success'
+        with:
+          name: v4-table8-bundle
+          path: bundle/
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 30
+
+  calibrate:
+    name: Run A and compute per-instance Ti
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts
+      - uses: actions/download-artifact@v4
+        with:
+          name: v4-table8-bundle
+          path: bundle
+      - name: Dispatch and collect the A batches
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PARALLEL_JOBS: ${{ inputs.parallel_jobs }}
+        run: |
+          python3 -u scripts/v4_table8_actions.py orchestrate --bundle bundle --phase A \
+            --parallel-jobs "$PARALLEL_JOBS" --output calibration
+          python3 scripts/v4_table8_actions.py calibrate --bundle bundle --output calibration
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v4-table8-calibration
+          path: calibration/
+          overwrite: true
+          if-no-files-found: error
+          retention-days: 30
+
+  timed:
+    name: Run B, C and D and produce Table 8
+    needs: calibrate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts
+      - uses: actions/download-artifact@v4
+        with:
+          name: v4-table8-bundle
+          path: bundle
+      - uses: actions/download-artifact@v4
+        with:
+          name: v4-table8-calibration
+          path: calibration
+      - name: Dispatch and collect the timed batches
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PARALLEL_JOBS: ${{ inputs.parallel_jobs }}
+        run: |
+          python3 -u scripts/v4_table8_actions.py orchestrate --bundle bundle --phase BCD \
+            --calibration calibration --parallel-jobs "$PARALLEL_JOBS" --output timed
+          python3 scripts/v4_table8_actions.py report --calibration calibration --timed timed --output report
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v4-table8-report
+          path: |
+            report/
+            calibration/
+            timed/
+          overwrite: true
+          if-no-files-found: error
+          retention-days: 30

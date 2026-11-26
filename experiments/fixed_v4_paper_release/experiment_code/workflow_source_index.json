@@ -1,0 +1,722 @@
+[
+  {
+    "experiment": "678",
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "36908a0b58546cf99447df51d2539d0ff450ab20",
+    "original_path": ".github/irace-v4-offload/jobs.json",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/678/36908a0b58546cf99447df51d2539d0ff450ab20/.github/irace-v4-offload/jobs.json",
+    "sha256": "4ee101202c93014c910951d4e9e87d0fc95d6d95229d0f4b6eb4cfb5a93fbc3e"
+  },
+  {
+    "experiment": "678",
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "36908a0b58546cf99447df51d2539d0ff450ab20",
+    "original_path": ".github/irace-v4-offload/paper_tables_678.py",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/678/36908a0b58546cf99447df51d2539d0ff450ab20/.github/irace-v4-offload/paper_tables_678.py",
+    "sha256": "6f3ce4b7725f50dcb487f6247b0d022dcbdb0e8131c1751be26316a4d29d2944"
+  },
+  {
+    "experiment": "678",
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "36908a0b58546cf99447df51d2539d0ff450ab20",
+    "original_path": ".github/irace-v4-offload/run_one.py",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/678/36908a0b58546cf99447df51d2539d0ff450ab20/.github/irace-v4-offload/run_one.py",
+    "sha256": "475fe5cd4608508e1423bafb1677b0751a68c2fbc5462d6e976f2c02eeb6b2f7"
+  },
+  {
+    "experiment": "678",
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "36908a0b58546cf99447df51d2539d0ff450ab20",
+    "original_path": ".github/irace-v4-offload/run_tables678_local.py",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/678/36908a0b58546cf99447df51d2539d0ff450ab20/.github/irace-v4-offload/run_tables678_local.py",
+    "sha256": "7b81e2857c50b2fcbf2d6dcdcc9840884efb892f85cedf110bb09a7ecbf01f80"
+  },
+  {
+    "experiment": "678",
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "36908a0b58546cf99447df51d2539d0ff450ab20",
+    "original_path": ".github/workflows/irace-v4-offload-1.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/678/36908a0b58546cf99447df51d2539d0ff450ab20/.github/workflows/irace-v4-offload-1.yml",
+    "sha256": "a6c3e751538c26f434870e391e6c49c3c4e7dfd29dad18ffa8b55c58c633a49b"
+  },
+  {
+    "experiment": "678",
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "36908a0b58546cf99447df51d2539d0ff450ab20",
+    "original_path": ".github/workflows/irace-v4-offload-2.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/678/36908a0b58546cf99447df51d2539d0ff450ab20/.github/workflows/irace-v4-offload-2.yml",
+    "sha256": "ff7dc492b6419c2b89c47d83d27f8caa1895d4382eb5cac8d84ec2f1b7fdaaac"
+  },
+  {
+    "experiment": "678",
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "36908a0b58546cf99447df51d2539d0ff450ab20",
+    "original_path": ".github/workflows/irace-v4-offload-3.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/678/36908a0b58546cf99447df51d2539d0ff450ab20/.github/workflows/irace-v4-offload-3.yml",
+    "sha256": "9cd92a5bf9b28666c2d8fb231706e3afa2bb413b3e9cb9283b342ecda1046dcb"
+  },
+  {
+    "experiment": "678",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "33f367c874de584408b2e95ccb44f90d12f3f4f4",
+    "original_path": ".github/irace-v4-offload-400/jobs.json",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/678/33f367c874de584408b2e95ccb44f90d12f3f4f4/.github/irace-v4-offload-400/jobs.json",
+    "sha256": "f4f7e360cc1a40cffd39d47b9c9899ef94dd978c552359227ecf77aa0bf83d84"
+  },
+  {
+    "experiment": "678",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "33f367c874de584408b2e95ccb44f90d12f3f4f4",
+    "original_path": ".github/irace-v4-offload-400/paper_tables_678.py",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/678/33f367c874de584408b2e95ccb44f90d12f3f4f4/.github/irace-v4-offload-400/paper_tables_678.py",
+    "sha256": "6f3ce4b7725f50dcb487f6247b0d022dcbdb0e8131c1751be26316a4d29d2944"
+  },
+  {
+    "experiment": "678",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "33f367c874de584408b2e95ccb44f90d12f3f4f4",
+    "original_path": ".github/irace-v4-offload-400/run_one.py",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/678/33f367c874de584408b2e95ccb44f90d12f3f4f4/.github/irace-v4-offload-400/run_one.py",
+    "sha256": "6d13e572ae085a06d9cbeaf6dc28a5a7ffe34f24c8856f079158db4ca756e048"
+  },
+  {
+    "experiment": "678",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "33f367c874de584408b2e95ccb44f90d12f3f4f4",
+    "original_path": ".github/irace-v4-offload-400/run_tables678_local.py",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/678/33f367c874de584408b2e95ccb44f90d12f3f4f4/.github/irace-v4-offload-400/run_tables678_local.py",
+    "sha256": "c1d2f76834213308628e6fc61800fffdbc77b9f43a1da9f4f0b45be562978716"
+  },
+  {
+    "experiment": "678",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "33f367c874de584408b2e95ccb44f90d12f3f4f4",
+    "original_path": ".github/workflows/irace-v4-offload-400-1.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/678/33f367c874de584408b2e95ccb44f90d12f3f4f4/.github/workflows/irace-v4-offload-400-1.yml",
+    "sha256": "5f2e28fa42be4c08f67fc40e77a3332fa03c55f0a9f93da6563690b624b70ebf"
+  },
+  {
+    "experiment": "678",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "33f367c874de584408b2e95ccb44f90d12f3f4f4",
+    "original_path": ".github/workflows/irace-v4-offload-400-2.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/678/33f367c874de584408b2e95ccb44f90d12f3f4f4/.github/workflows/irace-v4-offload-400-2.yml",
+    "sha256": "9583a0dbcca47d96e1290e230a279e94c37c0260abd9f46bfc520629b6e18b61"
+  },
+  {
+    "experiment": "678",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "f0f9623a3909e87853700a408115180cb218b3b7",
+    "original_path": ".github/irace-v4-offload-retry/jobs.json",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/678/f0f9623a3909e87853700a408115180cb218b3b7/.github/irace-v4-offload-retry/jobs.json",
+    "sha256": "2a4780aa83bdaa2c0b495ecddc4fc62d541754f9f619dd5de9f910c7f5061933"
+  },
+  {
+    "experiment": "678",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "f0f9623a3909e87853700a408115180cb218b3b7",
+    "original_path": ".github/irace-v4-offload-retry/paper_tables_678.py",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/678/f0f9623a3909e87853700a408115180cb218b3b7/.github/irace-v4-offload-retry/paper_tables_678.py",
+    "sha256": "6f3ce4b7725f50dcb487f6247b0d022dcbdb0e8131c1751be26316a4d29d2944"
+  },
+  {
+    "experiment": "678",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "f0f9623a3909e87853700a408115180cb218b3b7",
+    "original_path": ".github/irace-v4-offload-retry/run_one.py",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/678/f0f9623a3909e87853700a408115180cb218b3b7/.github/irace-v4-offload-retry/run_one.py",
+    "sha256": "42a10cbac9f71fba8b270a299bc124cdd396b65049445ebeca0ad22f5ec985ea"
+  },
+  {
+    "experiment": "678",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "f0f9623a3909e87853700a408115180cb218b3b7",
+    "original_path": ".github/irace-v4-offload-retry/run_tables678_local.py",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/678/f0f9623a3909e87853700a408115180cb218b3b7/.github/irace-v4-offload-retry/run_tables678_local.py",
+    "sha256": "c1d2f76834213308628e6fc61800fffdbc77b9f43a1da9f4f0b45be562978716"
+  },
+  {
+    "experiment": "678",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "f0f9623a3909e87853700a408115180cb218b3b7",
+    "original_path": ".github/workflows/irace-v4-offload-retry-1.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/678/f0f9623a3909e87853700a408115180cb218b3b7/.github/workflows/irace-v4-offload-retry-1.yml",
+    "sha256": "94093aaf2c7c864688f6b460b748bdf02b9ad57030b8794d78e5bdc872fd869a"
+  },
+  {
+    "experiment": "678",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "f0f9623a3909e87853700a408115180cb218b3b7",
+    "original_path": ".github/workflows/irace-v4-offload-retry-2.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/678/f0f9623a3909e87853700a408115180cb218b3b7/.github/workflows/irace-v4-offload-retry-2.yml",
+    "sha256": "60a411c25d49ac92d05fa0d0512dd6bfc911b6d564d5bc562751772b840166a0"
+  },
+  {
+    "experiment": "678",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "f0f9623a3909e87853700a408115180cb218b3b7",
+    "original_path": ".github/workflows/irace-v4-offload-retry-3.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/678/f0f9623a3909e87853700a408115180cb218b3b7/.github/workflows/irace-v4-offload-retry-3.yml",
+    "sha256": "a652b0d122c21acae06a408fe61560b54af6fea6e4e62ab063060a7298578786"
+  },
+  {
+    "experiment": "678",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "f0f9623a3909e87853700a408115180cb218b3b7",
+    "original_path": ".github/workflows/irace-v4-offload-retry-4.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/678/f0f9623a3909e87853700a408115180cb218b3b7/.github/workflows/irace-v4-offload-retry-4.yml",
+    "sha256": "168491699ee212a8a943904c1b0c05c5f2ff27ccc3f803ccc64be12ca2611d20"
+  },
+  {
+    "experiment": "678",
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "d14df2784328ada98855cc5dfb448b2e1f173aab",
+    "original_path": ".github/irace-v4-offload-retry/jobs.json",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/678/d14df2784328ada98855cc5dfb448b2e1f173aab/.github/irace-v4-offload-retry/jobs.json",
+    "sha256": "812ae2e7198b8c26d7cc36f19f6bfb3bf6f44460ae3f39771156903891dd55dc"
+  },
+  {
+    "experiment": "678",
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "d14df2784328ada98855cc5dfb448b2e1f173aab",
+    "original_path": ".github/irace-v4-offload-retry/paper_tables_678.py",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/678/d14df2784328ada98855cc5dfb448b2e1f173aab/.github/irace-v4-offload-retry/paper_tables_678.py",
+    "sha256": "6f3ce4b7725f50dcb487f6247b0d022dcbdb0e8131c1751be26316a4d29d2944"
+  },
+  {
+    "experiment": "678",
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "d14df2784328ada98855cc5dfb448b2e1f173aab",
+    "original_path": ".github/irace-v4-offload-retry/run_one.py",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/678/d14df2784328ada98855cc5dfb448b2e1f173aab/.github/irace-v4-offload-retry/run_one.py",
+    "sha256": "42a10cbac9f71fba8b270a299bc124cdd396b65049445ebeca0ad22f5ec985ea"
+  },
+  {
+    "experiment": "678",
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "d14df2784328ada98855cc5dfb448b2e1f173aab",
+    "original_path": ".github/irace-v4-offload-retry/run_tables678_local.py",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/678/d14df2784328ada98855cc5dfb448b2e1f173aab/.github/irace-v4-offload-retry/run_tables678_local.py",
+    "sha256": "c1d2f76834213308628e6fc61800fffdbc77b9f43a1da9f4f0b45be562978716"
+  },
+  {
+    "experiment": "678",
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "d14df2784328ada98855cc5dfb448b2e1f173aab",
+    "original_path": ".github/workflows/irace-v4-offload-retry-1.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/678/d14df2784328ada98855cc5dfb448b2e1f173aab/.github/workflows/irace-v4-offload-retry-1.yml",
+    "sha256": "7fac69ae3ec96fdae3526eddcbbe8204d221e8a5622470abba68c445a7fd753c"
+  },
+  {
+    "experiment": "678",
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "d14df2784328ada98855cc5dfb448b2e1f173aab",
+    "original_path": ".github/workflows/irace-v4-offload-retry-2.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/678/d14df2784328ada98855cc5dfb448b2e1f173aab/.github/workflows/irace-v4-offload-retry-2.yml",
+    "sha256": "b36d82325457f68def5f8b0a7e2a36a0d093153d49700f2b62ca9661c2ab2326"
+  },
+  {
+    "experiment": "678",
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "73ab4824b281c86b2e46e8851f010a7ef1a758b0",
+    "original_path": ".github/irace-v4-offload-tail-10/jobs.json",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/678/73ab4824b281c86b2e46e8851f010a7ef1a758b0/.github/irace-v4-offload-tail-10/jobs.json",
+    "sha256": "0cd9258ef89a20ef9a105899c85e903f19cabac2f6c0fcde33cfba1dd49f2da2"
+  },
+  {
+    "experiment": "678",
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "73ab4824b281c86b2e46e8851f010a7ef1a758b0",
+    "original_path": ".github/irace-v4-offload-tail-10/paper_tables_678.py",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/678/73ab4824b281c86b2e46e8851f010a7ef1a758b0/.github/irace-v4-offload-tail-10/paper_tables_678.py",
+    "sha256": "6f3ce4b7725f50dcb487f6247b0d022dcbdb0e8131c1751be26316a4d29d2944"
+  },
+  {
+    "experiment": "678",
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "73ab4824b281c86b2e46e8851f010a7ef1a758b0",
+    "original_path": ".github/irace-v4-offload-tail-10/run_one.py",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/678/73ab4824b281c86b2e46e8851f010a7ef1a758b0/.github/irace-v4-offload-tail-10/run_one.py",
+    "sha256": "87ae1943d336e5100d69ddef14ee909405a0a809577ab87a47f10b4c9b898fc3"
+  },
+  {
+    "experiment": "678",
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "73ab4824b281c86b2e46e8851f010a7ef1a758b0",
+    "original_path": ".github/irace-v4-offload-tail-10/run_tables678_local.py",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/678/73ab4824b281c86b2e46e8851f010a7ef1a758b0/.github/irace-v4-offload-tail-10/run_tables678_local.py",
+    "sha256": "c1d2f76834213308628e6fc61800fffdbc77b9f43a1da9f4f0b45be562978716"
+  },
+  {
+    "experiment": "678",
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "73ab4824b281c86b2e46e8851f010a7ef1a758b0",
+    "original_path": ".github/workflows/irace-v4-offload-tail-10-1.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/678/73ab4824b281c86b2e46e8851f010a7ef1a758b0/.github/workflows/irace-v4-offload-tail-10-1.yml",
+    "sha256": "03146219be5e473d4057cef9930e0623f5de6f43163ad5a46cc0a9eca41202cb"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "16645395114e4a4b6e1db379a596a9af5390ace7",
+    "original_path": ".github/v4-table8-de-baseline.json",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/16645395114e4a4b6e1db379a596a9af5390ace7/.github/v4-table8-de-baseline.json",
+    "sha256": "e0c7252a9c38a06f296219a2bf5022f66817382cf97bf58eda3a906501788051"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "16645395114e4a4b6e1db379a596a9af5390ace7",
+    "original_path": ".github/v4-table8-irace.json",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/16645395114e4a4b6e1db379a596a9af5390ace7/.github/v4-table8-irace.json",
+    "sha256": "bf3ee8feed4b7b58d8260173b52d5a17421aece67c4a0c15d02732fb719e9ed8"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "16645395114e4a4b6e1db379a596a9af5390ace7",
+    "original_path": ".github/workflows/v4-table8-de-transfer-00.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/16645395114e4a4b6e1db379a596a9af5390ace7/.github/workflows/v4-table8-de-transfer-00.yml",
+    "sha256": "03759d16298a555d77be428b291e7eaf9ff8c4c42d0aa48bb571252177e8a270"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "16645395114e4a4b6e1db379a596a9af5390ace7",
+    "original_path": ".github/workflows/v4-table8-de-transfer-01.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/16645395114e4a4b6e1db379a596a9af5390ace7/.github/workflows/v4-table8-de-transfer-01.yml",
+    "sha256": "1e3bf1abc1ed21ac0a749e74277eb4c976e2cdc91f4ed7cbd1067f8ccb29cda6"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "16645395114e4a4b6e1db379a596a9af5390ace7",
+    "original_path": ".github/workflows/v4-table8-de-transfer-02.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/16645395114e4a4b6e1db379a596a9af5390ace7/.github/workflows/v4-table8-de-transfer-02.yml",
+    "sha256": "f306fd948a1120a357f95134a647f6ecb580b68ac4d510791793f0de0c709d89"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "16645395114e4a4b6e1db379a596a9af5390ace7",
+    "original_path": ".github/workflows/v4-table8-de-transfer-03.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/16645395114e4a4b6e1db379a596a9af5390ace7/.github/workflows/v4-table8-de-transfer-03.yml",
+    "sha256": "e8417b11cba9c72399e9f994076b997a01358a1ead697ebef88a9133a63be4ef"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "16645395114e4a4b6e1db379a596a9af5390ace7",
+    "original_path": ".github/workflows/v4-table8-de-transfer-04.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/16645395114e4a4b6e1db379a596a9af5390ace7/.github/workflows/v4-table8-de-transfer-04.yml",
+    "sha256": "7ec4c370278266a70b2f24ca5535cd4ba01700ebb0fdcf1c595a4c773eb3f745"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "16645395114e4a4b6e1db379a596a9af5390ace7",
+    "original_path": ".github/workflows/v4-table8-de-transfer-05.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/16645395114e4a4b6e1db379a596a9af5390ace7/.github/workflows/v4-table8-de-transfer-05.yml",
+    "sha256": "8282d38c047a385514f210bd9bb92915ce492c5fe31a20e1e061b6b764f89695"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "16645395114e4a4b6e1db379a596a9af5390ace7",
+    "original_path": ".github/workflows/v4-table8-de-transfer-06.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/16645395114e4a4b6e1db379a596a9af5390ace7/.github/workflows/v4-table8-de-transfer-06.yml",
+    "sha256": "ab38f591c72b92f82d3efca411d5c4f7bc010305a31a0e3dcd73143a1e321728"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "16645395114e4a4b6e1db379a596a9af5390ace7",
+    "original_path": ".github/workflows/v4-table8-de-transfer-07.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/16645395114e4a4b6e1db379a596a9af5390ace7/.github/workflows/v4-table8-de-transfer-07.yml",
+    "sha256": "a82bf9684bd9f3f7df3d1a63c355a08ef2f0cb1addd7eb723c0e57a03926b941"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "16645395114e4a4b6e1db379a596a9af5390ace7",
+    "original_path": ".github/workflows/v4-table8-de-transfer-08.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/16645395114e4a4b6e1db379a596a9af5390ace7/.github/workflows/v4-table8-de-transfer-08.yml",
+    "sha256": "56bd040533bddb4a87c92ccdf698dad529939c559953a0cf62ba8766b74391de"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "16645395114e4a4b6e1db379a596a9af5390ace7",
+    "original_path": ".github/workflows/v4-table8-de-transfer-09.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/16645395114e4a4b6e1db379a596a9af5390ace7/.github/workflows/v4-table8-de-transfer-09.yml",
+    "sha256": "2d20cd989096db20ebd5e642d251fa84c0b8d78ca56178010bbe717ad868a504"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "16645395114e4a4b6e1db379a596a9af5390ace7",
+    "original_path": ".github/workflows/v4-table8-de-transfer-worker.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/16645395114e4a4b6e1db379a596a9af5390ace7/.github/workflows/v4-table8-de-transfer-worker.yml",
+    "sha256": "6f047603327ec0c51ca57f388807a1901a19d73c264b47ccc18650d4cdcf02eb"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "16645395114e4a4b6e1db379a596a9af5390ace7",
+    "original_path": "scripts/download_paper_bundle.py",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/16645395114e4a4b6e1db379a596a9af5390ace7/scripts/download_paper_bundle.py",
+    "sha256": "b99b44a55a270837226830cca1ae8e5f033006a2b5dbb18fb37a9a9237d55034"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "16645395114e4a4b6e1db379a596a9af5390ace7",
+    "original_path": "scripts/run_v4_table8.py",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/16645395114e4a4b6e1db379a596a9af5390ace7/scripts/run_v4_table8.py",
+    "sha256": "d95f2150e17955af8b77133897030279842de09f74bb695c7c4c838d8e5b61b2"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "16645395114e4a4b6e1db379a596a9af5390ace7",
+    "original_path": "scripts/v4_table8_actions.py",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/16645395114e4a4b6e1db379a596a9af5390ace7/scripts/v4_table8_actions.py",
+    "sha256": "1fb606e4f645e9d3af504333638556000c43e6d4ce2f6ba3f4dd8d96bc6988dd"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "16645395114e4a4b6e1db379a596a9af5390ace7",
+    "original_path": "scripts/v4_table8_de_transfer.py",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/16645395114e4a4b6e1db379a596a9af5390ace7/scripts/v4_table8_de_transfer.py",
+    "sha256": "f003e75d1dab6efaae5353937300daa379c7b3d815a32538b94846718f401e09"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "730f46ef0f528830a584f6cca3e3f6e1b91c2cfb",
+    "original_path": ".github/v4-table8-de-baseline.json",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/730f46ef0f528830a584f6cca3e3f6e1b91c2cfb/.github/v4-table8-de-baseline.json",
+    "sha256": "e0c7252a9c38a06f296219a2bf5022f66817382cf97bf58eda3a906501788051"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "730f46ef0f528830a584f6cca3e3f6e1b91c2cfb",
+    "original_path": ".github/v4-table8-irace.json",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/730f46ef0f528830a584f6cca3e3f6e1b91c2cfb/.github/v4-table8-irace.json",
+    "sha256": "bf3ee8feed4b7b58d8260173b52d5a17421aece67c4a0c15d02732fb719e9ed8"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "730f46ef0f528830a584f6cca3e3f6e1b91c2cfb",
+    "original_path": ".github/workflows/v4-table8-d-paper-transfer-00.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/730f46ef0f528830a584f6cca3e3f6e1b91c2cfb/.github/workflows/v4-table8-d-paper-transfer-00.yml",
+    "sha256": "e77012a2794137258475966d220b7c51fed033aa7c637d1fb6936e30099bf201"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "730f46ef0f528830a584f6cca3e3f6e1b91c2cfb",
+    "original_path": ".github/workflows/v4-table8-d-paper-transfer-01.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/730f46ef0f528830a584f6cca3e3f6e1b91c2cfb/.github/workflows/v4-table8-d-paper-transfer-01.yml",
+    "sha256": "971f043e49722a937c90310685251b9e94862985d25e80adbd8884a2ed985dd0"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "730f46ef0f528830a584f6cca3e3f6e1b91c2cfb",
+    "original_path": ".github/workflows/v4-table8-d-paper-transfer-02.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/730f46ef0f528830a584f6cca3e3f6e1b91c2cfb/.github/workflows/v4-table8-d-paper-transfer-02.yml",
+    "sha256": "7f106cfddc279bf39ceb04d1619d4acf7bc05e634d2c6aae6ed33cb5d0fedd6e"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "730f46ef0f528830a584f6cca3e3f6e1b91c2cfb",
+    "original_path": ".github/workflows/v4-table8-d-paper-transfer-03.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/730f46ef0f528830a584f6cca3e3f6e1b91c2cfb/.github/workflows/v4-table8-d-paper-transfer-03.yml",
+    "sha256": "f617d7b3618b33e802d749a9a3d2e10fe53ac165533a6422867db74881aa3ecd"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "730f46ef0f528830a584f6cca3e3f6e1b91c2cfb",
+    "original_path": ".github/workflows/v4-table8-d-paper-transfer-04.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/730f46ef0f528830a584f6cca3e3f6e1b91c2cfb/.github/workflows/v4-table8-d-paper-transfer-04.yml",
+    "sha256": "869bf0549ebe3d84631dd45c8974a8361e1d5dad3cf9ca700d7e8c7c3f97c3ea"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "730f46ef0f528830a584f6cca3e3f6e1b91c2cfb",
+    "original_path": ".github/workflows/v4-table8-d-paper-transfer-05.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/730f46ef0f528830a584f6cca3e3f6e1b91c2cfb/.github/workflows/v4-table8-d-paper-transfer-05.yml",
+    "sha256": "160a0d4343e9e75a300cdeb7aa6236b043b8b2e6ecdd8abdb86b4dd929d6d18c"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "730f46ef0f528830a584f6cca3e3f6e1b91c2cfb",
+    "original_path": ".github/workflows/v4-table8-d-paper-transfer-06.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/730f46ef0f528830a584f6cca3e3f6e1b91c2cfb/.github/workflows/v4-table8-d-paper-transfer-06.yml",
+    "sha256": "8435f212a0dbfbd913c48b82cc79a9aecdccfdd44f8cee33bcdbf18399b3887f"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "730f46ef0f528830a584f6cca3e3f6e1b91c2cfb",
+    "original_path": ".github/workflows/v4-table8-d-paper-transfer-07.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/730f46ef0f528830a584f6cca3e3f6e1b91c2cfb/.github/workflows/v4-table8-d-paper-transfer-07.yml",
+    "sha256": "e361dd0f037e06763dbe6b326b9f9bd5d7e8d81dbafb60472a0cf0b770a4cb84"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "730f46ef0f528830a584f6cca3e3f6e1b91c2cfb",
+    "original_path": ".github/workflows/v4-table8-d-paper-transfer-08.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/730f46ef0f528830a584f6cca3e3f6e1b91c2cfb/.github/workflows/v4-table8-d-paper-transfer-08.yml",
+    "sha256": "ba72eaf140d43763ac37988158275384ef20df705f236394420d10d33a49a261"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "730f46ef0f528830a584f6cca3e3f6e1b91c2cfb",
+    "original_path": ".github/workflows/v4-table8-d-paper-transfer-09.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/730f46ef0f528830a584f6cca3e3f6e1b91c2cfb/.github/workflows/v4-table8-d-paper-transfer-09.yml",
+    "sha256": "d8447562a0dafc9967d56b4b9141b7f26044aeab39f05bafd997b14e1ae8c081"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "730f46ef0f528830a584f6cca3e3f6e1b91c2cfb",
+    "original_path": ".github/workflows/v4-table8-d-paper-transfer-worker.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/730f46ef0f528830a584f6cca3e3f6e1b91c2cfb/.github/workflows/v4-table8-d-paper-transfer-worker.yml",
+    "sha256": "137f48d71dc7bc3ff02063074a5b05aa400bf062b437822534b21d493c6058be"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "730f46ef0f528830a584f6cca3e3f6e1b91c2cfb",
+    "original_path": ".github/workflows/v4-table8-de-transfer-00.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/730f46ef0f528830a584f6cca3e3f6e1b91c2cfb/.github/workflows/v4-table8-de-transfer-00.yml",
+    "sha256": "03759d16298a555d77be428b291e7eaf9ff8c4c42d0aa48bb571252177e8a270"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "730f46ef0f528830a584f6cca3e3f6e1b91c2cfb",
+    "original_path": ".github/workflows/v4-table8-de-transfer-01.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/730f46ef0f528830a584f6cca3e3f6e1b91c2cfb/.github/workflows/v4-table8-de-transfer-01.yml",
+    "sha256": "1e3bf1abc1ed21ac0a749e74277eb4c976e2cdc91f4ed7cbd1067f8ccb29cda6"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "730f46ef0f528830a584f6cca3e3f6e1b91c2cfb",
+    "original_path": ".github/workflows/v4-table8-de-transfer-02.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/730f46ef0f528830a584f6cca3e3f6e1b91c2cfb/.github/workflows/v4-table8-de-transfer-02.yml",
+    "sha256": "f306fd948a1120a357f95134a647f6ecb580b68ac4d510791793f0de0c709d89"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "730f46ef0f528830a584f6cca3e3f6e1b91c2cfb",
+    "original_path": ".github/workflows/v4-table8-de-transfer-03.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/730f46ef0f528830a584f6cca3e3f6e1b91c2cfb/.github/workflows/v4-table8-de-transfer-03.yml",
+    "sha256": "e8417b11cba9c72399e9f994076b997a01358a1ead697ebef88a9133a63be4ef"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "730f46ef0f528830a584f6cca3e3f6e1b91c2cfb",
+    "original_path": ".github/workflows/v4-table8-de-transfer-04.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/730f46ef0f528830a584f6cca3e3f6e1b91c2cfb/.github/workflows/v4-table8-de-transfer-04.yml",
+    "sha256": "7ec4c370278266a70b2f24ca5535cd4ba01700ebb0fdcf1c595a4c773eb3f745"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "730f46ef0f528830a584f6cca3e3f6e1b91c2cfb",
+    "original_path": ".github/workflows/v4-table8-de-transfer-05.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/730f46ef0f528830a584f6cca3e3f6e1b91c2cfb/.github/workflows/v4-table8-de-transfer-05.yml",
+    "sha256": "8282d38c047a385514f210bd9bb92915ce492c5fe31a20e1e061b6b764f89695"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "730f46ef0f528830a584f6cca3e3f6e1b91c2cfb",
+    "original_path": ".github/workflows/v4-table8-de-transfer-06.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/730f46ef0f528830a584f6cca3e3f6e1b91c2cfb/.github/workflows/v4-table8-de-transfer-06.yml",
+    "sha256": "ab38f591c72b92f82d3efca411d5c4f7bc010305a31a0e3dcd73143a1e321728"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "730f46ef0f528830a584f6cca3e3f6e1b91c2cfb",
+    "original_path": ".github/workflows/v4-table8-de-transfer-07.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/730f46ef0f528830a584f6cca3e3f6e1b91c2cfb/.github/workflows/v4-table8-de-transfer-07.yml",
+    "sha256": "a82bf9684bd9f3f7df3d1a63c355a08ef2f0cb1addd7eb723c0e57a03926b941"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "730f46ef0f528830a584f6cca3e3f6e1b91c2cfb",
+    "original_path": ".github/workflows/v4-table8-de-transfer-08.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/730f46ef0f528830a584f6cca3e3f6e1b91c2cfb/.github/workflows/v4-table8-de-transfer-08.yml",
+    "sha256": "56bd040533bddb4a87c92ccdf698dad529939c559953a0cf62ba8766b74391de"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "730f46ef0f528830a584f6cca3e3f6e1b91c2cfb",
+    "original_path": ".github/workflows/v4-table8-de-transfer-09.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/730f46ef0f528830a584f6cca3e3f6e1b91c2cfb/.github/workflows/v4-table8-de-transfer-09.yml",
+    "sha256": "2d20cd989096db20ebd5e642d251fa84c0b8d78ca56178010bbe717ad868a504"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "730f46ef0f528830a584f6cca3e3f6e1b91c2cfb",
+    "original_path": ".github/workflows/v4-table8-de-transfer-worker.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/730f46ef0f528830a584f6cca3e3f6e1b91c2cfb/.github/workflows/v4-table8-de-transfer-worker.yml",
+    "sha256": "6f047603327ec0c51ca57f388807a1901a19d73c264b47ccc18650d4cdcf02eb"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "730f46ef0f528830a584f6cca3e3f6e1b91c2cfb",
+    "original_path": "scripts/download_paper_bundle.py",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/730f46ef0f528830a584f6cca3e3f6e1b91c2cfb/scripts/download_paper_bundle.py",
+    "sha256": "b99b44a55a270837226830cca1ae8e5f033006a2b5dbb18fb37a9a9237d55034"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "730f46ef0f528830a584f6cca3e3f6e1b91c2cfb",
+    "original_path": "scripts/run_v4_table8.py",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/730f46ef0f528830a584f6cca3e3f6e1b91c2cfb/scripts/run_v4_table8.py",
+    "sha256": "d95f2150e17955af8b77133897030279842de09f74bb695c7c4c838d8e5b61b2"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "730f46ef0f528830a584f6cca3e3f6e1b91c2cfb",
+    "original_path": "scripts/v4_table8_actions.py",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/730f46ef0f528830a584f6cca3e3f6e1b91c2cfb/scripts/v4_table8_actions.py",
+    "sha256": "1d01fdbdc7f3c88e277c490673aa9c30d4467429eed494e52d1a35ba64e88f93"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "Phuc-Ly-Hong/Chi_Hue_run",
+    "commit": "730f46ef0f528830a584f6cca3e3f6e1b91c2cfb",
+    "original_path": "scripts/v4_table8_de_transfer.py",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/730f46ef0f528830a584f6cca3e3f6e1b91c2cfb/scripts/v4_table8_de_transfer.py",
+    "sha256": "0a434848cb06c41e57c40476295452b554307c741dafd862fd2a42a0ddead9d6"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "2fb60590ab4af0d1efd8710701dd1a1b57d0c399",
+    "original_path": ".github/v4-table8-irace.json",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/2fb60590ab4af0d1efd8710701dd1a1b57d0c399/.github/v4-table8-irace.json",
+    "sha256": "bf3ee8feed4b7b58d8260173b52d5a17421aece67c4a0c15d02732fb719e9ed8"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "2fb60590ab4af0d1efd8710701dd1a1b57d0c399",
+    "original_path": ".github/workflows/v4-table8-batch.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/2fb60590ab4af0d1efd8710701dd1a1b57d0c399/.github/workflows/v4-table8-batch.yml",
+    "sha256": "ee6b7d302665b08203fa01328ec38fbc282a67f7409eda798da64988d341f23d"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "2fb60590ab4af0d1efd8710701dd1a1b57d0c399",
+    "original_path": ".github/workflows/v4-table8.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/2fb60590ab4af0d1efd8710701dd1a1b57d0c399/.github/workflows/v4-table8.yml",
+    "sha256": "adefce5105769dac48bcde609f8d03adf03ced33caa89411aa5aa65106d1cd0f"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "2fb60590ab4af0d1efd8710701dd1a1b57d0c399",
+    "original_path": "scripts/download_paper_bundle.py",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/2fb60590ab4af0d1efd8710701dd1a1b57d0c399/scripts/download_paper_bundle.py",
+    "sha256": "b99b44a55a270837226830cca1ae8e5f033006a2b5dbb18fb37a9a9237d55034"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "2fb60590ab4af0d1efd8710701dd1a1b57d0c399",
+    "original_path": "scripts/run_v4_table8.py",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/2fb60590ab4af0d1efd8710701dd1a1b57d0c399/scripts/run_v4_table8.py",
+    "sha256": "d95f2150e17955af8b77133897030279842de09f74bb695c7c4c838d8e5b61b2"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "2fb60590ab4af0d1efd8710701dd1a1b57d0c399",
+    "original_path": "scripts/v4_table8_actions.py",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/2fb60590ab4af0d1efd8710701dd1a1b57d0c399/scripts/v4_table8_actions.py",
+    "sha256": "878a0bdaaf1fc809f1d8fb2ee4e38582763c9ed84633a30891a41ab13dd6f148"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "759fc33658c5dde4eff8fac728ec13e686e621de",
+    "original_path": ".github/v4-table8-irace.json",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/759fc33658c5dde4eff8fac728ec13e686e621de/.github/v4-table8-irace.json",
+    "sha256": "bf3ee8feed4b7b58d8260173b52d5a17421aece67c4a0c15d02732fb719e9ed8"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "759fc33658c5dde4eff8fac728ec13e686e621de",
+    "original_path": ".github/workflows/v4-table8-batch.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/759fc33658c5dde4eff8fac728ec13e686e621de/.github/workflows/v4-table8-batch.yml",
+    "sha256": "04f286bde6255166b753732ea9b23fa79ec454a3169996b10e6c64a70b72b9ae"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "759fc33658c5dde4eff8fac728ec13e686e621de",
+    "original_path": ".github/workflows/v4-table8-n200.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/759fc33658c5dde4eff8fac728ec13e686e621de/.github/workflows/v4-table8-n200.yml",
+    "sha256": "cc4dbe9919e31d9654bb16c3ee1b11d58fb6be71d0607891c39e0e1da325f974"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "759fc33658c5dde4eff8fac728ec13e686e621de",
+    "original_path": ".github/workflows/v4-table8.yml",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/759fc33658c5dde4eff8fac728ec13e686e621de/.github/workflows/v4-table8.yml",
+    "sha256": "adefce5105769dac48bcde609f8d03adf03ced33caa89411aa5aa65106d1cd0f"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "759fc33658c5dde4eff8fac728ec13e686e621de",
+    "original_path": "scripts/download_paper_bundle.py",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/759fc33658c5dde4eff8fac728ec13e686e621de/scripts/download_paper_bundle.py",
+    "sha256": "b99b44a55a270837226830cca1ae8e5f033006a2b5dbb18fb37a9a9237d55034"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "759fc33658c5dde4eff8fac728ec13e686e621de",
+    "original_path": "scripts/run_v4_table8.py",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/759fc33658c5dde4eff8fac728ec13e686e621de/scripts/run_v4_table8.py",
+    "sha256": "d95f2150e17955af8b77133897030279842de09f74bb695c7c4c838d8e5b61b2"
+  },
+  {
+    "experiment": "8_Ti",
+    "repository": "huetran1611/Tu_paper_HueRepo",
+    "commit": "759fc33658c5dde4eff8fac728ec13e686e621de",
+    "original_path": "scripts/v4_table8_actions.py",
+    "archived_path": "experiments/fixed_v4_paper_release/experiment_code/8_Ti/759fc33658c5dde4eff8fac728ec13e686e621de/scripts/v4_table8_actions.py",
+    "sha256": "b340d764b96fa5b7b6e5140e244e572b718217aa01ba72c01948bb7e7f2e6fbb"
+  }
+]

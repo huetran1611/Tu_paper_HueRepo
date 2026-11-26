@@ -1,0 +1,13 @@
+name: V4 Table 8 D_paper batch 08
+run-name: V4T8 transfer D_paper 8
+on:
+  push:
+    branches: [Tu_paper-table8-d-paper]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  batch:
+    uses: ./.github/workflows/v4-table8-d-paper-transfer-worker.yml
+    with:
+      batch: 8

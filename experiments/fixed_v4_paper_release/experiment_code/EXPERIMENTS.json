@@ -1,0 +1,56 @@
+{
+  "iteration_tables_6_8": {
+    "frozen_implementation": "experiments/tables678_irace_v4/full_20261123/bundle/source",
+    "runner": "scripts/run_tables678_local.py",
+    "aggregator": "scripts/paper_tables_678.py",
+    "table6_substitution": "scripts/edit_table6_runs.py",
+    "variant_spec": "experiments/tables678_irace_v4/full_20261123/bundle/manifest.json"
+  },
+  "table_8_Ti": {
+    "scenario_configuration": {
+      "A": {
+        "scoring": "makespan",
+        "mode_switching": false,
+        "scope_N0_N6": "critical",
+        "tie_break": false,
+        "stopping": "iteration calibration, with recorded process caps"
+      },
+      "B": {
+        "scoring": "makespan/workload",
+        "mode_switching": true,
+        "scope_N0_N6": "critical in both modes",
+        "tie_break": false,
+        "stopping": "Ti"
+      },
+      "C": {
+        "scoring": "makespan",
+        "mode_switching": false,
+        "scope_N0_N6": "fleet",
+        "tie_break": false,
+        "stopping": "Ti"
+      },
+      "D_paper": {
+        "scoring": "makespan/workload",
+        "mode_switching": true,
+        "scope_N0_N6": "critical in makespan, fleet in workload",
+        "tie_break": false,
+        "stopping": "Ti"
+      },
+      "E": {
+        "scoring": "makespan",
+        "mode_switching": false,
+        "scope_N0_N6": "critical",
+        "tie_break": "workload",
+        "stopping": "Ti"
+      }
+    },
+    "N7_N8": "fleet in all scenarios",
+    "SA": false,
+    "DR": false,
+    "Ti_source": "experiments/v4_table8_paper_20261126/Ti.csv",
+    "solver_revisions": "experiments/fixed_v4_paper_release/source_Ti/source_index.json",
+    "runner": "scripts/v4_table8_actions.py",
+    "timed_transfer_runner": "scripts/v4_table8_de_transfer.py"
+  },
+  "exact_workflow_sources": "experiments/fixed_v4_paper_release/experiment_code/workflow_source_index.json"
+}
